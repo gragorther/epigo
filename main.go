@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	argon2id "github.com/gragorther/epigo/auth"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
@@ -24,6 +25,12 @@ type User struct {
 	//	Country      string //should probably be a foreign key of another table
 	LastLogin *time.Time `json:"lastLogin"`
 }
+type UserDTO struct { // prevents client from modifying everything in the users table
+	Username string `json:"username" binding:"required"`
+	Name     string `json:"name" binding:"required"`
+	Email    string `json:"email" binding:"required,email"`
+	Password string `json:"password" binding:"required"`
+}
 
 func initDB() *Env {
 	env := &Env{}
@@ -38,15 +45,31 @@ func initDB() *Env {
 }
 
 func (env *Env) registerUser(c *gin.Context) {
-	var newUser User
-	if err := c.BindJSON(&newUser); err != nil {
+	var dto UserDTO
+	if err := c.BindJSON(&dto); err != nil {
 		return
 	}
-	env.DB.Create(&newUser)
-	c.JSON(http.StatusCreated, newUser)
+	passwordHash, err := argon2id.CreateHash(dto.Password)
+	if err != nil {
+
+	}
+	newUser := User{
+		Username:     dto.Username,
+		Name:         dto.Name,
+		Email:        dto.Email,
+		PasswordHash: passwordHash,
+		LastLogin:    nil,
+	}
+	if err := env.DB.Create(&newUser).Error; err != nil {
+		env.Logger.Println(err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Unable to create user"})
+		return
+	}
+
 }
 
 func main() {
+
 	env := initDB()
 	router := gin.Default()
 	router.POST("/registerUser", env.registerUser)
