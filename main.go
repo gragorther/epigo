@@ -49,9 +49,13 @@ func (env *Env) registerUser(c *gin.Context) {
 	if err := c.BindJSON(&dto); err != nil {
 		return
 	}
-	passwordHash, err := argon2id.CreateHash(dto.Password)
+	passwordHash, err := argon2id.CreateHash(dto.Password, &argon2id.Params{Memory: 2048,
+		Iterations:  3,
+		Parallelism: 5,
+		SaltLength:  16,
+		KeyLength:   32})
 	if err != nil {
-
+		env.Logger.Printf("Password hashing error: %v", err)
 	}
 	newUser := User{
 		Username:     dto.Username,
