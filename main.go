@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"net/http"
 	"time"
@@ -17,39 +16,40 @@ type Env struct {
 }
 
 type User struct {
-	ID           uint
-	Username     string
-	Name         string
-	Email        string
-	PasswordHash string
+	ID           uint   `json:"id"`
+	Username     string `json:"username"`
+	Name         string `json:"name"`
+	Email        string `json:"email"`
+	PasswordHash string `json:"passwordHash"`
 	//	Country      string //should probably be a foreign key of another table
-	LastLogin *time.Time
+	LastLogin *time.Time `json:"lastLogin"`
 }
 
-func initDB() {
+func initDB() *Env {
 	env := &Env{}
 	db, err := gorm.Open(sqlite.Open("gorm.db"), &gorm.Config{})
 	if err != nil {
-		fmt.Printf("Error opening database: %v", err)
-		return
+		log.Fatalf("Error opening database: %v", err)
 	}
-	env.DB = db // sets the DB env to the database connector set up above
+	env.DB = db
 	env.DB.AutoMigrate(&User{})
-
+	env.Logger = log.Default()
+	return env
 }
 
-func registerUser(c *gin.Context) {
+func (env *Env) registerUser(c *gin.Context) {
 	var newUser User
 	if err := c.BindJSON(&newUser); err != nil {
 		return
 	}
-
+	env.DB.Create(&newUser)
 	c.JSON(http.StatusCreated, newUser)
-
 }
 
 func main() {
-	initDB()
+	env := initDB()
 	router := gin.Default()
-	router.POST("/registerUser", registerUser)
+	router.POST("/registerUser", env.registerUser)
+
+	router.Run()
 }
