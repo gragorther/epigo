@@ -7,11 +7,12 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt"
+	"github.com/gragorther/epigo/db/initializers"
 	"github.com/gragorther/epigo/models"
 	"golang.org/x/crypto/bcrypt"
 )
 
-func (env *Env) Login(c *gin.Context) {
+func Login(c *gin.Context) {
 
 	var authInput models.AuthInput
 
@@ -21,7 +22,7 @@ func (env *Env) Login(c *gin.Context) {
 	}
 
 	var userFound models.User
-	db.db.Where("username=?", authInput.Username).Find(&userFound)
+	initializers.DB.Where("username=?", authInput.Username).Find(&userFound)
 
 	if userFound.ID == 0 {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "user not found"})
