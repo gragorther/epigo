@@ -18,7 +18,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("DB connection error: %v", err)
 	}
-	err = db.AutoMigrate(&models.User{})
+	err = db.AutoMigrate(&models.User{}, &models.LastMessage{}, &models.SendToGroup{})
 	if err != nil {
 		log.Fatalf("Database migration failed: %v", err)
 	}
