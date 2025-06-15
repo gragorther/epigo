@@ -54,6 +54,7 @@ func (h *UserHandler) RegisterUser(c *gin.Context) {
 		Username:     authInput.Username,
 		PasswordHash: string(passwordHash),
 		Email:        authInput.Email,
+		Name:         authInput.Name,
 	}
 
 	h.DB.Create(&user)
