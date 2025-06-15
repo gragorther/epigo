@@ -15,9 +15,13 @@ type User struct {
 	//	Country      string //should probably be a foreign key of another table
 	LastLogin *time.Time `json:"lastLogin"`
 }
-type AuthInput struct {
+type RegistrationInput struct {
 	Username string `json:"username" binding:"required"`
 	Name     string `json:"name"     binding:"required"`
 	Email    string `json:"email"    binding:"required,email"`
+	Password string `json:"password" binding:"required"`
+}
+type LoginInput struct {
+	Username string `json:"username" binding:"required"`
 	Password string `json:"password" binding:"required"`
 }

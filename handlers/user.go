@@ -1,9 +1,13 @@
 package handlers
 
 import (
+	"log"
 	"net/http"
+	"os"
+	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/golang-jwt/jwt"
 	argon2id "github.com/gragorther/epigo/auth"
 	"github.com/gragorther/epigo/models"
 	"gorm.io/gorm"
@@ -18,32 +22,8 @@ func NewUserHandler(db *gorm.DB) *UserHandler {
 }
 
 func (h *UserHandler) RegisterUser(c *gin.Context) {
-	// var dto models.UserDTO
-	// if err := c.BindJSON(&dto); err != nil {
-	// 	return
-	// }
-	// passwordHash, err := argon2id.CreateHash(dto.Password, &argon2id.Params{Memory: 256 * 1024,
-	// 	Iterations:  3,
-	// 	Parallelism: 5,
-	// 	SaltLength:  16,
-	// 	KeyLength:   32})
-	// if err != nil {
-	// 	env.Logger.Printf("Password hashing error: %v", err)
-	// }
-	// newUser := models.User{
-	// 	Username:     dto.Username,
-	// 	Name:         dto.Name,
-	// 	Email:        dto.Email,
-	// 	PasswordHash: passwordHash,
-	// 	LastLogin:    nil,
-	// }
-	// if err := env.DB.Create(&newUser).Error; err != nil {
-	// 	env.Logger.Println(err)
-	// 	c.JSON(http.StatusInternalServerError, gin.H{"error": "Unable to create user"})
-	// 	return
-	// }
 
-	var authInput models.AuthInput
+	var authInput models.RegistrationInput
 
 	if err := c.ShouldBindJSON(&authInput); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -78,6 +58,72 @@ func (h *UserHandler) RegisterUser(c *gin.Context) {
 
 	h.DB.Create(&user)
 
-	c.JSON(http.StatusOK, gin.H{"data": user})
+	c.JSON(http.StatusOK, gin.H{"data": authInput})
 
+}
+func (h *UserHandler) LoginUser(c *gin.Context) {
+	var authInput models.LoginInput
+	if err := c.ShouldBindJSON(&authInput); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	var userFound models.User
+	h.DB.Where("username=?", authInput.Username).Find(&userFound)
+
+	if userFound.ID == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "user not found"})
+		return
+	}
+	match, err := argon2id.ComparePasswordAndHash(authInput.Password, userFound.PasswordHash) //check hash
+	if err != nil {
+		log.Printf("Password hash checking error: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error during password hash verification"})
+		return
+	}
+
+	if !match {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid password"})
+		return
+	}
+
+	generateToken := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"id":  userFound.ID,
+		"exp": time.Now().Add(time.Hour * 24).Unix(),
+	})
+
+	token, err := generateToken.SignedString([]byte(os.Getenv("JWT_SECRET")))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "failed to generate JWT token"})
+		return
+	}
+	currentTime := time.Now()
+	userFound.LastLogin = &currentTime
+	h.DB.Save(&userFound)
+	c.JSON(200, gin.H{
+		"token": token,
+	})
+
+}
+func GetUserProfile(c *gin.Context) {
+	// Retrieve the user object from the context
+	userValue, exists := c.Get("currentUser")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
+		return
+	}
+
+	// Type assertion to convert the interface{} to models.User
+	user, ok := userValue.(models.User)
+	if !ok {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to assert user type"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"username":  user.Username,
+		"lastLogin": user.LastLogin,
+		"name":      user.Name,
+		"email":     user.Email,
+	})
 }
