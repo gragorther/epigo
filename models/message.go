@@ -4,17 +4,31 @@ import "gorm.io/gorm"
 
 type LastMessage struct {
 	gorm.Model
-	Title        string        `json:"title"`
-	Content      string        `json:"content"` // markdown
-	UserID       int           `json:"userID"`  // every LastMessage belongs to a user (this is the foreign key)
-	User         User          // define relationship between LastMessage and User
-	SendToGroups []SendToGroup `json:"sendToGroups"`
+	Title   string `json:"title"`
+	Content string `json:"content"` // markdown
+	UserID  uint   `json:"userID"`
+	User    User   `json:"user" gorm:"constraint:OnUpdate:CASCADE,OnDelete:SET NULL"`
 }
 
-// groups of people the user can send messages to
 type SendToGroup struct {
 	gorm.Model
-	Recipients []string `json:"recipients"`
-	UserID     int      `json:"userID"` // defines the user that created this group
-	User       User
+	UserID      uint `json:"userID"`
+	User        User `json:"user" gorm:"constraint:OnUpdate:CASCADE,OnDelete:SET NULL"`
+	Name        string
+	Description string
+}
+
+type RecipientEmail struct {
+	gorm.Model
+	UserID        uint        `json:"userID"`
+	User          User        `json:"user" gorm:"constraint:OnUpdate:CASCADE,OnDelete:SET NULL"`
+	SendToGroupID uint        `json:"sendToGroupID"`
+	SendToGroup   SendToGroup `json:"sendToGroup"`
+	Email         string      `json:"email"`
+}
+
+type SendToGroupInput struct {
+	RecipientEmails []string `json:"recipients"`
+	Name            string   `json:"name"`
+	Description     string   `json:"description"`
 }

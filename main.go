@@ -18,7 +18,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("DB connection error: %v", err)
 	}
-	err = db.AutoMigrate(&models.User{}, &models.LastMessage{}, &models.SendToGroup{})
+	err = db.AutoMigrate(&models.User{}, &models.LastMessage{}, &models.SendToGroup{}, &models.RecipientEmail{})
 	if err != nil {
 		log.Fatalf("Database migration failed: %v", err)
 	}
@@ -26,8 +26,9 @@ func main() {
 	r := gin.Default()
 	userHandler := handlers.NewUserHandler(db)
 	authHandler := middlewares.NewAuthHandler(db)
-	r.POST("/register", userHandler.RegisterUser)
-	r.POST("/login", userHandler.LoginUser)
+	r.POST("/user/register", userHandler.RegisterUser)
+	r.POST("/user/login", userHandler.LoginUser)
+	r.POST("/user/addSendToGroup", authHandler.CheckAuth, userHandler.AddSendToGroup)
 	r.GET("/user/profile", authHandler.CheckAuth, handlers.GetUserProfile)
 	r.Run()
 }
