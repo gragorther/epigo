@@ -20,15 +20,15 @@ type SendToGroup struct {
 
 type RecipientEmail struct {
 	gorm.Model
-	UserID        uint        `json:"userID"`
+	UserID        uint        `json:"userID"` // owner user
 	User          User        `json:"user" gorm:"constraint:OnUpdate:CASCADE,OnDelete:SET NULL"`
-	SendToGroupID uint        `json:"sendToGroupID"`
+	SendToGroupID uint        `json:"sendToGroupID"` // group of the email
 	SendToGroup   SendToGroup `json:"sendToGroup"`
 	Email         string      `json:"email"`
 }
 
 type SendToGroupInput struct {
-	RecipientEmails []string `json:"recipients"`
+	RecipientEmails []string `json:"recipientEmails"`
 	Name            string   `json:"name"`
 	Description     string   `json:"description"`
 }

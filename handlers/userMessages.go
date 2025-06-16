@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"log"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -18,6 +19,7 @@ func (h *UserHandler) AddSendToGroup(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to assert user type"})
 		return
 	}
+
 	var input models.SendToGroupInput
 	if err := c.ShouldBindJSON(&input); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -30,14 +32,24 @@ func (h *UserHandler) AddSendToGroup(c *gin.Context) {
 	}
 	h.DB.Create(&sendToGroup)
 
-	for _, element := range input.RecipientEmails {
-		// index is the index where we are
-		// element is the element from someSlice for where we are
-		object := models.RecipientEmail{
-			Email:         element,
+	var recipientEmails []models.RecipientEmail
+
+	for _, e := range input.RecipientEmails {
+		recipientEmails = append(recipientEmails, models.RecipientEmail{
+			UserID:        user.ID,
 			SendToGroupID: sendToGroup.ID,
-		}
-		h.DB.Create(object)
+			Email:         e,
+		})
 	}
 
+	// batch insert
+	if err := h.DB.Create(&recipientEmails).Error; err != nil {
+		log.Println("failed to insert recipient emails:", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create recipients"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "SendToGroup and recipients created successfully",
+	})
 }
