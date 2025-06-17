@@ -13,7 +13,8 @@ type User struct {
 	Email        string `json:"email" gorm:"unique"`
 	PasswordHash string `json:"passwordHash"`
 	//	Country      string //should probably be a foreign key of another table
-	LastLogin *time.Time `json:"lastLogin"`
+	LastLogin    *time.Time `json:"lastLogin"`
+	SendToGroups SendToGroup
 }
 type RegistrationInput struct {
 	Username string `json:"username" binding:"required"`

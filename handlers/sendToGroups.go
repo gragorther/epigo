@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"log"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -30,26 +29,25 @@ func (h *UserHandler) AddSendToGroup(c *gin.Context) {
 		Name:        input.Name,
 		Description: input.Description,
 	}
-	h.DB.Create(&sendToGroup)
-
 	var recipientEmails []models.RecipientEmail
-
 	for _, e := range input.RecipientEmails {
 		recipientEmails = append(recipientEmails, models.RecipientEmail{
-			UserID:        user.ID,
 			SendToGroupID: sendToGroup.ID,
 			Email:         e,
 		})
 	}
+	h.DB.Create(&sendToGroup).Association("RecipientEmails").Append(&recipientEmails)
 
-	// batch insert
-	if err := h.DB.Create(&recipientEmails).Error; err != nil {
-		log.Println("failed to insert recipient emails:", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create recipients"})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"message": "SendToGroup and recipients created successfully",
-	})
 }
+
+// func (h *UserHandler) removeUserHandler(c *gin.Context) {
+// 	currentUser, exists := c.Get("currentUser")
+// 	if !exists {
+// 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Not authenticated"})
+// 	}
+// 	user, ok := currentUser.(models.User)
+// 	if !ok {
+// 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to assert user type"})
+// 		return
+// 	}
+// }
