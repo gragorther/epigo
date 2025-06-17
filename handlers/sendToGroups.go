@@ -29,14 +29,14 @@ func (h *UserHandler) AddSendToGroup(c *gin.Context) {
 		Name:        input.Name,
 		Description: input.Description,
 	}
-	var recipientEmails []models.RecipientEmail
+	var newRecipientEmails []models.RecipientEmail
 	for _, e := range input.RecipientEmails {
-		recipientEmails = append(recipientEmails, models.RecipientEmail{
+		newRecipientEmails = append(newRecipientEmails, models.RecipientEmail{
 			SendToGroupID: sendToGroup.ID,
 			Email:         e,
 		})
 	}
-	h.DB.Create(&sendToGroup).Association("RecipientEmails").Append(&recipientEmails)
+	h.DB.Create(&sendToGroup).Association("RecipientEmails").Append(&newRecipientEmails)
 
 }
 
