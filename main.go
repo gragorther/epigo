@@ -1,9 +1,7 @@
 package main
 
 import (
-	"fmt"
 	"log"
-	"os"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gragorther/epigo/db/initializers"
@@ -13,7 +11,6 @@ import (
 )
 
 func main() {
-	fmt.Printf("JWT secret is: %v\n", os.Getenv("JWT_SECRET"))
 	db, err := initializers.ConnectDB()
 	if err != nil {
 		log.Fatalf("DB connection error: %v", err)
