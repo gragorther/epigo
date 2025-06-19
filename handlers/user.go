@@ -21,9 +21,20 @@ func NewUserHandler(db *gorm.DB) *UserHandler {
 	return &UserHandler{DB: db}
 }
 
+type RegistrationInput struct {
+	Username string `json:"username" binding:"required"`
+	Name     string `json:"name"     binding:"required"`
+	Email    string `json:"email"    binding:"required,email"`
+	Password string `json:"password" binding:"required"`
+}
+type LoginInput struct {
+	Username string `json:"username" binding:"required"`
+	Password string `json:"password" binding:"required"`
+}
+
 func (h *UserHandler) RegisterUser(c *gin.Context) {
 
-	var authInput models.RegistrationInput
+	var authInput RegistrationInput
 
 	if err := c.ShouldBindJSON(&authInput); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -63,7 +74,7 @@ func (h *UserHandler) RegisterUser(c *gin.Context) {
 
 }
 func (h *UserHandler) LoginUser(c *gin.Context) {
-	var authInput models.LoginInput
+	var authInput LoginInput
 	if err := c.ShouldBindJSON(&authInput); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
