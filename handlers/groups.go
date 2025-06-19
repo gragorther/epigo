@@ -108,3 +108,36 @@ func (h *GroupHandler) ListGroups(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"groups": groups})
 }
+
+type editGroupInput struct {
+	ID              uint     `json:"id"`
+	RecipientEmails []string `json:"recipientEmails"`
+	Name            string   `json:"name"`
+	Description     string   `json:"description"`
+}
+
+func (h *GroupHandler) EditGroup(c *gin.Context) {
+	_, exists := c.Get("currentUser")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Not authenticated"})
+		return
+	}
+
+	var input editGroupInput
+	c.ShouldBindJSON(&input)
+
+	var group models.Group
+	h.DB.Preload("RecipientEmails").
+		First(&group, input.ID)
+	recipientEmails := make([]models.RecipientEmail, len(input.RecipientEmails))
+	for i, email := range input.RecipientEmails {
+		recipientEmails[i] = models.RecipientEmail{Email: email}
+	}
+
+	group.Name = input.Name
+	group.Description = input.Description
+	group.RecipientEmails = recipientEmails
+	h.DB.
+		Session(&gorm.Session{FullSaveAssociations: true}).
+		Updates(&group)
+}

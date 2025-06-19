@@ -4,10 +4,10 @@ import "gorm.io/gorm"
 
 type Group struct {
 	gorm.Model
-	UserID          uint `json:"userID"`
-	Name            string
-	Description     string
-	RecipientEmails []RecipientEmail
+	UserID          uint             `json:"userID"`
+	Name            string           `json:"name"`
+	Description     string           `json:"description"`
+	RecipientEmails []RecipientEmail `json:"recipientEmails"`
 }
 
 type RecipientEmail struct {
