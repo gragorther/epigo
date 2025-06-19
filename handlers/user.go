@@ -41,17 +41,18 @@ func (h *UserHandler) RegisterUser(c *gin.Context) {
 		return
 	}
 
-	var exists models.User
-	res := h.DB.
-		Where("username = ? OR email = ?", authInput.Username, authInput.Email).
-		First(&exists)
+	var foundUsers int64
+	res := h.DB.Model(&models.User{}).
+		Where("username = ? OR email = ?", authInput.Username, authInput.Email).Count(&foundUsers)
 
-	if res.Error == nil { // record found
-		if exists.Username == authInput.Username {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "username already used"})
-		} else {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "email already used"})
-		}
+	if res.Error != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Couldn't check if user exists"})
+		log.Printf("Couldn't check if user exists: %v", res.Error)
+		return
+	}
+
+	if foundUsers > 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "User already exists"})
 		return
 	}
 
