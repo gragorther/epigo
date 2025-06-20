@@ -8,6 +8,7 @@ type Group struct {
 	Name            string           `json:"name"`
 	Description     string           `json:"description"`
 	RecipientEmails []RecipientEmail `json:"recipientEmails"`
+	LastMessages    []*LastMessage   `json:"lastMessages" gorm:"group_last_messages;"`
 }
 
 type RecipientEmail struct {
