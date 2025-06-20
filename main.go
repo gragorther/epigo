@@ -33,8 +33,8 @@ func main() {
 	// groups
 	r.DELETE("/user/groups/delete/:id", authHandler.CheckAuth, groupHandler.DeleteGroup)
 	r.POST("/user/groups/add", authHandler.CheckAuth, groupHandler.AddGroup)
-	r.GET("/user/groups", authHandler.CheckAuth, groupHandler.ListGroups)
-	r.PATCH("/user/groups/edit", authHandler.CheckAuth, groupHandler.EditGroup)
+	r.GET("/user/groups", authHandler.CheckAuth, groupHandler.ListGroups) // list groups
+	r.PATCH("/user/groups/edit/:id", authHandler.CheckAuth, groupHandler.EditGroup)
 
 	r.Run()
 }

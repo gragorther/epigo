@@ -125,10 +125,14 @@ func (h *GroupHandler) EditGroup(c *gin.Context) {
 
 	var input editGroupInput
 	c.ShouldBindJSON(&input)
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid group ID"})
+		return
+	}
 
 	var group models.Group
-	h.DB.Preload("RecipientEmails").
-		First(&group, input.ID)
+
 	recipientEmails := make([]models.RecipientEmail, len(input.RecipientEmails))
 	for i, email := range input.RecipientEmails {
 		recipientEmails[i] = models.RecipientEmail{Email: email}
@@ -137,7 +141,11 @@ func (h *GroupHandler) EditGroup(c *gin.Context) {
 	group.Name = input.Name
 	group.Description = input.Description
 	group.RecipientEmails = recipientEmails
-	h.DB.
+	group.ID = uint(id)
+	output := h.DB.
 		Session(&gorm.Session{FullSaveAssociations: true}).
 		Updates(&group)
+	if output.RowsAffected < 1 {
+		c.JSON(http.StatusNotFound, gin.H{"error": "group not found"})
+	}
 }
