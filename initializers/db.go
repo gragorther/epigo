@@ -6,7 +6,7 @@ import (
 )
 
 func ConnectDB() (*gorm.DB, error) {
-	db, err := gorm.Open(sqlite.Open("gorm.db"), &gorm.Config{})
+	db, err := gorm.Open(sqlite.Open("gorm.db"), &gorm.Config{TranslateError: true, FullSaveAssociations: true})
 
 	if err != nil {
 		return nil, err

@@ -18,12 +18,11 @@ type groupInput struct {
 }
 
 type GroupHandler struct {
-	DB *gorm.DB      // direct access to Gorm
 	db *db.DBHandler // functions for database operations
 }
 
 func NewGroupHandler(db *gorm.DB, dbHandler *db.DBHandler) *GroupHandler {
-	return &GroupHandler{DB: db, db: dbHandler}
+	return &GroupHandler{db: dbHandler}
 }
 
 func (h *GroupHandler) AddGroup(c *gin.Context) {
@@ -104,7 +103,7 @@ func (h *GroupHandler) ListGroups(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to assert user type"})
 		return
 	}
-	groups, err := h.db.FindGroupsByUserID(user.ID) // gets the list of groups a user has via the association "Groups" on the User model
+	groups, err := h.db.FindGroupsAndRecipientEmailsByUserID(user.ID) // gets the list of groups a user has via the association "Groups" on the User model
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err})
 		return
@@ -125,11 +124,8 @@ type editGroupInput struct {
 }
 
 func (h *GroupHandler) EditGroup(c *gin.Context) {
-	currentUser, exists := c.Get("currentUser")
-	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Not authenticated"})
-		return
-	}
+	currentUser, _ := c.Get("currentUser")
+
 	user := currentUser.(models.User)
 
 	var input editGroupInput
@@ -158,11 +154,10 @@ func (h *GroupHandler) EditGroup(c *gin.Context) {
 
 	group.Name = input.Name
 	group.Description = input.Description
-	group.RecipientEmails = recipientEmails
 	group.ID = uint(id)
-	output := h.DB.Updates(&group)
-	if output.RowsAffected < 1 {
-		c.JSON(http.StatusNotFound, gin.H{"error": "group not found"})
-		return
+	err = h.db.UpdateGroup(&group, &recipientEmails)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": err})
 	}
+
 }
