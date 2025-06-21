@@ -55,7 +55,7 @@ func (h *GroupHandler) AddGroup(c *gin.Context) {
 			Email:   e,
 		})
 	}
-	h.DB.Create(&sendToGroup).Association("RecipientEmails").Append(&newRecipientEmails)
+	h.db.CreateGroupAndRecipientEmails(&sendToGroup, &newRecipientEmails)
 }
 
 func (h *GroupHandler) DeleteGroup(c *gin.Context) {
@@ -63,14 +63,13 @@ func (h *GroupHandler) DeleteGroup(c *gin.Context) {
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Not authenticated"})
 	}
-	uint64id, err := strconv.ParseUint(c.Param("id"), 10, 32)
-	id := uint(uint64id)
+	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid group ID"})
 		return
 	}
 	user := currentUser.(models.User)
-	authorized, err := h.db.CheckUserAuthorizationForGroup(id, user.ID)
+	authorized, err := h.db.CheckUserAuthorizationForGroup(uint(id), user.ID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Couldn't check if the user is authorized to perform this action"})
 		return
@@ -80,14 +79,12 @@ func (h *GroupHandler) DeleteGroup(c *gin.Context) {
 		return
 	}
 
-	res := h.DB.Delete(&models.Group{}, id)
-	if res.Error != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": res.Error})
-	}
-	if res.RowsAffected == 0 {
-		c.JSON(http.StatusNotFound, gin.H{"error": "group not found"})
+	err = h.db.DeleteGroupByID(uint(id))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err})
 		return
 	}
+
 	c.JSON(http.StatusOK, gin.H{"message": "group deleted"})
 }
 
@@ -107,8 +104,11 @@ func (h *GroupHandler) ListGroups(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to assert user type"})
 		return
 	}
-	var groups []listGroupsOutput
-	h.DB.Model(&user).Association("Groups").Find(&groups) // gets the list of groups a user has via the association "Groups" on the User model
+	groups, err := h.db.FindGroupsByUserID(user.ID) // gets the list of groups a user has via the association "Groups" on the User model
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err})
+		return
+	}
 
 	if len(groups) == 0 {
 		c.JSON(http.StatusNotFound, gin.H{"error": "No groups"})
@@ -125,12 +125,12 @@ type editGroupInput struct {
 }
 
 func (h *GroupHandler) EditGroup(c *gin.Context) {
-	_, exists := c.Get("currentUser")
+	currentUser, exists := c.Get("currentUser")
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Not authenticated"})
 		return
 	}
-	//	user := currentUser.(models.User)
+	user := currentUser.(models.User)
 
 	var input editGroupInput
 	c.ShouldBindJSON(&input)
@@ -138,6 +138,15 @@ func (h *GroupHandler) EditGroup(c *gin.Context) {
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid group ID"})
 		return
+	}
+
+	authorized, err := h.db.CheckUserAuthorizationForGroup(uint(id), user.ID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Couldn't check if the user is authorized to perform this action"})
+		return
+	}
+	if !authorized {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Not authorized to edit this group"})
 	}
 
 	var group models.Group
