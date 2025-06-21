@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/gragorther/epigo/db"
 	"github.com/gragorther/epigo/models"
 	"gorm.io/gorm"
 )
@@ -17,11 +18,12 @@ type groupInput struct {
 }
 
 type GroupHandler struct {
-	DB *gorm.DB
+	DB *gorm.DB      // direct access to Gorm
+	db *db.DBHandler // functions for database operations
 }
 
-func NewGroupHandler(db *gorm.DB) *GroupHandler {
-	return &GroupHandler{DB: db}
+func NewGroupHandler(db *gorm.DB, dbHandler *db.DBHandler) *GroupHandler {
+	return &GroupHandler{DB: db, db: dbHandler}
 }
 
 func (h *GroupHandler) AddGroup(c *gin.Context) {
@@ -57,13 +59,24 @@ func (h *GroupHandler) AddGroup(c *gin.Context) {
 }
 
 func (h *GroupHandler) DeleteGroup(c *gin.Context) {
-	_, exists := c.Get("currentUser")
+	currentUser, exists := c.Get("currentUser")
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Not authenticated"})
 	}
-	id, err := strconv.Atoi(c.Param("id"))
+	uint64id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	id := uint(uint64id)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid group ID"})
+		return
+	}
+	user := currentUser.(models.User)
+	authorized, err := h.db.CheckUserAuthorizationForGroup(id, user.ID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Couldn't check if the user is authorized to perform this action"})
+		return
+	}
+	if !authorized {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Not authorized to delete this group"})
 		return
 	}
 
@@ -80,18 +93,14 @@ func (h *GroupHandler) DeleteGroup(c *gin.Context) {
 
 type listGroupsOutput struct {
 	ID          uint
-	CreatedAt   time.Time
-	UpdatedAt   time.Time
-	Name        string
-	Description string
+	CreatedAt   time.Time `json:"createdAt"`
+	UpdatedAt   time.Time `json:"updatedAt"`
+	Name        string    `json:"name"`
+	Description string    `json:"description"`
 }
 
 func (h *GroupHandler) ListGroups(c *gin.Context) {
-	currentUser, exists := c.Get("currentUser")
-	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Not authenticated"})
-		return
-	}
+	currentUser, _ := c.Get("currentUser")
 
 	user, ok := currentUser.(models.User)
 	if !ok {
@@ -116,29 +125,18 @@ type editGroupInput struct {
 }
 
 func (h *GroupHandler) EditGroup(c *gin.Context) {
-	currentUser, exists := c.Get("currentUser")
+	_, exists := c.Get("currentUser")
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Not authenticated"})
 		return
 	}
-	user := currentUser.(models.User)
+	//	user := currentUser.(models.User)
 
 	var input editGroupInput
 	c.ShouldBindJSON(&input)
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid group ID"})
-		return
-	}
-	var authorizedGroup int64
-	if err := h.DB.Model(&models.Group{}).
-		Where("id = ?", id).
-		Where("user_id = ?", user.ID).
-		Count(&authorizedGroup).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Couldn't check if the user is authorized to add last messages to this group"})
-	}
-	if authorizedGroup != 1 {
-		c.JSON(http.StatusForbidden, gin.H{"error": "invalid group selection"})
 		return
 	}
 

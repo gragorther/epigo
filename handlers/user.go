@@ -8,7 +8,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt"
-	argon2id "github.com/gragorther/epigo/auth"
+	argon2id "github.com/gragorther/epigo/hash"
 	"github.com/gragorther/epigo/models"
 	"gorm.io/gorm"
 )

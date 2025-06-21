@@ -4,27 +4,29 @@ import (
 	"log"
 
 	"github.com/gin-gonic/gin"
-	"github.com/gragorther/epigo/db/initializers"
+	"github.com/gragorther/epigo/db"
 	"github.com/gragorther/epigo/handlers"
+	"github.com/gragorther/epigo/initializers"
 	"github.com/gragorther/epigo/middlewares"
 	"github.com/gragorther/epigo/models"
 )
 
 func main() {
-	db, err := initializers.ConnectDB()
+	dbconn, err := initializers.ConnectDB()
 	if err != nil {
 		log.Fatalf("DB connection error: %v", err)
 	}
-	err = db.AutoMigrate(&models.User{}, &models.LastMessage{}, &models.Group{}, &models.RecipientEmail{}, &models.Group{})
+	err = dbconn.AutoMigrate(&models.User{}, &models.LastMessage{}, &models.Group{}, &models.RecipientEmail{}, &models.Group{})
 	if err != nil {
 		log.Fatalf("Database migration failed: %v", err)
 	}
+	dbHandler := db.NewDBHandler(dbconn)
 
 	r := gin.Default()
-	userHandler := handlers.NewUserHandler(db)
-	authHandler := middlewares.NewAuthHandler(db)
-	groupHandler := handlers.NewGroupHandler(db)
-	messageHandler := handlers.NewMessageHandler(db)
+	userHandler := handlers.NewUserHandler(dbconn)
+	authHandler := middlewares.NewAuthHandler(dbconn)
+	groupHandler := handlers.NewGroupHandler(dbconn, dbHandler)
+	messageHandler := handlers.NewMessageHandler(dbconn)
 
 	// user stuff
 	r.POST("/user/register", userHandler.RegisterUser)
