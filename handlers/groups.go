@@ -106,28 +106,39 @@ func (h *GroupHandler) ListGroups(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"groups": groups})
+	c.JSON(http.StatusOK, groups)
 }
 
 type editGroupInput struct {
-	ID              uint     `json:"id"`
 	RecipientEmails []string `json:"recipientEmails"`
 	Name            string   `json:"name"`
 	Description     string   `json:"description"`
 }
 
 func (h *GroupHandler) EditGroup(c *gin.Context) {
-	_, exists := c.Get("currentUser")
+	currentUser, exists := c.Get("currentUser")
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Not authenticated"})
 		return
 	}
+	user := currentUser.(models.User)
 
 	var input editGroupInput
 	c.ShouldBindJSON(&input)
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid group ID"})
+		return
+	}
+	var authorizedGroup int64
+	if err := h.DB.Model(&models.Group{}).
+		Where("id = ?", id).
+		Where("user_id = ?", user.ID).
+		Count(&authorizedGroup).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Couldn't check if the user is authorized to add last messages to this group"})
+	}
+	if authorizedGroup != 1 {
+		c.JSON(http.StatusForbidden, gin.H{"error": "invalid group selection"})
 		return
 	}
 
@@ -142,10 +153,9 @@ func (h *GroupHandler) EditGroup(c *gin.Context) {
 	group.Description = input.Description
 	group.RecipientEmails = recipientEmails
 	group.ID = uint(id)
-	output := h.DB.
-		Session(&gorm.Session{FullSaveAssociations: true}).
-		Updates(&group)
+	output := h.DB.Updates(&group)
 	if output.RowsAffected < 1 {
 		c.JSON(http.StatusNotFound, gin.H{"error": "group not found"})
+		return
 	}
 }

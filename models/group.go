@@ -1,14 +1,21 @@
 package models
 
-import "gorm.io/gorm"
+import (
+	"time"
+
+	"gorm.io/gorm"
+)
 
 type Group struct {
-	gorm.Model
+	ID              uint `gorm:"primarykey"`
+	CreatedAt       time.Time
+	UpdatedAt       time.Time
+	DeletedAt       gorm.DeletedAt   `gorm:"index"`
 	UserID          uint             `json:"userID"`
 	Name            string           `json:"name"`
 	Description     string           `json:"description"`
 	RecipientEmails []RecipientEmail `json:"recipientEmails"`
-	LastMessages    []*LastMessage   `json:"lastMessages" gorm:"group_last_messages;"`
+	LastMessages    []LastMessage    `json:"lastMessages" gorm:"many2many:group_last_messages;"`
 }
 
 type RecipientEmail struct {

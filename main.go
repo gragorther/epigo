@@ -24,6 +24,7 @@ func main() {
 	userHandler := handlers.NewUserHandler(db)
 	authHandler := middlewares.NewAuthHandler(db)
 	groupHandler := handlers.NewGroupHandler(db)
+	messageHandler := handlers.NewMessageHandler(db)
 
 	// user stuff
 	r.POST("/user/register", userHandler.RegisterUser)
@@ -35,6 +36,10 @@ func main() {
 	r.POST("/user/groups/add", authHandler.CheckAuth, groupHandler.AddGroup)
 	r.GET("/user/groups", authHandler.CheckAuth, groupHandler.ListGroups) // list groups
 	r.PATCH("/user/groups/edit/:id", authHandler.CheckAuth, groupHandler.EditGroup)
+
+	// lastMessages
+	r.POST("/user/lastMessages/add", authHandler.CheckAuth, messageHandler.AddLastMessage)
+	r.GET("/user/lastMessages", authHandler.CheckAuth, messageHandler.ListLastMessages)
 
 	r.Run()
 }
