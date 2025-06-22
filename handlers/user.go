@@ -77,7 +77,7 @@ func (h *UserHandler) RegisterUser(c *gin.Context) {
 
 	h.DB.Create(&user)
 
-	c.JSON(http.StatusOK, gin.H{"data": authInput})
+	c.JSON(http.StatusOK, authInput)
 
 }
 func (h *UserHandler) LoginUser(c *gin.Context) {
