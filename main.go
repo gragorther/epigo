@@ -43,6 +43,7 @@ func main() {
 	r.POST("/user/lastMessages/add", authHandler.CheckAuth, messageHandler.AddLastMessage)
 	r.GET("/user/lastMessages", authHandler.CheckAuth, messageHandler.ListLastMessages)
 	r.PATCH("/user/lastMessages/edit/:id", authHandler.CheckAuth, messageHandler.EditLastMessage)
+	r.DELETE("/user/lastMessages/delete/:id", authHandler.CheckAuth, messageHandler.DeleteLastMessage)
 
 	r.Run()
 }

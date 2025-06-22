@@ -39,7 +39,7 @@ type groupWithEmails struct {
 
 func (h *DBHandler) FindGroupsAndRecipientEmailsByUserID(userID uint) ([]groupWithEmails, error) {
 	var groups []listGroupsDTO
-	res := h.DB.Model(&models.Group{ID: userID}).Preload("RecipientEmails").Find(&groups)
+	res := h.DB.Model(&models.Group{}).Where("user_id = ?", userID).Preload("RecipientEmails").Find(&groups)
 	if res.Error != nil {
 		return nil, res.Error
 	}

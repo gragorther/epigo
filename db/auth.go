@@ -15,7 +15,7 @@ func NewDBHandler(db *gorm.DB) *DBHandler {
 
 func (h *DBHandler) CheckUserAuthorizationForGroup(groupIDs []uint, userID uint) (bool, error) {
 	var authorizedGroups int64
-	if err := h.DB.Model(&models.Group{UserID: userID}).
+	if err := h.DB.Model(&models.Group{}).Where("user_id = ?", userID).
 		Where("id IN ?", groupIDs).
 		Count(&authorizedGroups).Error; err != nil {
 
@@ -28,7 +28,7 @@ func (h *DBHandler) CheckUserAuthorizationForGroup(groupIDs []uint, userID uint)
 }
 func (h *DBHandler) CheckUserAuthorizationForLastMessage(messageID uint, userID uint) (bool, error) {
 	var authorizedCount int64
-	res := h.DB.Model(&models.LastMessage{ID: messageID, UserID: userID}).Count(&authorizedCount)
+	res := h.DB.Model(&models.LastMessage{}).Where("id = ?", messageID).Where("user_id = ?", userID).Count(&authorizedCount)
 	if authorizedCount != 1 {
 		return false, res.Error
 	}

@@ -11,7 +11,7 @@ type User struct {
 	Username     string `json:"username" gorm:"unique"`
 	Name         string `json:"name"`
 	Email        string `json:"email" gorm:"unique"`
-	PasswordHash string `json:"passwordHash"`
+	PasswordHash string `json:"-"`
 	//	Country      string //should probably be a foreign key of another table
 	LastLogin *time.Time `json:"lastLogin"`
 	Groups    Group

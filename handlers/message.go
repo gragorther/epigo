@@ -42,6 +42,7 @@ func (h *MessageHandler) AddLastMessage(c *gin.Context) {
 	}
 	if !authorized {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": apperrors.ErrUnauthorized.Error()})
+		return
 	}
 
 	groups, parseErr := util.ParseGroups(input.GroupIDs)
@@ -117,6 +118,33 @@ func (h *MessageHandler) EditLastMessage(c *gin.Context) {
 	err = h.db.UpdateLastMessage(&editedMessage)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+}
+
+func (h *MessageHandler) DeleteLastMessage(c *gin.Context) {
+	lastMessageID, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err})
+		return
+	}
+	currentUser, _ := c.Get("currentUser")
+	user := currentUser.(models.User)
+	authorized, authErr := h.db.CheckUserAuthorizationForLastMessage(uint(lastMessageID), user.ID)
+	if authErr != nil {
+		c.JSON(http.StatusInternalServerError, apperrors.ErrAuthCheckFailed.Error())
+		return
+	}
+	if !authorized {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": apperrors.ErrUnauthorized.Error()})
+		return
+	}
+	err = h.db.DeleteLastMessageByID(uint(lastMessageID))
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
 	}
 
 }
