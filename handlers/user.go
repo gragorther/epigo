@@ -8,8 +8,10 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt"
+	"github.com/gragorther/epigo/apperrors"
 	argon2id "github.com/gragorther/epigo/hash"
 	"github.com/gragorther/epigo/models"
+	"github.com/gragorther/epigo/util"
 	"gorm.io/gorm"
 )
 
@@ -40,13 +42,17 @@ func (h *UserHandler) RegisterUser(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+	validEmail := util.ValidateEmail(authInput.Email)
+	if !validEmail {
+		c.JSON(http.StatusBadRequest, gin.H{"error": apperrors.ErrInvalidEmail.Error})
+	}
 
 	var foundUsers int64
 	res := h.DB.Model(&models.User{}).
 		Where("username = ? OR email = ?", authInput.Username, authInput.Email).Count(&foundUsers)
 
 	if res.Error != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Couldn't check if user exists"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": apperrors.ErrServerError.Error()})
 		log.Printf("Couldn't check if user exists: %v", res.Error)
 		return
 	}
@@ -129,7 +135,7 @@ func GetUserProfile(c *gin.Context) {
 	// Type assertion to convert the interface{} to models.User
 	user, ok := userValue.(models.User)
 	if !ok {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to assert user type"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": apperrors.ErrTypeConversionFailed.Error()})
 		return
 	}
 

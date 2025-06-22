@@ -1,9 +1,9 @@
 package db
 
 import (
-	"errors"
 	"time"
 
+	"github.com/gragorther/epigo/apperrors"
 	"github.com/gragorther/epigo/models"
 )
 
@@ -84,9 +84,9 @@ func (h *DBHandler) UpdateGroup(group *models.Group, recipientEmails *[]models.R
 		return output.Error
 	}
 	if output.RowsAffected < 1 {
-		return errors.New("Group not found")
+		return apperrors.ErrNotFound
 	}
-	h.DB.Model(&group).Association("recipientEmails").Replace(recipientEmails)
+	h.DB.Model(&group).Association("RecipientEmails").Replace(recipientEmails)
 
 	return nil
 }

@@ -25,8 +25,8 @@ func main() {
 	r := gin.Default()
 	userHandler := handlers.NewUserHandler(dbconn)
 	authHandler := middlewares.NewAuthHandler(dbconn)
-	groupHandler := handlers.NewGroupHandler(dbconn, dbHandler)
-	messageHandler := handlers.NewMessageHandler(dbconn)
+	groupHandler := handlers.NewGroupHandler(dbHandler)
+	messageHandler := handlers.NewMessageHandler(dbHandler)
 
 	// user stuff
 	r.POST("/user/register", userHandler.RegisterUser)
@@ -42,6 +42,7 @@ func main() {
 	// lastMessages
 	r.POST("/user/lastMessages/add", authHandler.CheckAuth, messageHandler.AddLastMessage)
 	r.GET("/user/lastMessages", authHandler.CheckAuth, messageHandler.ListLastMessages)
+	r.PATCH("/user/lastMessages/edit/:id", authHandler.CheckAuth, messageHandler.EditLastMessage)
 
 	r.Run()
 }

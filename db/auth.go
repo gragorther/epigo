@@ -13,14 +13,24 @@ func NewDBHandler(db *gorm.DB) *DBHandler {
 	return &DBHandler{DB: db}
 }
 
-func (h *DBHandler) CheckUserAuthorizationForGroup(groupID uint, userID uint) (bool, error) {
+func (h *DBHandler) CheckUserAuthorizationForGroup(groupIDs []uint, userID uint) (bool, error) {
+	var authorizedGroups int64
+	if err := h.DB.Model(&models.Group{UserID: userID}).
+		Where("id IN ?", groupIDs).
+		Count(&authorizedGroups).Error; err != nil {
 
-	var authorizedGroup int64
-	if err := h.DB.Model(&models.Group{}).
-		Where("id = ?", groupID).
-		Where("user_id = ?", userID).
-		Count(&authorizedGroup).Error; err != nil {
 		return false, err
 	}
-	return (authorizedGroup == 1), nil
+	if int(authorizedGroups) != len(groupIDs) {
+		return false, nil
+	}
+	return true, nil
+}
+func (h *DBHandler) CheckUserAuthorizationForLastMessage(messageID uint, userID uint) (bool, error) {
+	var authorizedCount int64
+	res := h.DB.Model(&models.LastMessage{ID: messageID, UserID: userID}).Count(&authorizedCount)
+	if authorizedCount != 1 {
+		return false, res.Error
+	}
+	return true, res.Error
 }
