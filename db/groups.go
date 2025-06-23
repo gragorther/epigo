@@ -5,14 +5,15 @@ import (
 
 	"github.com/gragorther/epigo/apperrors"
 	"github.com/gragorther/epigo/models"
+	"gorm.io/gorm"
 )
 
 func (h *DBHandler) DeleteGroupByID(id uint) error {
-	res := h.DB.Delete(&models.Group{}, id)
-	if res.Error != nil {
+	err := h.DB.Transaction(func(tx *gorm.DB) error {
+		res := tx.Delete(&models.Group{}, id)
 		return res.Error
-	}
-	return nil
+	})
+	return err
 }
 
 type recipientEmail struct {
@@ -70,12 +71,11 @@ func (h *DBHandler) CreateGroupAndRecipientEmails(group *models.Group, recipient
 		Description:     group.Description,
 		RecipientEmails: *recipientEmails,
 	}
-	err := h.DB.Create(&newGroup).Error
-
-	if err != nil {
+	err := h.DB.Transaction(func(tx *gorm.DB) error {
+		err := tx.Create(&newGroup).Error
 		return err
-	}
-	return nil
+	})
+	return err
 }
 
 func (h *DBHandler) UpdateGroup(group *models.Group, recipientEmails *[]models.RecipientEmail) error {

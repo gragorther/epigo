@@ -2,14 +2,15 @@ package db
 
 import (
 	"github.com/gragorther/epigo/models"
+	"gorm.io/gorm"
 )
 
 func (h *DBHandler) CreateLastMessage(lastMessage *models.LastMessage) error {
-	res := h.DB.Create(&lastMessage)
-	if res.Error != nil {
+	err := h.DB.Transaction(func(tx *gorm.DB) error {
+		res := tx.Create(&lastMessage)
 		return res.Error
-	}
-	return nil
+	})
+	return err
 }
 
 type group struct {
@@ -51,11 +52,17 @@ func (h *DBHandler) FindLastMessagesByUserID(userID uint) ([]lastMessageOut, err
 }
 
 func (h *DBHandler) UpdateLastMessage(newMessage *models.LastMessage) error {
-	res := h.DB.Model(&models.LastMessage{ID: newMessage.ID}).Updates(newMessage)
-	h.DB.Model(&newMessage).Association("Groups").Replace(newMessage.Groups)
-	return res.Error
+	err := h.DB.Transaction(func(tx *gorm.DB) error {
+		res := tx.Model(&models.LastMessage{ID: newMessage.ID}).Updates(newMessage)
+		tx.Model(&newMessage).Association("Groups").Replace(newMessage.Groups)
+		return res.Error
+	})
+	return err
 }
 func (h *DBHandler) DeleteLastMessageByID(lastMessageID uint) error {
-	res := h.DB.Delete(&models.LastMessage{ID: lastMessageID})
-	return res.Error
+	err := h.DB.Transaction(func(tx *gorm.DB) error {
+		res := tx.Delete(&models.LastMessage{ID: lastMessageID})
+		return res.Error
+	})
+	return err
 }
