@@ -14,13 +14,3 @@ var (
 	ErrAuthCheckFailed      = errors.New("failed to check if the user is authorized to perform this action")
 	ErrTypeConversionFailed = errors.New("couldn't convert the user data into the proper type - wrong input?")
 )
-
-// Custom error type (optional)
-type ValidationError struct {
-	Field   string
-	Message string
-}
-
-func (e *ValidationError) Error() string {
-	return e.Field + ": " + e.Message
-}
