@@ -13,6 +13,7 @@ type User struct {
 	Email        string `json:"email" gorm:"unique"`
 	PasswordHash string `json:"-"`
 	//	Country      string //should probably be a foreign key of another table
-	LastLogin *time.Time `json:"lastLogin"`
-	Groups    Group
+	LastLogin         *time.Time `json:"lastLogin"`
+	Groups            Group
+	SendEmailSchedule time.Time
 }

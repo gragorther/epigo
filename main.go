@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 	"net/http"
+	"os"
 	"os/signal"
 	"syscall"
 	"time"
@@ -14,6 +15,8 @@ import (
 	"github.com/gragorther/epigo/initializers"
 	"github.com/gragorther/epigo/middlewares"
 	"github.com/gragorther/epigo/models"
+	"github.com/gragorther/epigo/workers"
+	"github.com/hibiken/asynq"
 )
 
 func main() {
@@ -28,6 +31,9 @@ func main() {
 	if err != nil {
 		log.Fatalf("Database migration failed: %v", err)
 	}
+	redisAddr := os.Getenv("REDIS_ADDRESS")
+	go workers.Run(redisAddr)
+	asynqClient := asynq.NewClient(asynq.RedisClientOpt{Addr: redisAddr})
 	dbHandler := db.NewDBHandler(dbconn)
 
 	r := gin.Default()
