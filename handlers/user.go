@@ -125,7 +125,14 @@ func (h *UserHandler) LoginUser(c *gin.Context) {
 
 }
 
+type setEmailIntervalInput struct {
+	Cron string `json:"cron" binding:"required"`
+}
+
 func (h *UserHandler) SetEmailInterval(c *gin.Context) {
 	currentUser, _ := c.Get("currentUser")
 	user := currentUser.(models.User)
+	var input setEmailIntervalInput
+	c.ShouldBindJSON(&input)
+
 }
