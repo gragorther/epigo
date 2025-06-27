@@ -15,8 +15,8 @@ import (
 	"github.com/gragorther/epigo/initializers"
 	"github.com/gragorther/epigo/middlewares"
 	"github.com/gragorther/epigo/models"
+	"github.com/gragorther/epigo/scheduler"
 	"github.com/gragorther/epigo/workers"
-	"github.com/hibiken/asynq"
 )
 
 func main() {
@@ -27,17 +27,17 @@ func main() {
 	if err != nil {
 		log.Fatalf("DB connection error: %v", err)
 	}
-	err = dbconn.AutoMigrate(&models.User{}, &models.LastMessage{}, &models.Group{}, &models.RecipientEmail{}, &models.Group{})
+	err = dbconn.AutoMigrate(&models.User{}, &models.LastMessage{}, &models.Group{}, &models.RecipientEmail{})
 	if err != nil {
 		log.Fatalf("Database migration failed: %v", err)
 	}
+
+	dbHandler := db.NewDBHandler(dbconn)
 	redisAddr := os.Getenv("REDIS_ADDRESS")
 	go workers.Run(redisAddr)
-	asynqClient := asynq.NewClient(asynq.RedisClientOpt{Addr: redisAddr})
-	dbHandler := db.NewDBHandler(dbconn)
-
+	go scheduler.Run(dbHandler, redisAddr)
 	r := gin.Default()
-	userHandler := handlers.NewUserHandler(dbconn)
+	userHandler := handlers.NewUserHandler(dbconn, dbHandler)
 	authHandler := middlewares.NewAuthHandler(dbconn)
 	groupHandler := handlers.NewGroupHandler(dbHandler)
 	messageHandler := handlers.NewMessageHandler(dbHandler)

@@ -9,6 +9,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt"
 	"github.com/gragorther/epigo/apperrors"
+	"github.com/gragorther/epigo/db"
 	argon2id "github.com/gragorther/epigo/hash"
 	"github.com/gragorther/epigo/models"
 	"github.com/gragorther/epigo/util"
@@ -17,10 +18,11 @@ import (
 
 type UserHandler struct {
 	DB *gorm.DB
+	db *db.DBHandler
 }
 
-func NewUserHandler(db *gorm.DB) *UserHandler {
-	return &UserHandler{DB: db}
+func NewUserHandler(DB *gorm.DB, db *db.DBHandler) *UserHandler {
+	return &UserHandler{DB: DB, db: db}
 }
 
 type RegistrationInput struct {
@@ -124,6 +126,28 @@ func (h *UserHandler) LoginUser(c *gin.Context) {
 	})
 
 }
+func GetUserProfile(c *gin.Context) {
+	// Retrieve the user object from the context
+	userValue, exists := c.Get("currentUser")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
+		return
+	}
+
+	// Type assertion to convert the interface{} to models.User
+	user, ok := userValue.(models.User)
+	if !ok {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": apperrors.ErrTypeConversionFailed.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"username":  user.Username,
+		"lastLogin": user.LastLogin,
+		"name":      user.Name,
+		"email":     user.Email,
+	})
+}
 
 type setEmailIntervalInput struct {
 	Cron string `json:"cron" binding:"required"`
@@ -134,5 +158,9 @@ func (h *UserHandler) SetEmailInterval(c *gin.Context) {
 	user := currentUser.(models.User)
 	var input setEmailIntervalInput
 	c.ShouldBindJSON(&input)
-
+	err := h.db.UpdateUserInterval(user.ID, input.Cron)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
 }
