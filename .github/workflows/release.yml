@@ -6,6 +6,8 @@ on:
 permissions:
   contents: write
   packages: write
+env:
+  GIN_MODE: release
 
 jobs:
   release-linux-amd64:
@@ -18,4 +20,3 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           goos: linux
           goarch: amd64
-          GIN_MODE: release
