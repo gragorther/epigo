@@ -55,7 +55,11 @@ func (h *GroupHandler) AddGroup(c *gin.Context) {
 			Email:   e,
 		})
 	}
-	h.db.CreateGroupAndRecipientEmails(&sendToGroup, &newRecipientEmails)
+	err := h.db.CreateGroupAndRecipientEmails(&sendToGroup, &newRecipientEmails)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": apperrors.ErrServerError.Error()})
+		return
+	}
 }
 
 func (h *GroupHandler) DeleteGroup(c *gin.Context) {
@@ -120,7 +124,11 @@ func (h *GroupHandler) EditGroup(c *gin.Context) {
 	user := currentUser.(models.User)
 
 	var input editGroupInput
-	c.ShouldBindJSON(&input)
+	err := c.ShouldBindJSON(&input)
+	if err != nil {
+		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": "Failed to parse JSON"})
+		return
+	}
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": apperrors.ErrNotFound})

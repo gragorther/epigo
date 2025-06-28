@@ -157,10 +157,15 @@ func (h *UserHandler) SetEmailInterval(c *gin.Context) {
 	currentUser, _ := c.Get("currentUser")
 	user := currentUser.(models.User)
 	var input setEmailIntervalInput
-	c.ShouldBindJSON(&input)
-	err := h.db.UpdateUserInterval(user.ID, input.Cron)
+	err := c.ShouldBindJSON(&input)
+	if err != nil {
+		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": apperrors.ErrParsingFailed.Error()})
+		return
+	}
+	err = h.db.UpdateUserInterval(user.ID, input.Cron)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("failed to set email interval: %v", err)
 		return
 	}
 }

@@ -58,7 +58,11 @@ func (h *MessageHandler) AddLastMessage(c *gin.Context) {
 		UserID:  user.ID,
 	}
 
-	h.db.CreateLastMessage(&newLastMessage)
+	err = h.db.CreateLastMessage(&newLastMessage)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": apperrors.ErrServerError.Error()})
+		return
+	}
 }
 
 func (h *MessageHandler) ListLastMessages(c *gin.Context) {
@@ -86,7 +90,11 @@ func (h *MessageHandler) EditLastMessage(c *gin.Context) {
 
 	user := currentUser.(models.User)
 	var input messageInput
-	c.ShouldBindJSON(&input)
+	err = c.ShouldBindJSON(&input)
+	if err != nil {
+		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": apperrors.ErrParsingFailed.Error()})
+		return
+	}
 	authorized, autherr := h.db.CheckUserAuthorizationForLastMessage(uint(id), user.ID)
 	if autherr != nil {
 		c.JSON(http.StatusInternalServerError, apperrors.ErrServerError.Error())

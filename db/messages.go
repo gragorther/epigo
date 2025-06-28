@@ -54,8 +54,11 @@ func (h *DBHandler) FindLastMessagesByUserID(userID uint) ([]lastMessageOut, err
 func (h *DBHandler) UpdateLastMessage(newMessage *models.LastMessage) error {
 	err := h.DB.Transaction(func(tx *gorm.DB) error {
 		res := tx.Model(&models.LastMessage{ID: newMessage.ID}).Updates(newMessage)
-		tx.Model(&newMessage).Association("Groups").Replace(newMessage.Groups)
-		return res.Error
+		if res.Error != nil {
+			return res.Error
+		}
+		err := tx.Model(&newMessage).Association("Groups").Replace(newMessage.Groups)
+		return err
 	})
 	return err
 }

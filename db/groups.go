@@ -79,14 +79,18 @@ func (h *DBHandler) CreateGroupAndRecipientEmails(group *models.Group, recipient
 }
 
 func (h *DBHandler) UpdateGroup(group *models.Group, recipientEmails *[]models.RecipientEmail) error {
-	output := h.DB.Updates(&group)
-	if output.Error != nil {
-		return output.Error
-	}
-	if output.RowsAffected < 1 {
-		return apperrors.ErrNotFound
-	}
-	h.DB.Model(&group).Association("RecipientEmails").Replace(recipientEmails)
+	err := h.DB.Transaction(func(tx *gorm.DB) error {
+		output := h.DB.Updates(&group)
+		if output.Error != nil {
+			return output.Error
+		}
+		if output.RowsAffected < 1 {
+			return apperrors.ErrNotFound
+		}
+		err := h.DB.Model(&group).Association("RecipientEmails").Replace(recipientEmails)
 
-	return nil
+		return err
+	})
+	return err
+
 }
