@@ -13,4 +13,5 @@ var (
 	ErrUnauthorizedToEdit   = errors.New("not authorized to edit this object")
 	ErrAuthCheckFailed      = errors.New("failed to check if the user is authorized to perform this action")
 	ErrTypeConversionFailed = errors.New("couldn't convert the user data into the proper type - wrong input?")
+	ErrNoUsers              = errors.New("no users")
 )

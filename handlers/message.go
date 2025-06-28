@@ -20,9 +20,9 @@ func NewMessageHandler(db *db.DBHandler) *MessageHandler {
 }
 
 type messageInput struct {
-	Title    string `json:"title"`
-	Content  string `json:"content"`
-	GroupIDs []uint `json:"groupIDs"`
+	Title    string `json:"title" binding:"required"`
+	Content  string `json:"content" binding:"required"`
+	GroupIDs []uint `json:"groupIDs" binding:"required"`
 }
 
 func (h *MessageHandler) AddLastMessage(c *gin.Context) {
