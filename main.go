@@ -36,6 +36,19 @@ func main() {
 	redisAddr := os.Getenv("REDIS_ADDRESS")
 	go workers.Run(redisAddr)
 	go scheduler.Run(dbHandler, redisAddr)
+	/*
+		adminUsername := os.Getenv("ADMIN_USERNAME")
+		adminPasswordHash, err := argon2id.CreateHash(os.Getenv("ADMIN_PASSWORD"), argon2id.DefaultParams)
+		if err != nil {
+			log.Fatalf("Failed to create admin account %v", err)
+		}
+
+		adminEmail := os.Getenv("ADMIN_EMAIL")
+		res := dbconn.Create(&models.User{Username: adminUsername, Email: adminEmail, PasswordHash: adminPasswordHash, EmailCron: &adminCron, IsAdmin: true})
+		if res.Error != nil {
+			log.Print(res.Error)
+		}
+	*/
 	r := gin.Default()
 	userHandler := handlers.NewUserHandler(dbconn, dbHandler)
 	authHandler := middlewares.NewAuthHandler(dbconn)
@@ -45,7 +58,8 @@ func main() {
 	// user stuff
 	r.POST("/user/register", userHandler.RegisterUser)
 	r.POST("/user/login", userHandler.LoginUser)
-	r.GET("/user/profile", authHandler.CheckAuth, handlers.GetUserProfile)
+	r.GET("/user/profile", authHandler.CheckAuth, userHandler.GetUserProfile)
+	r.PUT("/user/setEmailInterval", authHandler.CheckAuth, userHandler.SetEmailInterval)
 
 	// groups
 	r.DELETE("/user/groups/delete/:id", authHandler.CheckAuth, groupHandler.DeleteGroup)
@@ -74,6 +88,15 @@ func main() {
 	// Restore default behavior on the interrupt signal and notify user of shutdown.
 	stop()
 	log.Println("shutting down gracefully, press Ctrl+C again to force")
+	sqlDB, err := dbconn.DB()
+	if err != nil {
+		log.Fatal("failed to get sqldb ", err)
+	}
+	log.Print("closing db connection")
+	sqlerr := sqlDB.Close()
+	if sqlerr != nil {
+		log.Printf("Failed to close db connection: %v", sqlerr)
+	}
 
 	// The context is used to inform the server it has 5 seconds to finish
 	// the request it is currently handling

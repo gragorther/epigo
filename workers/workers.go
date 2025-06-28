@@ -27,7 +27,6 @@ func Run(redisAddr string) {
 	// mux maps a type to a handler
 	mux := asynq.NewServeMux()
 	mux.HandleFunc(tasks.TypeRecurringEmail, tasks.HandleRecurringEmailTask)
-
 	if err := srv.Run(mux); err != nil {
 		log.Fatalf("could not run asynq workers: %v", err.Error())
 	}

@@ -32,6 +32,6 @@ func HandleRecurringEmailTask(ctx context.Context, t *asynq.Task) error {
 	if err := json.Unmarshal(t.Payload(), &p); err != nil {
 		return err
 	}
-	log.Printf(" [*] Send Welcome Email to User %d", p.UserID)
+	log.Printf("[*] Sent Email to User %d", p.UserID)
 	return nil
 }

@@ -26,10 +26,10 @@ func NewUserHandler(DB *gorm.DB, db *db.DBHandler) *UserHandler {
 }
 
 type RegistrationInput struct {
-	Username string `json:"username" binding:"required"`
-	Name     string `json:"name"     binding:"required"`
-	Email    string `json:"email"    binding:"required,email"`
-	Password string `json:"password" binding:"required"`
+	Username string  `json:"username" binding:"required"`
+	Name     *string `json:"name"     binding:"required"`
+	Email    string  `json:"email"    binding:"required,email"`
+	Password string  `json:"password" binding:"required"`
 }
 type LoginInput struct {
 	Username string `json:"username" binding:"required"`
@@ -126,7 +126,7 @@ func (h *UserHandler) LoginUser(c *gin.Context) {
 	})
 
 }
-func GetUserProfile(c *gin.Context) {
+func (h *UserHandler) GetUserProfile(c *gin.Context) {
 	// Retrieve the user object from the context
 	userValue, exists := c.Get("currentUser")
 	if !exists {
