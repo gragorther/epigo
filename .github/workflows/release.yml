@@ -90,3 +90,29 @@ jobs:
       - name: Run go test
         run: |
           go test -race -shuffle=on ./...
+
+  test-fbsd:
+    name: Test on FreeBSD ${{ matrix.osver }}
+    runs-on: ubuntu-latest
+    concurrency:
+      group: ci-test-freebsd-${{ matrix.osver }}
+      cancel-in-progress: true
+    strategy:
+      matrix:
+        osver: ["14.3", "13.4", "13.5", "14.2"]
+    env:
+      TEST_BASEPORT: ${{ vars.TEST_BASEPORT }}
+      TEST_BASEPORT_SMTP: ${{ vars.TEST_BASEPORT_SMTP }}
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@61b9e3751b92087fd0b06925ba6dd6314e06f089 # master
+      - name: Run go test on FreeBSD
+        uses: vmactions/freebsd-vm@debf37ca7b7fa40e19c542ef7ba30d6054a706a4 # v1.1.5
+        with:
+          usesh: true
+          copyback: false
+          prepare: |
+            pkg install -y go
+          run: |
+            cd $GITHUB_WORKSPACE;
+            go test -race -shuffle=on ./...
