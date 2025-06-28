@@ -9,7 +9,6 @@ permissions:
 
 jobs:
   release-linux-amd64:
-    if: ${{  }}
     name: release linux/amd64
     runs-on: ubuntu-latest
     steps:
