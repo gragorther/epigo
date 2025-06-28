@@ -2,19 +2,30 @@ name: Release
 on:
   release:
     types: [created]
-
 permissions:
   contents: write
   packages: write
-
 jobs:
-  release-linux-amd64:
-    name: release linux/amd64
+  releases-matrix:
+    name: Release Go Binary
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        goos: [linux, windows, darwin]
+        goarch: [amd64, arm64]
     steps:
       - uses: actions/checkout@v4
+
+      - name: Set GOAMD64 for amd64
+        if: matrix.goarch == 'amd64'
+        run: echo "GOAMD64=v3" >> $GITHUB_ENV
+
+      - name: Set GOARM for arm
+        if: matrix.goarch == 'arm64'
+        run: echo "GOARM=7" >> $GITHUB_ENV
+
       - uses: wangyoucao577/go-release-action@v1
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          goos: linux
-          goarch: amd64
+          goos: ${{ matrix.goos }}
+          goarch: ${{ matrix.goarch }}
