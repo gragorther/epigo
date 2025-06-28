@@ -6,8 +6,6 @@ on:
 permissions:
   contents: write
   packages: write
-env:
-  GIN_MODE: release
 
 jobs:
   release-linux-amd64:
