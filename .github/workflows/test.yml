@@ -1,0 +1,118 @@
+name: Test
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+jobs:
+  lint:
+    name: golangci-lint (${{ matrix.go }})
+    runs-on: ubuntu-latest
+    concurrency:
+      group: ci-lint-${{ matrix.go }}
+      cancel-in-progress: true
+    strategy:
+      matrix:
+        go: ["1.24"]
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@0080882f6c36860b6ba35c610c98ce87d4e2f26f # v2.10.2
+        with:
+          egress-policy: audit
+      - name: Setup go
+        uses: actions/setup-go@3041bf56c941b39c61721a86cd11f3bb1338122a # v5.2.0
+        with:
+          go-version: ${{ matrix.go }}
+          check-latest: true
+      - name: Checkout Code
+        uses: actions/checkout@61b9e3751b92087fd0b06925ba6dd6314e06f089 # master
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@1481404843c368bc19ca9406f87d6e0fc97bdcfd # v7.0.0
+        with:
+          version: latest
+  dependency-review:
+    name: Dependency review
+    runs-on: ubuntu-latest
+    concurrency:
+      group: ci-dependency-review
+      cancel-in-progress: true
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@0080882f6c36860b6ba35c610c98ce87d4e2f26f # v2.10.2
+        with:
+          egress-policy: audit
+      - name: Checkout Code
+        uses: actions/checkout@61b9e3751b92087fd0b06925ba6dd6314e06f089 # master
+      - name: "Dependency Review"
+        uses: actions/dependency-review-action@3b139cfc5fae8b618d3eae3675e383bb1769c019 # v4.5.0
+        with:
+          base-ref: ${{ github.event.pull_request.base.sha || 'main' }}
+          head-ref: ${{ github.event.pull_request.head.sha || github.ref }}
+  govulncheck:
+    name: Go vulnerabilities check
+    runs-on: ubuntu-latest
+    concurrency:
+      group: ci-govulncheck
+      cancel-in-progress: true
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@0080882f6c36860b6ba35c610c98ce87d4e2f26f # v2.10.2
+        with:
+          egress-policy: audit
+      - name: Run govulncheck
+        uses: golang/govulncheck-action@b625fbe08f3bccbe446d94fbf87fcc875a4f50ee # v1.0.4
+  test:
+    name: Test (${{ matrix.os }} / ${{ matrix.go }})
+    runs-on: ${{ matrix.os }}
+    concurrency:
+      group: ci-test-${{ matrix.os }}-${{ matrix.go }}
+      cancel-in-progress: true
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        go: ["1.23", "1.24"]
+    env:
+      TEST_BASEPORT: ${{ vars.TEST_BASEPORT }}
+      TEST_BASEPORT_SMTP: ${{ vars.TEST_BASEPORT_SMTP }}
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@0080882f6c36860b6ba35c610c98ce87d4e2f26f # v2.10.2
+        with:
+          egress-policy: audit
+      - name: Checkout Code
+        uses: actions/checkout@61b9e3751b92087fd0b06925ba6dd6314e06f089 # master
+      - name: Setup go
+        uses: actions/setup-go@3041bf56c941b39c61721a86cd11f3bb1338122a # v5.2.0
+        with:
+          go-version: ${{ matrix.go }}
+      - name: Run go test
+        run: |
+          go test -race -shuffle=on ./...
+
+  test-fbsd:
+    name: Test on FreeBSD ${{ matrix.osver }}
+    runs-on: ubuntu-latest
+    concurrency:
+      group: ci-test-freebsd-${{ matrix.osver }}
+      cancel-in-progress: true
+    strategy:
+      matrix:
+        osver: ["14.3", "13.4", "13.5", "14.2"]
+    env:
+      TEST_BASEPORT: ${{ vars.TEST_BASEPORT }}
+      TEST_BASEPORT_SMTP: ${{ vars.TEST_BASEPORT_SMTP }}
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@61b9e3751b92087fd0b06925ba6dd6314e06f089 # master
+      - name: Run go test on FreeBSD
+        uses: vmactions/freebsd-vm@debf37ca7b7fa40e19c542ef7ba30d6054a706a4 # v1.1.5
+        with:
+          usesh: true
+          copyback: false
+          prepare: |
+            pkg install -y go
+          run: |
+            cd $GITHUB_WORKSPACE;
+            go test -race -shuffle=on ./...
