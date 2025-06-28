@@ -20,10 +20,10 @@ jobs:
       - name: Build binary
         run: |
           mkdir -p bin
-          go build -o bin/myapp .
+          go build -o bin .
 
       - name: Create Release and upload assets
         uses: softprops/action-gh-release@v1
         with:
           files: |
-            bin/myapp
+            bin
