@@ -6,6 +6,12 @@ permissions:
   contents: write
   packages: write
 jobs:
+  update-go-pkg:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Update pkg.go.dev
+        run: |
+          curl https://proxy.golang.org/github.com/${{ github.repository }}/@v/${GITHUB_REF##*/}.info
   releases-matrix:
     name: Release Go Binary
     runs-on: ubuntu-latest
