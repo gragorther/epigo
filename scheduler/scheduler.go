@@ -10,7 +10,7 @@ import (
 )
 
 type ConfigProvider struct {
-	db *db.DBHandler
+	db db.Users
 }
 
 type PeriodicTaskConfigContainer struct {
@@ -21,7 +21,7 @@ type Config struct {
 	TaskType string `json:"task_type"`
 }
 
-func Run(db *db.DBHandler, redisAddress string) {
+func Run(db db.Users, redisAddress string) {
 	provider := &ConfigProvider{db: db}
 
 	mgr, err := asynq.NewPeriodicTaskManager(

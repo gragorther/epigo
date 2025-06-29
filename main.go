@@ -40,7 +40,7 @@ func main() {
 	dbHandler := db.NewDBHandler(dbconn)
 	redisAddr := os.Getenv("REDIS_ADDRESS")
 	go workers.Run(redisAddr)
-	go scheduler.Run(dbHandler, redisAddr)
+	go scheduler.Run(dbHandler.Users, redisAddr)
 	/*
 		adminUsername := os.Getenv("ADMIN_USERNAME")
 		adminPasswordHash, err := argon2id.CreateHash(os.Getenv("ADMIN_PASSWORD"), argon2id.DefaultParams)
@@ -56,11 +56,10 @@ func main() {
 	*/
 
 	r := gin.Default()
-	userHandler := handlers.UserHandler{}
+	userHandler := dbHandler.Users
 	authHandler := middlewares.NewAuthHandler(dbconn)
-	groupHandler := handlers.NewGroupHandler(dbHandler)
-	messageHandler := handlers.NewMessageHandler(dbHandler)
-
+	groupHandler := handlers.GroupHandler{}
+	messageHandler := handlers.MessageHandler{}
 	// user stuff
 	r.POST("/user/register", userHandler.RegisterUser)
 	r.POST("/user/login", userHandler.LoginUser)

@@ -3,34 +3,28 @@ package db
 import (
 	"log"
 
-	"github.com/gragorther/epigo/db"
 	"github.com/gragorther/epigo/models"
+	"github.com/gragorther/epigo/types"
 	"gorm.io/gorm"
 )
 
-type userDB struct {
+type UserDB struct {
 	DB *gorm.DB
 }
 
-func (u *userDB) UpdateUserInterval(userID uint, cron string) error {
+func (u *UserDB) UpdateUserInterval(userID uint, cron string) error {
 	res := u.DB.Model(&models.User{}).Where("id = ?", userID).Update("email_cron", cron)
 	return res.Error
 }
 
-type userIntervalsOutput struct {
-	ID        uint   `gorm:"primarykey"`
-	Email     string `json:"email" gorm:"unique"`
-	EmailCron string `json:"emailCron"`
-}
-
-func (u *userDB) GetUserIntervals() ([]db.UserIntervalsOutput, error) {
-	var intervals []db.UserIntervalsOutput
+func (u *UserDB) GetUserIntervals() ([]types.UserIntervalsOutput, error) {
+	var intervals []types.UserIntervalsOutput
 	res := u.DB.Model(&models.User{}).Find(&intervals)
 	return intervals, res.Error
 }
 
 // true if user exists, false if they don't exist
-func (u *userDB) CheckIfUserExistsByUsernameAndEmail(username string, email string) (bool, error) {
+func (u *UserDB) CheckIfUserExistsByUsernameAndEmail(username string, email string) (bool, error) {
 	var foundUsers int64
 	res := u.DB.Model(&models.User{}).
 		Where("username = ? OR email = ?", username, email).Count(&foundUsers)
@@ -46,7 +40,7 @@ func (u *userDB) CheckIfUserExistsByUsernameAndEmail(username string, email stri
 	}
 	return false, nil
 }
-func (u *userDB) CheckIfUserExistsByUsername(username string) (bool, error) {
+func (u *UserDB) CheckIfUserExistsByUsername(username string) (bool, error) {
 	var userFound int64
 
 	res := u.DB.Where("username=?", username).Count(&userFound)
@@ -60,16 +54,16 @@ func (u *userDB) CheckIfUserExistsByUsername(username string) (bool, error) {
 	return true, nil
 }
 
-func (u *userDB) CreateUser(user *models.User) error {
+func (u *UserDB) CreateUser(user *models.User) error {
 	res := u.DB.Create(user)
 	return res.Error
 }
-func (u *userDB) GetUserByUsername(username string) (*models.User, error) {
+func (u *UserDB) GetUserByUsername(username string) (*models.User, error) {
 	var userFound models.User
 	res := u.DB.Where("username = ?", username).Find(&userFound)
 	return &userFound, res.Error
 }
-func (u *userDB) SaveUserData(user *models.User) error {
+func (u *UserDB) SaveUserData(user *models.User) error {
 	res := u.DB.Save(user)
 	return res.Error
 }
