@@ -54,8 +54,9 @@ func main() {
 			log.Print(res.Error)
 		}
 	*/
+
 	r := gin.Default()
-	userHandler := handlers.NewUserHandler(dbconn, dbHandler)
+	userHandler := handlers.UserHandler{}
 	authHandler := middlewares.NewAuthHandler(dbconn)
 	groupHandler := handlers.NewGroupHandler(dbHandler)
 	messageHandler := handlers.NewMessageHandler(dbHandler)

@@ -13,16 +13,10 @@ import (
 	argon2id "github.com/gragorther/epigo/hash"
 	"github.com/gragorther/epigo/models"
 	"github.com/gragorther/epigo/util"
-	"gorm.io/gorm"
 )
 
 type UserHandler struct {
-	DB *gorm.DB
-	db *db.DBHandler
-}
-
-func NewUserHandler(DB *gorm.DB, db *db.DBHandler) *UserHandler {
-	return &UserHandler{DB: DB, db: db}
+	u db.Users
 }
 
 type RegistrationInput struct {
@@ -49,18 +43,14 @@ func (h *UserHandler) RegisterUser(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": apperrors.ErrInvalidEmail.Error})
 	}
 
-	var foundUsers int64
-	res := h.DB.Model(&models.User{}).
-		Where("username = ? OR email = ?", authInput.Username, authInput.Email).Count(&foundUsers)
+	userExists, userExistsErr := h.u.CheckIfUserExistsByUsernameAndEmail(authInput.Username, authInput.Email)
 
-	if res.Error != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": apperrors.ErrServerError.Error()})
-		log.Printf("Couldn't check if user exists: %v", res.Error)
+	if userExistsErr != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to check if the user already exists"})
 		return
 	}
-
-	if foundUsers > 0 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "User already exists"})
+	if userExists {
+		c.JSON(http.StatusConflict, gin.H{"error": "user already exists"})
 		return
 	}
 
@@ -77,7 +67,11 @@ func (h *UserHandler) RegisterUser(c *gin.Context) {
 		Name:         authInput.Name,
 	}
 
-	h.DB.Create(&user)
+	if err := h.u.CreateUser(&user); err != nil {
+		log.Printf("failed to create user: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create user"})
+		return
+	}
 
 	c.JSON(http.StatusOK, authInput)
 
@@ -89,11 +83,19 @@ func (h *UserHandler) LoginUser(c *gin.Context) {
 		return
 	}
 
-	var userFound models.User
-	h.DB.Where("username=?", authInput.Username).Find(&userFound)
-
-	if userFound.ID == 0 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "user not found"})
+	userExists, err := h.u.CheckIfUserExistsByUsername(authInput.Username)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "couldn't check if user exists"})
+		return
+	}
+	if !userExists {
+		c.JSON(http.StatusNotFound, gin.H{"error": apperrors.ErrNotFound.Error()})
+		return
+	}
+	userFound, err := h.u.GetUserByUsername(authInput.Username)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "couldn't fetch user"})
+		log.Printf("Couldn't fetch user: %v", err)
 		return
 	}
 	match, err := argon2id.ComparePasswordAndHash(authInput.Password, userFound.PasswordHash) //check hash
@@ -120,7 +122,11 @@ func (h *UserHandler) LoginUser(c *gin.Context) {
 	}
 	currentTime := time.Now()
 	userFound.LastLogin = &currentTime
-	h.DB.Save(&userFound)
+	if err := h.u.SaveUserData(userFound); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": apperrors.ErrServerError.Error()})
+		log.Printf("failed to save user lastLogin: %v", err)
+		return
+	}
 	c.JSON(200, gin.H{
 		"token": token,
 	})
@@ -162,7 +168,7 @@ func (h *UserHandler) SetEmailInterval(c *gin.Context) {
 		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": apperrors.ErrParsingFailed.Error()})
 		return
 	}
-	err = h.db.UpdateUserInterval(user.ID, input.Cron)
+	err = h.u.UpdateUserInterval(user.ID, input.Cron)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		log.Printf("failed to set email interval: %v", err)
