@@ -12,8 +12,8 @@ import (
 )
 
 type MessageHandler struct {
-	m db.Messages
-	a db.Auth
+	M db.Messages
+	A db.Auth
 }
 
 type messageInput struct {
@@ -32,7 +32,7 @@ func (h *MessageHandler) AddLastMessage(c *gin.Context) {
 		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": apperrors.ErrParsingFailed.Error()})
 		return
 	}
-	authorized, err := h.a.CheckUserAuthorizationForGroup(input.GroupIDs, user.ID)
+	authorized, err := h.A.CheckUserAuthorizationForGroup(input.GroupIDs, user.ID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -55,7 +55,7 @@ func (h *MessageHandler) AddLastMessage(c *gin.Context) {
 		UserID:  user.ID,
 	}
 
-	err = h.m.CreateLastMessage(&newLastMessage)
+	err = h.M.CreateLastMessage(&newLastMessage)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": apperrors.ErrServerError.Error()})
 		return
@@ -67,7 +67,7 @@ func (h *MessageHandler) ListLastMessages(c *gin.Context) {
 
 	user := currentUser.(models.User)
 
-	lastMessages, err := h.m.FindLastMessagesByUserID(user.ID)
+	lastMessages, err := h.M.FindLastMessagesByUserID(user.ID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -92,7 +92,7 @@ func (h *MessageHandler) EditLastMessage(c *gin.Context) {
 		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": apperrors.ErrParsingFailed.Error()})
 		return
 	}
-	authorized, autherr := h.a.CheckUserAuthorizationForLastMessage(uint(id), user.ID)
+	authorized, autherr := h.A.CheckUserAuthorizationForLastMessage(uint(id), user.ID)
 	if autherr != nil {
 		c.JSON(http.StatusInternalServerError, apperrors.ErrServerError.Error())
 		return
@@ -100,7 +100,7 @@ func (h *MessageHandler) EditLastMessage(c *gin.Context) {
 	if !authorized {
 		c.JSON(http.StatusUnauthorized, apperrors.ErrUnauthorized.Error())
 	}
-	authorizedToAddGroups, groupsAuthErr := h.a.CheckUserAuthorizationForGroup(input.GroupIDs, user.ID)
+	authorizedToAddGroups, groupsAuthErr := h.A.CheckUserAuthorizationForGroup(input.GroupIDs, user.ID)
 	if groupsAuthErr != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": apperrors.ErrServerError.Error()})
 		return
@@ -120,7 +120,7 @@ func (h *MessageHandler) EditLastMessage(c *gin.Context) {
 		Content: input.Content,
 		Groups:  groups,
 	}
-	err = h.m.UpdateLastMessage(&editedMessage)
+	err = h.M.UpdateLastMessage(&editedMessage)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -136,7 +136,7 @@ func (h *MessageHandler) DeleteLastMessage(c *gin.Context) {
 	}
 	currentUser, _ := c.Get("currentUser")
 	user := currentUser.(models.User)
-	authorized, authErr := h.a.CheckUserAuthorizationForLastMessage(uint(lastMessageID), user.ID)
+	authorized, authErr := h.A.CheckUserAuthorizationForLastMessage(uint(lastMessageID), user.ID)
 	if authErr != nil {
 		c.JSON(http.StatusInternalServerError, apperrors.ErrAuthCheckFailed.Error())
 		return
@@ -145,7 +145,7 @@ func (h *MessageHandler) DeleteLastMessage(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": apperrors.ErrUnauthorized.Error()})
 		return
 	}
-	err = h.m.DeleteLastMessageByID(uint(lastMessageID))
+	err = h.M.DeleteLastMessageByID(uint(lastMessageID))
 
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})

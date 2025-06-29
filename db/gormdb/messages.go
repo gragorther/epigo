@@ -1,4 +1,4 @@
-package db
+package gormdb
 
 import (
 	"github.com/gragorther/epigo/models"

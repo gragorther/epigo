@@ -16,7 +16,7 @@ import (
 )
 
 type UserHandler struct {
-	u db.Users
+	U db.Users
 }
 
 type RegistrationInput struct {
@@ -43,7 +43,7 @@ func (h *UserHandler) RegisterUser(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": apperrors.ErrInvalidEmail.Error})
 	}
 
-	userExists, userExistsErr := h.u.CheckIfUserExistsByUsernameAndEmail(authInput.Username, authInput.Email)
+	userExists, userExistsErr := h.U.CheckIfUserExistsByUsernameAndEmail(authInput.Username, authInput.Email)
 
 	if userExistsErr != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to check if the user already exists"})
@@ -67,7 +67,7 @@ func (h *UserHandler) RegisterUser(c *gin.Context) {
 		Name:         authInput.Name,
 	}
 
-	if err := h.u.CreateUser(&user); err != nil {
+	if err := h.U.CreateUser(&user); err != nil {
 		log.Printf("failed to create user: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create user"})
 		return
@@ -83,16 +83,17 @@ func (h *UserHandler) LoginUser(c *gin.Context) {
 		return
 	}
 
-	userExists, err := h.u.CheckIfUserExistsByUsername(authInput.Username)
+	userExists, err := h.U.CheckIfUserExistsByUsername(authInput.Username)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "couldn't check if user exists"})
+		log.Print(err)
 		return
 	}
 	if !userExists {
 		c.JSON(http.StatusNotFound, gin.H{"error": apperrors.ErrNotFound.Error()})
 		return
 	}
-	userFound, err := h.u.GetUserByUsername(authInput.Username)
+	userFound, err := h.U.GetUserByUsername(authInput.Username)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "couldn't fetch user"})
 		log.Printf("Couldn't fetch user: %v", err)
@@ -122,7 +123,7 @@ func (h *UserHandler) LoginUser(c *gin.Context) {
 	}
 	currentTime := time.Now()
 	userFound.LastLogin = &currentTime
-	if err := h.u.SaveUserData(userFound); err != nil {
+	if err := h.U.SaveUserData(userFound); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": apperrors.ErrServerError.Error()})
 		log.Printf("failed to save user lastLogin: %v", err)
 		return
@@ -168,7 +169,7 @@ func (h *UserHandler) SetEmailInterval(c *gin.Context) {
 		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": apperrors.ErrParsingFailed.Error()})
 		return
 	}
-	err = h.u.UpdateUserInterval(user.ID, input.Cron)
+	err = h.U.UpdateUserInterval(user.ID, input.Cron)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		log.Printf("failed to set email interval: %v", err)

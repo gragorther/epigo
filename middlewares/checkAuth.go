@@ -8,22 +8,17 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gragorther/epigo/models"
-	"gorm.io/gorm"
+	"github.com/gragorther/epigo/db"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 )
 
-type AuthHandler struct {
-	DB *gorm.DB
+type AuthMiddleware struct {
+	U db.Users
 }
 
-func NewAuthHandler(db *gorm.DB) *AuthHandler {
-	return &AuthHandler{DB: db}
-}
-
-func (h *AuthHandler) CheckAuth(c *gin.Context) {
+func (h *AuthMiddleware) CheckAuth(c *gin.Context) {
 
 	authHeader := c.GetHeader("Authorization")
 
@@ -66,9 +61,21 @@ func (h *AuthHandler) CheckAuth(c *gin.Context) {
 		c.AbortWithStatus(http.StatusUnauthorized)
 		return
 	}
+	claimsUserID, claimsBool := claims["id"].(uint)
 
-	var user models.User
-	h.DB.Where("ID=?", claims["id"]).Find(&user)
+	//checks if type assertion failed
+	if !claimsBool {
+		log.Print("type assertion failed during authorization")
+		c.AbortWithStatus(http.StatusUnauthorized)
+		return
+	}
+
+	user, err := h.U.GetUserByID(claimsUserID)
+	if err != nil {
+		log.Print("failed to get user by ID during auth")
+		c.AbortWithStatus(http.StatusUnauthorized)
+		return
+	}
 
 	if user.ID == 0 {
 		c.AbortWithStatus(http.StatusUnauthorized)

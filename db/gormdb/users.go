@@ -1,4 +1,4 @@
-package db
+package gormdb
 
 import (
 	"log"
@@ -43,7 +43,7 @@ func (u *UserDB) CheckIfUserExistsByUsernameAndEmail(username string, email stri
 func (u *UserDB) CheckIfUserExistsByUsername(username string) (bool, error) {
 	var userFound int64
 
-	res := u.DB.Where("username=?", username).Count(&userFound)
+	res := u.DB.Model(&models.User{}).Where("username=?", username).Count(&userFound)
 	if res.Error != nil {
 		return false, res.Error
 	}
@@ -60,8 +60,27 @@ func (u *UserDB) CreateUser(user *models.User) error {
 }
 func (u *UserDB) GetUserByUsername(username string) (*models.User, error) {
 	var userFound models.User
-	res := u.DB.Where("username = ?", username).Find(&userFound)
+	res := u.DB.Model(&models.User{}).Where("username = ?", username).Find(&userFound)
 	return &userFound, res.Error
+}
+
+func (u *UserDB) CheckIfUserExistsByID(ID uint) (bool, error) {
+	var userFound int64
+
+	res := u.DB.Model(&models.User{}).Where("id=?", ID).Count(&userFound)
+	if res.Error != nil {
+		return false, res.Error
+	}
+
+	if userFound == 0 {
+		return false, nil
+	}
+	return true, nil
+}
+func (u *UserDB) GetUserByID(ID uint) (*models.User, error) {
+	var user models.User
+	res := u.DB.Model(&models.User{}).Where("id = ?", ID).Find(&user)
+	return &user, res.Error
 }
 func (u *UserDB) SaveUserData(user *models.User) error {
 	res := u.DB.Save(user)

@@ -19,8 +19,8 @@ type groupInput struct {
 }
 
 type GroupHandler struct {
-	g db.Groups //group part of the db
-	a db.Auth   //auth
+	G db.Groups //group part of the db
+	A db.Auth   //auth
 }
 
 func (h *GroupHandler) AddGroup(c *gin.Context) {
@@ -52,7 +52,7 @@ func (h *GroupHandler) AddGroup(c *gin.Context) {
 			Email:   e,
 		})
 	}
-	err := h.g.CreateGroupAndRecipientEmails(&sendToGroup, &newRecipientEmails)
+	err := h.G.CreateGroupAndRecipientEmails(&sendToGroup, &newRecipientEmails)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": apperrors.ErrServerError.Error()})
 		return
@@ -68,7 +68,7 @@ func (h *GroupHandler) DeleteGroup(c *gin.Context) {
 		return
 	}
 	user := currentUser.(models.User)
-	authorized, err := h.a.CheckUserAuthorizationForGroup([]uint{uint(id)}, user.ID)
+	authorized, err := h.A.CheckUserAuthorizationForGroup([]uint{uint(id)}, user.ID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": apperrors.ErrAuthCheckFailed.Error()})
 		return
@@ -78,7 +78,7 @@ func (h *GroupHandler) DeleteGroup(c *gin.Context) {
 		return
 	}
 
-	err = h.g.DeleteGroupByID(uint(id))
+	err = h.G.DeleteGroupByID(uint(id))
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -95,7 +95,7 @@ func (h *GroupHandler) ListGroups(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": apperrors.ErrTypeConversionFailed.Error()})
 		return
 	}
-	groups, err := h.g.FindGroupsAndRecipientEmailsByUserID(user.ID) // gets the list of groups a user has via the association "Groups" on the User model
+	groups, err := h.G.FindGroupsAndRecipientEmailsByUserID(user.ID) // gets the list of groups a user has via the association "Groups" on the User model
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -132,7 +132,7 @@ func (h *GroupHandler) EditGroup(c *gin.Context) {
 		return
 	}
 
-	authorized, err := h.a.CheckUserAuthorizationForGroup([]uint{uint(id)}, user.ID)
+	authorized, err := h.A.CheckUserAuthorizationForGroup([]uint{uint(id)}, user.ID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": apperrors.ErrAuthCheckFailed.Error()})
 		return
@@ -156,7 +156,7 @@ func (h *GroupHandler) EditGroup(c *gin.Context) {
 	group.Name = input.Name
 	group.Description = input.Description
 	group.ID = uint(id)
-	err = h.g.UpdateGroup(&group, &recipientEmails)
+	err = h.G.UpdateGroup(&group, &recipientEmails)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 	}

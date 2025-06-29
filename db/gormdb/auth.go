@@ -1,15 +1,15 @@
-package db
+package gormdb
 
 import (
 	"github.com/gragorther/epigo/models"
 	"gorm.io/gorm"
 )
 
-type authDB struct {
+type AuthDB struct {
 	DB *gorm.DB
 }
 
-func (a *authDB) CheckUserAuthorizationForGroup(groupIDs []uint, userID uint) (bool, error) {
+func (a *AuthDB) CheckUserAuthorizationForGroup(groupIDs []uint, userID uint) (bool, error) {
 	var authorizedGroups int64
 	if err := a.DB.Model(&models.Group{}).Where("user_id = ?", userID).
 		Where("id IN ?", groupIDs).
@@ -22,7 +22,7 @@ func (a *authDB) CheckUserAuthorizationForGroup(groupIDs []uint, userID uint) (b
 	}
 	return true, nil
 }
-func (a *authDB) CheckUserAuthorizationForLastMessage(messageID uint, userID uint) (bool, error) {
+func (a *AuthDB) CheckUserAuthorizationForLastMessage(messageID uint, userID uint) (bool, error) {
 	var authorizedCount int64
 	res := a.DB.Model(&models.LastMessage{}).Where("id = ?", messageID).Where("user_id = ?", userID).Count(&authorizedCount)
 	if authorizedCount != 1 {

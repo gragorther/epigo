@@ -54,12 +54,12 @@ func main() {
 			log.Print(res.Error)
 		}
 	*/
-
 	r := gin.Default()
-	userHandler := dbHandler.Users
-	authHandler := middlewares.NewAuthHandler(dbconn)
-	groupHandler := handlers.GroupHandler{}
-	messageHandler := handlers.MessageHandler{}
+	userHandler := handlers.UserHandler{U: dbHandler.Users}
+	authHandler := middlewares.AuthMiddleware{U: dbHandler.Users}
+	groupHandler := handlers.GroupHandler{G: dbHandler.Groups, A: dbHandler.Auth}
+	messageHandler := handlers.MessageHandler{A: dbHandler.Auth, M: dbHandler.Messages}
+
 	// user stuff
 	r.POST("/user/register", userHandler.RegisterUser)
 	r.POST("/user/login", userHandler.LoginUser)

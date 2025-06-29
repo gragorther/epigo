@@ -13,4 +13,6 @@ type Users interface {
 	CreateUser(*models.User) error
 	GetUserByUsername(username string) (*models.User, error)
 	SaveUserData(*models.User) error
+	CheckIfUserExistsByID(ID uint) (bool, error)
+	GetUserByID(ID uint) (*models.User, error)
 }
