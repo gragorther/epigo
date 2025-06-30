@@ -15,7 +15,9 @@ type GroupDB struct {
 
 func (g *GroupDB) DeleteGroupByID(id uint) error {
 	err := g.DB.Transaction(func(tx *gorm.DB) error {
-		res := tx.Delete(&models.Group{}, id)
+		//res := tx.Delete(&models.Group{}, id)
+		group := models.Group{ID: id}
+		res := tx.Select("RecipientEmails").Delete(&group)
 		return res.Error
 	})
 	return err

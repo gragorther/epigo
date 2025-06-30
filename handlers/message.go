@@ -24,7 +24,7 @@ type messageInput struct {
 
 func (h *MessageHandler) AddLastMessage(c *gin.Context) {
 	currentUser, _ := c.Get("currentUser")
-	user := currentUser.(models.User)
+	user := currentUser.(*models.User)
 	var input messageInput
 
 	err := c.ShouldBindJSON(&input)
@@ -65,7 +65,7 @@ func (h *MessageHandler) AddLastMessage(c *gin.Context) {
 func (h *MessageHandler) ListLastMessages(c *gin.Context) {
 	currentUser, _ := c.Get("currentUser")
 
-	user := currentUser.(models.User)
+	user := currentUser.(*models.User)
 
 	lastMessages, err := h.M.FindLastMessagesByUserID(user.ID)
 	if err != nil {
@@ -85,7 +85,7 @@ func (h *MessageHandler) EditLastMessage(c *gin.Context) {
 		return
 	}
 
-	user := currentUser.(models.User)
+	user := currentUser.(*models.User)
 	var input messageInput
 	err = c.ShouldBindJSON(&input)
 	if err != nil {
@@ -135,7 +135,7 @@ func (h *MessageHandler) DeleteLastMessage(c *gin.Context) {
 		return
 	}
 	currentUser, _ := c.Get("currentUser")
-	user := currentUser.(models.User)
+	user := currentUser.(*models.User)
 	authorized, authErr := h.A.CheckUserAuthorizationForLastMessage(uint(lastMessageID), user.ID)
 	if authErr != nil {
 		c.JSON(http.StatusInternalServerError, apperrors.ErrAuthCheckFailed.Error())

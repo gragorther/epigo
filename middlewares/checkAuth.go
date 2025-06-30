@@ -61,16 +61,8 @@ func (h *AuthMiddleware) CheckAuth(c *gin.Context) {
 		c.AbortWithStatus(http.StatusUnauthorized)
 		return
 	}
-	claimsUserID, claimsBool := claims["id"].(uint)
 
-	//checks if type assertion failed
-	if !claimsBool {
-		log.Print("type assertion failed during authorization")
-		c.AbortWithStatus(http.StatusUnauthorized)
-		return
-	}
-
-	user, err := h.U.GetUserByID(claimsUserID)
+	user, err := h.U.GetUserByID(uint(claims["id"].(float64)))
 	if err != nil {
 		log.Print("failed to get user by ID during auth")
 		c.AbortWithStatus(http.StatusUnauthorized)

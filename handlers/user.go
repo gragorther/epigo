@@ -142,7 +142,7 @@ func (h *UserHandler) GetUserProfile(c *gin.Context) {
 	}
 
 	// Type assertion to convert the interface{} to models.User
-	user, ok := userValue.(models.User)
+	user, ok := userValue.(*models.User)
 	if !ok {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": apperrors.ErrTypeConversionFailed.Error()})
 		return
@@ -162,7 +162,7 @@ type setEmailIntervalInput struct {
 
 func (h *UserHandler) SetEmailInterval(c *gin.Context) {
 	currentUser, _ := c.Get("currentUser")
-	user := currentUser.(models.User)
+	user := currentUser.(*models.User)
 	var input setEmailIntervalInput
 	err := c.ShouldBindJSON(&input)
 	if err != nil {

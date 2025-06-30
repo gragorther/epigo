@@ -25,8 +25,7 @@ type GroupHandler struct {
 
 func (h *GroupHandler) AddGroup(c *gin.Context) {
 	currentUser, _ := c.Get("currentUser")
-
-	user, ok := currentUser.(models.User)
+	user, ok := currentUser.(*models.User)
 	if !ok {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": apperrors.ErrTypeConversionFailed.Error()})
 		return
@@ -67,7 +66,7 @@ func (h *GroupHandler) DeleteGroup(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": apperrors.ErrNotFound.Error()})
 		return
 	}
-	user := currentUser.(models.User)
+	user := currentUser.(*models.User)
 	authorized, err := h.A.CheckUserAuthorizationForGroup([]uint{uint(id)}, user.ID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": apperrors.ErrAuthCheckFailed.Error()})
@@ -90,7 +89,7 @@ func (h *GroupHandler) DeleteGroup(c *gin.Context) {
 func (h *GroupHandler) ListGroups(c *gin.Context) {
 	currentUser, _ := c.Get("currentUser")
 
-	user, ok := currentUser.(models.User)
+	user, ok := currentUser.(*models.User)
 	if !ok {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": apperrors.ErrTypeConversionFailed.Error()})
 		return
@@ -118,7 +117,7 @@ type editGroupInput struct {
 func (h *GroupHandler) EditGroup(c *gin.Context) {
 	currentUser, _ := c.Get("currentUser")
 
-	user := currentUser.(models.User)
+	user := currentUser.(*models.User)
 
 	var input editGroupInput
 	err := c.ShouldBindJSON(&input)
