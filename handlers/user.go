@@ -35,28 +35,29 @@ func (h *UserHandler) RegisterUser(c *gin.Context) {
 	var authInput RegistrationInput
 
 	if err := c.ShouldBindJSON(&authInput); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.AbortWithError(http.StatusUnprocessableEntity, apperrors.ErrParsingFailed)
 		return
 	}
 	validEmail := util.ValidateEmail(authInput.Email)
 	if !validEmail {
-		c.JSON(http.StatusBadRequest, gin.H{"error": apperrors.ErrInvalidEmail.Error})
+		c.AbortWithError(http.StatusBadRequest, apperrors.ErrInvalidEmail)
+		return
 	}
 
 	userExists, userExistsErr := h.U.CheckIfUserExistsByUsernameAndEmail(authInput.Username, authInput.Email)
 
 	if userExistsErr != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to check if the user already exists"})
+		c.AbortWithError(http.StatusInternalServerError, apperrors.ErrDatabaseFetchFailed)
 		return
 	}
 	if userExists {
-		c.JSON(http.StatusConflict, gin.H{"error": "user already exists"})
+		c.AbortWithError(http.StatusConflict, apperrors.ErrUserAlreadyExists)
 		return
 	}
 
 	passwordHash, err := argon2id.CreateHash(authInput.Password, argon2id.DefaultParams)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.AbortWithError(http.StatusInternalServerError, apperrors.ErrHashingFailed)
 		return
 	}
 
@@ -69,7 +70,7 @@ func (h *UserHandler) RegisterUser(c *gin.Context) {
 
 	if err := h.U.CreateUser(&user); err != nil {
 		log.Printf("failed to create user: %v", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create user"})
+		c.AbortWithError(http.StatusInternalServerError, apperrors.ErrCreationOfObjectFailed)
 		return
 	}
 
@@ -79,35 +80,35 @@ func (h *UserHandler) RegisterUser(c *gin.Context) {
 func (h *UserHandler) LoginUser(c *gin.Context) {
 	var authInput LoginInput
 	if err := c.ShouldBindJSON(&authInput); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.AbortWithError(http.StatusUnprocessableEntity, apperrors.ErrParsingFailed)
 		return
 	}
 
 	userExists, err := h.U.CheckIfUserExistsByUsername(authInput.Username)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "couldn't check if user exists"})
+		c.AbortWithError(http.StatusInternalServerError, apperrors.ErrUserNotFound)
 		log.Print(err)
 		return
 	}
 	if !userExists {
-		c.JSON(http.StatusNotFound, gin.H{"error": apperrors.ErrNotFound.Error()})
+		c.AbortWithError(http.StatusNotFound, apperrors.ErrUserNotFound)
 		return
 	}
 	userFound, err := h.U.GetUserByUsername(authInput.Username)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "couldn't fetch user"})
+		c.AbortWithError(http.StatusNotFound, apperrors.ErrUserNotFound)
 		log.Printf("Couldn't fetch user: %v", err)
 		return
 	}
 	match, err := argon2id.ComparePasswordAndHash(authInput.Password, userFound.PasswordHash) //check hash
 	if err != nil {
 		log.Printf("Password hash checking error: %v", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error during password hash verification"})
+		c.AbortWithError(http.StatusInternalServerError, apperrors.ErrHashCheckFailed)
 		return
 	}
 
 	if !match {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid password"})
+		c.AbortWithError(http.StatusUnauthorized, apperrors.ErrInvalidPassword)
 		return
 	}
 
@@ -118,13 +119,13 @@ func (h *UserHandler) LoginUser(c *gin.Context) {
 
 	token, err := generateToken.SignedString([]byte(os.Getenv("JWT_SECRET")))
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "failed to generate JWT token"})
+		c.AbortWithError(http.StatusInternalServerError, apperrors.ErrJWTCreationError)
 		return
 	}
 	currentTime := time.Now()
 	userFound.LastLogin = &currentTime
 	if err := h.U.SaveUserData(userFound); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": apperrors.ErrServerError.Error()})
+		c.Error(apperrors.ErrCreationOfObjectFailed)
 		log.Printf("failed to save user lastLogin: %v", err)
 		return
 	}
@@ -135,16 +136,12 @@ func (h *UserHandler) LoginUser(c *gin.Context) {
 }
 func (h *UserHandler) GetUserProfile(c *gin.Context) {
 	// Retrieve the user object from the context
-	userValue, exists := c.Get("currentUser")
-	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
-		return
-	}
+	userValue, _ := c.Get("currentUser")
 
 	// Type assertion to convert the interface{} to models.User
 	user, ok := userValue.(*models.User)
 	if !ok {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": apperrors.ErrTypeConversionFailed.Error()})
+		c.AbortWithError(http.StatusInternalServerError, apperrors.ErrTypeConversionFailed)
 		return
 	}
 
@@ -166,12 +163,12 @@ func (h *UserHandler) SetEmailInterval(c *gin.Context) {
 	var input setEmailIntervalInput
 	err := c.ShouldBindJSON(&input)
 	if err != nil {
-		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": apperrors.ErrParsingFailed.Error()})
+		c.AbortWithError(http.StatusUnprocessableEntity, apperrors.ErrParsingFailed)
 		return
 	}
 	err = h.U.UpdateUserInterval(user.ID, input.Cron)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.AbortWithError(http.StatusInternalServerError, apperrors.ErrCreationOfObjectFailed)
 		log.Printf("failed to set email interval: %v", err)
 		return
 	}

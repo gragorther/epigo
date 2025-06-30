@@ -15,4 +15,7 @@ type Users interface {
 	SaveUserData(*models.User) error
 	CheckIfUserExistsByID(ID uint) (bool, error)
 	GetUserByID(ID uint) (*models.User, error)
+	DeleteUser(ID uint) error
+	EditUser(*models.User) error
+	DeleteUserAndAllAssociations(ID uint) error
 }

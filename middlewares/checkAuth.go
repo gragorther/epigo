@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/gragorther/epigo/apperrors"
 	"github.com/gragorther/epigo/db"
 
 	"github.com/gin-gonic/gin"
@@ -23,15 +24,13 @@ func (h *AuthMiddleware) CheckAuth(c *gin.Context) {
 	authHeader := c.GetHeader("Authorization")
 
 	if authHeader == "" {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Authorization header is missing"})
-		c.AbortWithStatus(http.StatusUnauthorized)
+		c.AbortWithError(http.StatusUnauthorized, apperrors.ErrMissingAuthHeader)
 		return
 	}
 
 	authToken := strings.Split(authHeader, " ")
 	if len(authToken) != 2 || authToken[0] != "Bearer" {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token format"})
-		c.AbortWithStatus(http.StatusUnauthorized)
+		c.AbortWithError(http.StatusUnauthorized, apperrors.ErrInvalidAuthTokenFormat)
 		return
 	}
 
@@ -44,28 +43,25 @@ func (h *AuthMiddleware) CheckAuth(c *gin.Context) {
 	})
 	if err != nil || !token.Valid {
 		log.Printf("Token error: %v", err)
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid or expired token"})
-		c.AbortWithStatus(http.StatusUnauthorized)
+		c.AbortWithError(http.StatusUnauthorized, apperrors.ErrInvalidToken)
 		return
 	}
 
 	claims, ok := token.Claims.(jwt.MapClaims)
 	if !ok {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token"})
-		c.Abort()
+		c.AbortWithError(http.StatusUnauthorized, apperrors.ErrInvalidAuthTokenFormat)
 		return
 	}
 
 	if float64(time.Now().Unix()) > claims["exp"].(float64) {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "token expired"})
-		c.AbortWithStatus(http.StatusUnauthorized)
+		c.AbortWithError(http.StatusUnauthorized, apperrors.ErrExpiredToken)
 		return
 	}
 
 	user, err := h.U.GetUserByID(uint(claims["id"].(float64)))
 	if err != nil {
 		log.Print("failed to get user by ID during auth")
-		c.AbortWithStatus(http.StatusUnauthorized)
+		c.AbortWithError(http.StatusUnauthorized, apperrors.ErrFailedToGetUserID)
 		return
 	}
 

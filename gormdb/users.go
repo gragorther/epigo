@@ -6,6 +6,7 @@ import (
 	"github.com/gragorther/epigo/models"
 	"github.com/gragorther/epigo/types"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 type UserDB struct {
@@ -79,10 +80,25 @@ func (u *UserDB) CheckIfUserExistsByID(ID uint) (bool, error) {
 }
 func (u *UserDB) GetUserByID(ID uint) (*models.User, error) {
 	var user models.User
-	res := u.DB.Model(&models.User{}).Where("id = ?", ID).Find(&user)
+	res := u.DB.Model(&models.User{ID: ID}).Find(&user)
 	return &user, res.Error
 }
 func (u *UserDB) SaveUserData(user *models.User) error {
 	res := u.DB.Save(user)
+	return res.Error
+}
+
+func (u *UserDB) DeleteUser(ID uint) error {
+	res := u.DB.Delete(&models.User{}, ID)
+	return res.Error
+}
+
+func (u *UserDB) EditUser(user *models.User) error {
+	res := u.DB.Model(&models.User{ID: user.ID}).Updates(user)
+	return res.Error
+}
+
+func (u *UserDB) DeleteUserAndAllAssociations(ID uint) error {
+	res := u.DB.Select(clause.Associations).Delete(&models.User{ID: ID})
 	return res.Error
 }

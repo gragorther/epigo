@@ -11,13 +11,24 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/gragorther/epigo/db"
+	"github.com/gragorther/epigo/gormdb"
 	"github.com/gragorther/epigo/handlers"
 	"github.com/gragorther/epigo/initializers"
 	"github.com/gragorther/epigo/middlewares"
 	"github.com/gragorther/epigo/models"
 	"github.com/gragorther/epigo/scheduler"
 	"github.com/gragorther/epigo/workers"
+	"gorm.io/gorm"
 )
+
+func NewDBHandler(conn *gorm.DB) *db.DBHandler {
+	return &db.DBHandler{
+		Users:    &gormdb.UserDB{DB: conn},
+		Auth:     &gormdb.AuthDB{DB: conn},
+		Groups:   &gormdb.GroupDB{DB: conn},
+		Messages: &gormdb.MessageDB{DB: conn},
+	}
+}
 
 func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
@@ -37,7 +48,7 @@ func main() {
 		log.Fatalf("Database migration failed: %v", err)
 	}
 
-	dbHandler := db.NewDBHandler(dbconn)
+	dbHandler := NewDBHandler(dbconn)
 	redisAddr := os.Getenv("REDIS_ADDRESS")
 	go workers.Run(redisAddr)
 	go scheduler.Run(dbHandler.Users, redisAddr)
@@ -55,6 +66,8 @@ func main() {
 		}
 	*/
 	r := gin.Default()
+	r.Use(middlewares.ErrorHandler())
+
 	userHandler := handlers.UserHandler{U: dbHandler.Users}
 	authHandler := middlewares.AuthMiddleware{U: dbHandler.Users}
 	groupHandler := handlers.GroupHandler{G: dbHandler.Groups, A: dbHandler.Auth}
