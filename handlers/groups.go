@@ -7,8 +7,8 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/gragorther/epigo/apperrors"
 	"github.com/gragorther/epigo/db"
+	"github.com/gragorther/epigo/email"
 	"github.com/gragorther/epigo/models"
-	"github.com/gragorther/epigo/util"
 )
 
 type groupInput struct {
@@ -18,8 +18,12 @@ type groupInput struct {
 }
 
 type GroupHandler struct {
-	G db.Groups //group part of the db
-	A db.Auth   //auth
+	g db.Groups //group part of the db
+	a db.Auth   //auth
+}
+
+func NewGroupHandler(g db.Groups, a db.Auth) *GroupHandler {
+	return &GroupHandler{g: g, a: a}
 }
 
 func (h *GroupHandler) AddGroup(c *gin.Context) {
@@ -42,7 +46,7 @@ func (h *GroupHandler) AddGroup(c *gin.Context) {
 	}
 	var newRecipientEmails []models.RecipientEmail
 	for _, e := range input.RecipientEmails {
-		if !util.ValidateEmail(e) {
+		if !email.Validate(e) {
 			c.Error(apperrors.ErrInvalidEmail)
 			return
 		}
@@ -51,7 +55,7 @@ func (h *GroupHandler) AddGroup(c *gin.Context) {
 			Email:   e,
 		})
 	}
-	err := h.G.CreateGroupAndRecipientEmails(&sendToGroup, &newRecipientEmails)
+	err := h.g.CreateGroupAndRecipientEmails(&sendToGroup, &newRecipientEmails)
 	if err != nil {
 		c.AbortWithError(http.StatusInternalServerError, apperrors.ErrCreationOfObjectFailed)
 		return
@@ -67,7 +71,7 @@ func (h *GroupHandler) DeleteGroup(c *gin.Context) {
 		return
 	}
 	user := currentUser.(*models.User)
-	authorized, err := h.A.CheckUserAuthorizationForGroup([]uint{uint(id)}, user.ID)
+	authorized, err := h.a.CheckUserAuthorizationForGroup([]uint{uint(id)}, user.ID)
 	if err != nil {
 		c.AbortWithError(http.StatusUnauthorized, apperrors.ErrAuthCheckFailed)
 		return
@@ -77,7 +81,7 @@ func (h *GroupHandler) DeleteGroup(c *gin.Context) {
 		return
 	}
 
-	err = h.G.DeleteGroupByID(uint(id))
+	err = h.g.DeleteGroupByID(uint(id))
 	if err != nil {
 		c.AbortWithError(http.StatusInternalServerError, apperrors.ErrCreationOfObjectFailed)
 		return
@@ -94,7 +98,7 @@ func (h *GroupHandler) ListGroups(c *gin.Context) {
 		c.AbortWithError(http.StatusInternalServerError, apperrors.ErrTypeConversionFailed)
 		return
 	}
-	groups, err := h.G.FindGroupsAndRecipientEmailsByUserID(user.ID) // gets the list of groups a user has via the association "Groups" on the User model
+	groups, err := h.g.FindGroupsAndRecipientEmailsByUserID(user.ID) // gets the list of groups a user has via the association "Groups" on the User model
 	if err != nil {
 		c.AbortWithError(http.StatusInternalServerError, apperrors.ErrDatabaseFetchFailed)
 		return
@@ -131,7 +135,7 @@ func (h *GroupHandler) EditGroup(c *gin.Context) {
 		return
 	}
 
-	authorized, err := h.A.CheckUserAuthorizationForGroup([]uint{uint(id)}, user.ID)
+	authorized, err := h.a.CheckUserAuthorizationForGroup([]uint{uint(id)}, user.ID)
 	if err != nil {
 		c.AbortWithError(http.StatusInternalServerError, apperrors.ErrAuthCheckFailed)
 		return
@@ -144,19 +148,19 @@ func (h *GroupHandler) EditGroup(c *gin.Context) {
 	var group models.Group
 
 	recipientEmails := make([]models.RecipientEmail, len(input.RecipientEmails))
-	for i, email := range input.RecipientEmails {
-		valid := util.ValidateEmail(email)
+	for i, address := range input.RecipientEmails {
+		valid := email.Validate(address)
 		if !valid {
 			c.AbortWithError(http.StatusBadRequest, apperrors.ErrInvalidEmail)
 			return
 		}
-		recipientEmails[i] = models.RecipientEmail{Email: email}
+		recipientEmails[i] = models.RecipientEmail{Email: address}
 	}
 
 	group.Name = input.Name
 	group.Description = input.Description
 	group.ID = uint(id)
-	err = h.G.UpdateGroup(&group, &recipientEmails)
+	err = h.g.UpdateGroup(&group, &recipientEmails)
 	if err != nil {
 		c.AbortWithError(http.StatusNotFound, apperrors.ErrNoGroups)
 		return

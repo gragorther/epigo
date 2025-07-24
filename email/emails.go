@@ -1,8 +1,8 @@
-package util
+package email
 
 import "net/mail"
 
-func ValidateEmail(email string) bool {
+func Validate(email string) bool {
 	_, err := mail.ParseAddress(email)
 	return err == nil
 }

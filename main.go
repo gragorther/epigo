@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/gragorther/epigo/db"
 	"github.com/gragorther/epigo/gormdb"
 	"github.com/gragorther/epigo/handlers"
 	"github.com/gragorther/epigo/initializers"
@@ -18,17 +17,7 @@ import (
 	"github.com/gragorther/epigo/models"
 	"github.com/gragorther/epigo/scheduler"
 	"github.com/gragorther/epigo/workers"
-	"gorm.io/gorm"
 )
-
-func NewDBHandler(conn *gorm.DB) *db.DBHandler {
-	return &db.DBHandler{
-		Users:    &gormdb.UserDB{DB: conn},
-		Auth:     &gormdb.AuthDB{DB: conn},
-		Groups:   &gormdb.GroupDB{DB: conn},
-		Messages: &gormdb.MessageDB{DB: conn},
-	}
-}
 
 func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
@@ -48,10 +37,10 @@ func main() {
 		log.Fatalf("Database migration failed: %v", err)
 	}
 
-	dbHandler := NewDBHandler(dbconn)
+	dbHandler := gormdb.NewGormDB(dbconn)
 	redisAddr := os.Getenv("REDIS_ADDRESS")
 	go workers.Run(redisAddr)
-	go scheduler.Run(dbHandler.Users, redisAddr)
+	go scheduler.Run(&dbHandler.UserDB, redisAddr)
 	/*
 		adminUsername := os.Getenv("ADMIN_USERNAME")
 		adminPasswordHash, err := argon2id.CreateHash(os.Getenv("ADMIN_PASSWORD"), argon2id.DefaultParams)
@@ -68,10 +57,10 @@ func main() {
 	r := gin.Default()
 	r.Use(middlewares.ErrorHandler())
 
-	userHandler := handlers.UserHandler{U: dbHandler.Users}
-	authHandler := middlewares.AuthMiddleware{U: dbHandler.Users}
-	groupHandler := handlers.GroupHandler{G: dbHandler.Groups, A: dbHandler.Auth}
-	messageHandler := handlers.MessageHandler{A: dbHandler.Auth, M: dbHandler.Messages}
+	userHandler := handlers.NewUserHandler(&dbHandler.UserDB)
+	authHandler := middlewares.NewAuthMiddleware(&dbHandler.UserDB)
+	groupHandler := handlers.NewGroupHandler(&dbHandler.GroupDB, &dbHandler.AuthDB)
+	messageHandler := handlers.NewMessageHandler(&dbHandler.MessageDB, &dbHandler.AuthDB)
 
 	// user stuff
 	r.POST("/user/register", userHandler.RegisterUser)

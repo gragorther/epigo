@@ -6,12 +6,12 @@ import (
 )
 
 type AuthDB struct {
-	DB *gorm.DB
+	db *gorm.DB
 }
 
 func (a *AuthDB) CheckUserAuthorizationForGroup(groupIDs []uint, userID uint) (bool, error) {
 	var authorizedGroups int64
-	if err := a.DB.Model(&models.Group{}).Where("user_id = ?", userID).
+	if err := a.db.Model(&models.Group{}).Where("user_id = ?", userID).
 		Where("id IN ?", groupIDs).
 		Count(&authorizedGroups).Error; err != nil {
 
@@ -24,7 +24,7 @@ func (a *AuthDB) CheckUserAuthorizationForGroup(groupIDs []uint, userID uint) (b
 }
 func (a *AuthDB) CheckUserAuthorizationForLastMessage(messageID uint, userID uint) (bool, error) {
 	var authorizedCount int64
-	res := a.DB.Model(&models.LastMessage{}).Where("id = ?", messageID).Where("user_id = ?", userID).Count(&authorizedCount)
+	res := a.db.Model(&models.LastMessage{}).Where("id = ?", messageID).Where("user_id = ?", userID).Count(&authorizedCount)
 	if authorizedCount != 1 {
 		return false, res.Error
 	}

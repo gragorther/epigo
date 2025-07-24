@@ -10,11 +10,11 @@ import (
 )
 
 type GroupDB struct {
-	DB *gorm.DB
+	db *gorm.DB
 }
 
 func (g *GroupDB) DeleteGroupByID(id uint) error {
-	err := g.DB.Transaction(func(tx *gorm.DB) error {
+	err := g.db.Transaction(func(tx *gorm.DB) error {
 		//res := tx.Delete(&models.Group{}, id)
 		group := models.Group{ID: id}
 		res := tx.Select("RecipientEmails").Delete(&group)
@@ -39,7 +39,7 @@ type listGroupsDTO struct {
 
 func (g *GroupDB) FindGroupsAndRecipientEmailsByUserID(userID uint) ([]types.GroupWithEmails, error) {
 	var groups []listGroupsDTO
-	res := g.DB.Model(&models.Group{}).Where("user_id = ?", userID).Preload("RecipientEmails").Find(&groups)
+	res := g.db.Model(&models.Group{}).Where("user_id = ?", userID).Preload("RecipientEmails").Find(&groups)
 	if res.Error != nil {
 		return nil, res.Error
 	}
@@ -70,7 +70,7 @@ func (g *GroupDB) CreateGroupAndRecipientEmails(group *models.Group, recipientEm
 		Description:     group.Description,
 		RecipientEmails: *recipientEmails,
 	}
-	err := g.DB.Transaction(func(tx *gorm.DB) error {
+	err := g.db.Transaction(func(tx *gorm.DB) error {
 		err := tx.Create(&newGroup).Error
 		return err
 	})
@@ -78,15 +78,15 @@ func (g *GroupDB) CreateGroupAndRecipientEmails(group *models.Group, recipientEm
 }
 
 func (g *GroupDB) UpdateGroup(group *models.Group, recipientEmails *[]models.RecipientEmail) error {
-	err := g.DB.Transaction(func(tx *gorm.DB) error {
-		output := g.DB.Updates(&group)
+	err := g.db.Transaction(func(tx *gorm.DB) error {
+		output := tx.Updates(&group)
 		if output.Error != nil {
 			return output.Error
 		}
 		if output.RowsAffected < 1 {
 			return apperrors.ErrNotFound
 		}
-		err := g.DB.Model(&group).Association("RecipientEmails").Replace(recipientEmails)
+		err := tx.Model(&group).Association("RecipientEmails").Replace(recipientEmails)
 
 		return err
 	})

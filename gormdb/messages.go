@@ -7,11 +7,11 @@ import (
 )
 
 type MessageDB struct {
-	DB *gorm.DB
+	db *gorm.DB
 }
 
 func (m *MessageDB) CreateLastMessage(lastMessage *models.LastMessage) error {
-	err := m.DB.Transaction(func(tx *gorm.DB) error {
+	err := m.db.Transaction(func(tx *gorm.DB) error {
 		res := tx.Create(&lastMessage)
 		return res.Error
 	})
@@ -31,7 +31,7 @@ type lastMessage struct {
 
 func (m *MessageDB) FindLastMessagesByUserID(userID uint) ([]types.LastMessageOut, error) {
 	var lastMessages []lastMessage
-	res := m.DB.Model(&models.LastMessage{}).Preload("Groups").Where("user_id = ?", userID).Find(&lastMessages)
+	res := m.db.Model(&models.LastMessage{}).Preload("Groups").Where("user_id = ?", userID).Find(&lastMessages)
 
 	var lastMessagesOut []types.LastMessageOut
 	for _, lastMessage := range lastMessages {
@@ -51,7 +51,7 @@ func (m *MessageDB) FindLastMessagesByUserID(userID uint) ([]types.LastMessageOu
 }
 
 func (m *MessageDB) UpdateLastMessage(newMessage *models.LastMessage) error {
-	err := m.DB.Transaction(func(tx *gorm.DB) error {
+	err := m.db.Transaction(func(tx *gorm.DB) error {
 		res := tx.Model(&models.LastMessage{ID: newMessage.ID}).Updates(newMessage)
 		if res.Error != nil {
 			return res.Error
@@ -62,7 +62,7 @@ func (m *MessageDB) UpdateLastMessage(newMessage *models.LastMessage) error {
 	return err
 }
 func (m *MessageDB) DeleteLastMessageByID(lastMessageID uint) error {
-	err := m.DB.Transaction(func(tx *gorm.DB) error {
+	err := m.db.Transaction(func(tx *gorm.DB) error {
 		res := tx.Delete(&models.LastMessage{ID: lastMessageID})
 		return res.Error
 	})

@@ -16,7 +16,11 @@ import (
 )
 
 type AuthMiddleware struct {
-	U db.Users
+	u db.Users
+}
+
+func NewAuthMiddleware(u db.Users) *AuthMiddleware {
+	return &AuthMiddleware{u: u}
 }
 
 func (h *AuthMiddleware) CheckAuth(c *gin.Context) {
@@ -58,7 +62,7 @@ func (h *AuthMiddleware) CheckAuth(c *gin.Context) {
 		return
 	}
 
-	user, err := h.U.GetUserByID(uint(claims["id"].(float64)))
+	user, err := h.u.GetUserByID(uint(claims["id"].(float64)))
 	if err != nil {
 		log.Print("failed to get user by ID during auth")
 		c.AbortWithError(http.StatusUnauthorized, apperrors.ErrFailedToGetUserID)

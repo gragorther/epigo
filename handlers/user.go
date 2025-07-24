@@ -10,13 +10,17 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/gragorther/epigo/apperrors"
 	"github.com/gragorther/epigo/db"
+	"github.com/gragorther/epigo/email"
 	argon2id "github.com/gragorther/epigo/hash"
 	"github.com/gragorther/epigo/models"
-	"github.com/gragorther/epigo/util"
 )
 
 type UserHandler struct {
-	U db.Users
+	u db.Users
+}
+
+func NewUserHandler(u db.Users) *UserHandler {
+	return &UserHandler{u: u}
 }
 
 type RegistrationInput struct {
@@ -38,13 +42,13 @@ func (h *UserHandler) RegisterUser(c *gin.Context) {
 		c.AbortWithError(http.StatusUnprocessableEntity, apperrors.ErrParsingFailed)
 		return
 	}
-	validEmail := util.ValidateEmail(authInput.Email)
+	validEmail := email.Validate(authInput.Email)
 	if !validEmail {
 		c.AbortWithError(http.StatusBadRequest, apperrors.ErrInvalidEmail)
 		return
 	}
 
-	userExists, userExistsErr := h.U.CheckIfUserExistsByUsernameAndEmail(authInput.Username, authInput.Email)
+	userExists, userExistsErr := h.u.CheckIfUserExistsByUsernameAndEmail(authInput.Username, authInput.Email)
 
 	if userExistsErr != nil {
 		c.AbortWithError(http.StatusInternalServerError, apperrors.ErrDatabaseFetchFailed)
@@ -68,7 +72,7 @@ func (h *UserHandler) RegisterUser(c *gin.Context) {
 		Name:         authInput.Name,
 	}
 
-	if err := h.U.CreateUser(&user); err != nil {
+	if err := h.u.CreateUser(&user); err != nil {
 		log.Printf("failed to create user: %v", err)
 		c.AbortWithError(http.StatusInternalServerError, apperrors.ErrCreationOfObjectFailed)
 		return
@@ -84,7 +88,7 @@ func (h *UserHandler) LoginUser(c *gin.Context) {
 		return
 	}
 
-	userExists, err := h.U.CheckIfUserExistsByUsername(authInput.Username)
+	userExists, err := h.u.CheckIfUserExistsByUsername(authInput.Username)
 	if err != nil {
 		c.AbortWithError(http.StatusInternalServerError, apperrors.ErrUserNotFound)
 		log.Print(err)
@@ -94,7 +98,7 @@ func (h *UserHandler) LoginUser(c *gin.Context) {
 		c.AbortWithError(http.StatusNotFound, apperrors.ErrUserNotFound)
 		return
 	}
-	userFound, err := h.U.GetUserByUsername(authInput.Username)
+	userFound, err := h.u.GetUserByUsername(authInput.Username)
 	if err != nil {
 		c.AbortWithError(http.StatusNotFound, apperrors.ErrUserNotFound)
 		log.Printf("Couldn't fetch user: %v", err)
@@ -124,7 +128,7 @@ func (h *UserHandler) LoginUser(c *gin.Context) {
 	}
 	currentTime := time.Now()
 	userFound.LastLogin = &currentTime
-	if err := h.U.SaveUserData(userFound); err != nil {
+	if err := h.u.SaveUserData(userFound); err != nil {
 		c.Error(apperrors.ErrCreationOfObjectFailed)
 		log.Printf("failed to save user lastLogin: %v", err)
 		return
@@ -166,7 +170,7 @@ func (h *UserHandler) SetEmailInterval(c *gin.Context) {
 		c.AbortWithError(http.StatusUnprocessableEntity, apperrors.ErrParsingFailed)
 		return
 	}
-	err = h.U.UpdateUserInterval(user.ID, input.Cron)
+	err = h.u.UpdateUserInterval(user.ID, input.Cron)
 	if err != nil {
 		c.AbortWithError(http.StatusInternalServerError, apperrors.ErrCreationOfObjectFailed)
 		log.Printf("failed to set email interval: %v", err)
