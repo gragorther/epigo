@@ -13,10 +13,9 @@ import (
 	"github.com/gragorther/epigo/asynq/scheduler"
 	"github.com/gragorther/epigo/asynq/workers"
 	"github.com/gragorther/epigo/gormdb"
-	"github.com/gragorther/epigo/handlers"
 	"github.com/gragorther/epigo/initializers"
-	"github.com/gragorther/epigo/middlewares"
 	"github.com/gragorther/epigo/models"
+	"github.com/gragorther/epigo/router"
 )
 
 func main() {
@@ -40,7 +39,7 @@ func main() {
 	dbHandler := gormdb.NewGormDB(dbconn)
 	redisAddr := os.Getenv("REDIS_ADDRESS")
 	go workers.Run(redisAddr)
-	go scheduler.Run(&dbHandler.UserDB, redisAddr)
+	go scheduler.Run(dbHandler.Users, redisAddr)
 	/*
 		adminUsername := os.Getenv("ADMIN_USERNAME")
 		adminPasswordHash, err := argon2id.CreateHash(os.Getenv("ADMIN_PASSWORD"), argon2id.DefaultParams)
@@ -54,31 +53,8 @@ func main() {
 			log.Print(res.Error)
 		}
 	*/
-	r := gin.Default()
-	r.Use(middlewares.ErrorHandler())
+	r := router.Setup(dbHandler)
 
-	userHandler := handlers.NewUserHandler(&dbHandler.UserDB)
-	authHandler := middlewares.NewAuthMiddleware(&dbHandler.UserDB)
-	groupHandler := handlers.NewGroupHandler(&dbHandler.GroupDB, &dbHandler.AuthDB)
-	messageHandler := handlers.NewMessageHandler(&dbHandler.MessageDB, &dbHandler.AuthDB)
-
-	// user stuff
-	r.POST("/user/register", userHandler.RegisterUser)
-	r.POST("/user/login", userHandler.LoginUser)
-	r.GET("/user/profile", authHandler.CheckAuth, userHandler.GetUserProfile)
-	r.PUT("/user/setEmailInterval", authHandler.CheckAuth, userHandler.SetEmailInterval)
-
-	// groups
-	r.DELETE("/user/groups/delete/:id", authHandler.CheckAuth, groupHandler.DeleteGroup)
-	r.POST("/user/groups/add", authHandler.CheckAuth, groupHandler.AddGroup)
-	r.GET("/user/groups", authHandler.CheckAuth, groupHandler.ListGroups) // list groups
-	r.PATCH("/user/groups/edit/:id", authHandler.CheckAuth, groupHandler.EditGroup)
-
-	// lastMessages
-	r.POST("/user/lastMessages/add", authHandler.CheckAuth, messageHandler.AddLastMessage)
-	r.GET("/user/lastMessages", authHandler.CheckAuth, messageHandler.ListLastMessages)
-	r.PATCH("/user/lastMessages/edit/:id", authHandler.CheckAuth, messageHandler.EditLastMessage)
-	r.DELETE("/user/lastMessages/delete/:id", authHandler.CheckAuth, messageHandler.DeleteLastMessage)
 	srv := &http.Server{
 		Addr:    ":8080",
 		Handler: r,
