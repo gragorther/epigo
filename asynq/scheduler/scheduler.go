@@ -4,8 +4,8 @@ import (
 	"log"
 	"time"
 
+	"github.com/gragorther/epigo/asynq/tasks"
 	"github.com/gragorther/epigo/db"
-	"github.com/gragorther/epigo/tasks"
 	"github.com/hibiken/asynq"
 )
 

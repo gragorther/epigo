@@ -3,6 +3,7 @@ module github.com/gragorther/epigo
 go 1.24
 
 require (
+	github.com/bytedance/sonic v1.14.0
 	github.com/gin-gonic/gin v1.10.1
 	github.com/golang-jwt/jwt/v5 v5.2.3
 	github.com/hibiken/asynq v0.25.1
@@ -12,7 +13,6 @@ require (
 )
 
 require (
-	github.com/bytedance/sonic v1.14.0 // indirect
 	github.com/bytedance/sonic/loader v0.3.0 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/cloudwego/base64x v0.1.5 // indirect

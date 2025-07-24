@@ -3,7 +3,7 @@ package workers
 import (
 	"log"
 
-	"github.com/gragorther/epigo/tasks"
+	"github.com/gragorther/epigo/asynq/tasks"
 	"github.com/hibiken/asynq"
 )
 

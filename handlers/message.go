@@ -8,7 +8,6 @@ import (
 	"github.com/gragorther/epigo/apperrors"
 	"github.com/gragorther/epigo/db"
 	"github.com/gragorther/epigo/models"
-	"github.com/gragorther/epigo/util"
 )
 
 type MessageHandler struct {
@@ -24,6 +23,17 @@ type messageInput struct {
 	Title    string `json:"title" binding:"required"`
 	Content  string `json:"content" binding:"required"`
 	GroupIDs []uint `json:"groupIDs" binding:"required"`
+}
+
+func parseGroups(groupIDs []uint) ([]models.Group, error) {
+	var groups []models.Group
+	for _, id := range groupIDs {
+		groups = append(groups, models.Group{ID: id})
+	}
+	if len(groups) != len(groupIDs) {
+		return nil, apperrors.ErrParsingFailed
+	}
+	return groups, nil
 }
 
 func (h *MessageHandler) AddLastMessage(c *gin.Context) {
@@ -46,7 +56,7 @@ func (h *MessageHandler) AddLastMessage(c *gin.Context) {
 		return
 	}
 
-	groups, parseErr := util.ParseGroups(input.GroupIDs)
+	groups, parseErr := parseGroups(input.GroupIDs)
 	if parseErr != nil {
 		c.AbortWithError(http.StatusUnprocessableEntity, apperrors.ErrParsingFailed)
 		return
@@ -115,7 +125,7 @@ func (h *MessageHandler) EditLastMessage(c *gin.Context) {
 		return
 	}
 
-	groups, parseErr := util.ParseGroups(input.GroupIDs)
+	groups, parseErr := parseGroups(input.GroupIDs)
 	if parseErr != nil {
 		c.AbortWithError(http.StatusUnprocessableEntity, apperrors.ErrParsingFailed)
 		return
