@@ -1,7 +1,7 @@
 package gormdb
 
 import (
-	"github.com/gragorther/epigo/db"
+	"github.com/gragorther/epigo/database/db"
 	"gorm.io/gorm"
 )
 

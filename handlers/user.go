@@ -9,7 +9,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/gragorther/epigo/apperrors"
-	"github.com/gragorther/epigo/db"
+	"github.com/gragorther/epigo/database/db"
 	"github.com/gragorther/epigo/email"
 	argon2id "github.com/gragorther/epigo/hash"
 	"github.com/gragorther/epigo/models"

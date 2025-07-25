@@ -12,8 +12,8 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/gragorther/epigo/asynq/scheduler"
 	"github.com/gragorther/epigo/asynq/workers"
-	"github.com/gragorther/epigo/gormdb"
-	"github.com/gragorther/epigo/initializers"
+	"github.com/gragorther/epigo/database/gormdb"
+	"github.com/gragorther/epigo/database/initializers"
 	"github.com/gragorther/epigo/models"
 	"github.com/gragorther/epigo/router"
 )

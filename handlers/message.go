@@ -6,16 +6,28 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/gragorther/epigo/apperrors"
-	"github.com/gragorther/epigo/db"
 	"github.com/gragorther/epigo/models"
+	"github.com/gragorther/epigo/types"
 )
 
-type MessageHandler struct {
-	m db.Messages
-	a db.Auth
+type messageMessageStore interface {
+	DeleteLastMessageByID(lastMessageID uint) error
+	UpdateLastMessage(newMessage *models.LastMessage) error
+	CreateLastMessage(lastMessage *models.LastMessage) error
+	FindLastMessagesByUserID(userID uint) ([]types.LastMessageOut, error)
 }
 
-func NewMessageHandler(m db.Messages, a db.Auth) *MessageHandler {
+type messageAuthStore interface {
+	CheckUserAuthorizationForLastMessage(messageID uint, userID uint) (bool, error)
+	CheckUserAuthorizationForGroup(groupIDs []uint, userID uint) (bool, error)
+}
+
+type MessageHandler struct {
+	m messageMessageStore
+	a messageAuthStore
+}
+
+func NewMessageHandler(m messageMessageStore, a messageAuthStore) *MessageHandler {
 	return &MessageHandler{m: m, a: a}
 }
 

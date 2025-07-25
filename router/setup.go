@@ -2,7 +2,7 @@ package router
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/gragorther/epigo/db"
+	"github.com/gragorther/epigo/database/db"
 	"github.com/gragorther/epigo/handlers"
 	"github.com/gragorther/epigo/middlewares"
 )

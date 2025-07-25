@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/gragorther/epigo/apperrors"
-	"github.com/gragorther/epigo/db"
+	"github.com/gragorther/epigo/database/db"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
