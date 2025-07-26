@@ -14,7 +14,7 @@ type intervalGetter interface {
 }
 
 type ConfigProvider struct {
-	db intervalGetter
+	DB intervalGetter
 }
 
 type PeriodicTaskConfigContainer struct {
@@ -26,7 +26,7 @@ type Config struct {
 }
 
 func Run(db intervalGetter, redisAddress string) {
-	provider := &ConfigProvider{db: db}
+	provider := &ConfigProvider{DB: db}
 
 	mgr, err := asynq.NewPeriodicTaskManager(
 		asynq.PeriodicTaskManagerOpts{
@@ -45,9 +45,8 @@ func Run(db intervalGetter, redisAddress string) {
 }
 
 func (p *ConfigProvider) GetConfigs() ([]*asynq.PeriodicTaskConfig, error) {
-	users, err := p.db.GetUserIntervals()
+	users, err := p.DB.GetUserIntervals()
 	if err != nil {
-		log.Print(err)
 		return nil, err
 	}
 	if len(users) == 0 {
@@ -73,5 +72,6 @@ func (p *ConfigProvider) GetConfigs() ([]*asynq.PeriodicTaskConfig, error) {
 			Task:     task,
 		})
 	}
+
 	return output, nil
 }
