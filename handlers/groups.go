@@ -6,7 +6,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/gragorther/epigo/apperrors"
-	"github.com/gragorther/epigo/database/db"
 	"github.com/gragorther/epigo/email"
 	"github.com/gragorther/epigo/models"
 	"github.com/gragorther/epigo/types"
@@ -18,23 +17,23 @@ type groupInput struct {
 	Description     string   `json:"description"`
 }
 
-type groupStore interface {
+type GroupGroupStore interface {
 	UpdateGroup(group *models.Group, recipientEmails *[]models.RecipientEmail) error
 	DeleteGroupByID(id uint) error
 	FindGroupsAndRecipientEmailsByUserID(userID uint) ([]types.GroupWithEmails, error)
 	CreateGroupAndRecipientEmails(group *models.Group, recipientEmails *[]models.RecipientEmail) error
 }
 
-type authStore interface {
+type GroupAuthStore interface {
 	CheckUserAuthorizationForGroup(groupIDs []uint, userID uint) (bool, error)
 }
 
 type GroupHandler struct {
-	g groupStore //group part of the db
-	a authStore  //auth
+	g GroupGroupStore //group part of the db
+	a GroupAuthStore  //auth
 }
 
-func NewGroupHandler(g db.Groups, a db.Auth) *GroupHandler {
+func NewGroupHandler(g GroupGroupStore, a GroupAuthStore) *GroupHandler {
 	return &GroupHandler{g: g, a: a}
 }
 

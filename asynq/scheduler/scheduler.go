@@ -5,12 +5,16 @@ import (
 	"time"
 
 	"github.com/gragorther/epigo/asynq/tasks"
-	"github.com/gragorther/epigo/database/db"
+	"github.com/gragorther/epigo/types"
 	"github.com/hibiken/asynq"
 )
 
+type intervalGetter interface {
+	GetUserIntervals() ([]types.UserIntervalsOutput, error)
+}
+
 type ConfigProvider struct {
-	db db.Users
+	db intervalGetter
 }
 
 type PeriodicTaskConfigContainer struct {
@@ -21,7 +25,7 @@ type Config struct {
 	TaskType string `json:"task_type"`
 }
 
-func Run(db db.Users, redisAddress string) {
+func Run(db intervalGetter, redisAddress string) {
 	provider := &ConfigProvider{db: db}
 
 	mgr, err := asynq.NewPeriodicTaskManager(

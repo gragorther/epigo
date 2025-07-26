@@ -10,24 +10,24 @@ import (
 	"github.com/gragorther/epigo/types"
 )
 
-type messageMessageStore interface {
+type MessageMessageStore interface {
 	DeleteLastMessageByID(lastMessageID uint) error
 	UpdateLastMessage(newMessage *models.LastMessage) error
 	CreateLastMessage(lastMessage *models.LastMessage) error
 	FindLastMessagesByUserID(userID uint) ([]types.LastMessageOut, error)
 }
 
-type messageAuthStore interface {
+type MessageAuthStore interface {
 	CheckUserAuthorizationForLastMessage(messageID uint, userID uint) (bool, error)
 	CheckUserAuthorizationForGroup(groupIDs []uint, userID uint) (bool, error)
 }
 
 type MessageHandler struct {
-	m messageMessageStore
-	a messageAuthStore
+	m MessageMessageStore
+	a MessageAuthStore
 }
 
-func NewMessageHandler(m messageMessageStore, a messageAuthStore) *MessageHandler {
+func NewMessageHandler(m MessageMessageStore, a MessageAuthStore) *MessageHandler {
 	return &MessageHandler{m: m, a: a}
 }
 

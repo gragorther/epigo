@@ -1,22 +1,21 @@
 package gormdb
 
 import (
-	"github.com/gragorther/epigo/database/db"
 	"gorm.io/gorm"
 )
 
 type gormDBs struct {
-	AuthDB
-	GroupDB
-	UserDB
-	MessageDB
+	Auth    *AuthDB
+	Group   *GroupDB
+	User    *UserDB
+	Message *MessageDB
 }
 
-func NewGormDB(gormdb *gorm.DB) *db.DBHandler {
-	return &db.DBHandler{
-		Auth:     &AuthDB{db: gormdb},
-		Messages: &MessageDB{db: gormdb},
-		Users:    &UserDB{db: gormdb},
-		Groups:   &GroupDB{db: gormdb},
+func NewGormDB(gormdb *gorm.DB) *gormDBs {
+	return &gormDBs{
+		Auth:    &AuthDB{db: gormdb},
+		Message: &MessageDB{db: gormdb},
+		User:    &UserDB{db: gormdb},
+		Group:   &GroupDB{db: gormdb},
 	}
 }

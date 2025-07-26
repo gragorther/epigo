@@ -9,17 +9,25 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/gragorther/epigo/apperrors"
-	"github.com/gragorther/epigo/database/db"
 	"github.com/gragorther/epigo/email"
 	argon2id "github.com/gragorther/epigo/hash"
 	"github.com/gragorther/epigo/models"
 )
 
-type UserHandler struct {
-	u db.Users
+type UserUserStore interface {
+	CreateUser(*models.User) error
+	CheckIfUserExistsByUsername(username string) (bool, error)
+	GetUserByUsername(username string) (*models.User, error)
+	SaveUserData(*models.User) error
+	UpdateUserInterval(userID uint, cron string) error
+	CheckIfUserExistsByUsernameAndEmail(username string, email string) (bool, error)
 }
 
-func NewUserHandler(u db.Users) *UserHandler {
+type UserHandler struct {
+	u UserUserStore
+}
+
+func NewUserHandler(u UserUserStore) *UserHandler {
 	return &UserHandler{u: u}
 }
 

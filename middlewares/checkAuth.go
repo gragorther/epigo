@@ -9,17 +9,21 @@ import (
 	"time"
 
 	"github.com/gragorther/epigo/apperrors"
-	"github.com/gragorther/epigo/database/db"
+	"github.com/gragorther/epigo/models"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 )
 
-type AuthMiddleware struct {
-	u db.Users
+type UserStore interface {
+	GetUserByID(ID uint) (*models.User, error)
 }
 
-func NewAuthMiddleware(u db.Users) *AuthMiddleware {
+type AuthMiddleware struct {
+	u UserStore
+}
+
+func NewAuthMiddleware(u UserStore) *AuthMiddleware {
 	return &AuthMiddleware{u: u}
 }
 

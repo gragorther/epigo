@@ -2,19 +2,18 @@ package router
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/gragorther/epigo/database/db"
 	"github.com/gragorther/epigo/handlers"
 	"github.com/gragorther/epigo/middlewares"
 )
 
-func Setup(dbHandler *db.DBHandler) *gin.Engine {
+func Setup(userUserStore handlers.UserUserStore, groupGroupStore handlers.GroupGroupStore, groupAuthStore handlers.GroupAuthStore, messageAuthStore handlers.MessageAuthStore, messageMessageStore handlers.MessageMessageStore, middlewareUserStore middlewares.UserStore) *gin.Engine {
 	r := gin.Default()
 	r.Use(middlewares.ErrorHandler())
 
-	userHandler := handlers.NewUserHandler(dbHandler.Users)
-	authHandler := middlewares.NewAuthMiddleware(dbHandler.Users)
-	groupHandler := handlers.NewGroupHandler(dbHandler.Groups, dbHandler.Auth)
-	messageHandler := handlers.NewMessageHandler(dbHandler.Messages, dbHandler.Auth)
+	userHandler := handlers.NewUserHandler(userUserStore)
+	authHandler := middlewares.NewAuthMiddleware(middlewareUserStore)
+	groupHandler := handlers.NewGroupHandler(groupGroupStore, groupAuthStore)
+	messageHandler := handlers.NewMessageHandler(messageMessageStore, messageAuthStore)
 
 	// user stuff
 	r.POST("/user/register", userHandler.RegisterUser)
