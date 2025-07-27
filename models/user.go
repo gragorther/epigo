@@ -16,8 +16,9 @@ type User struct {
 	Email        string         `json:"email" gorm:"unique"`
 	PasswordHash string         `json:"-"`
 	//	Country      string //should probably be a foreign key of another table
-	LastLogin *time.Time `json:"lastLogin"`
-	Groups    Group
-	EmailCron *string `json:"emailCron"`
-	IsAdmin   bool    `json:"isAdmin"`
+	LastLogin  *time.Time `json:"lastLogin"`
+	Groups     Group
+	EmailCron  *string `json:"emailCron"`
+	IsAdmin    bool    `json:"isAdmin"`
+	IsVerified bool    `json:"isVerified"`
 }

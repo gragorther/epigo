@@ -2,11 +2,12 @@ package router
 
 import (
 	"github.com/gin-gonic/gin"
+	"github.com/gragorther/epigo/database/gormdb"
 	"github.com/gragorther/epigo/handlers"
 	"github.com/gragorther/epigo/middlewares"
 )
 
-func Setup(userUserStore handlers.UserUserStore, groupGroupStore handlers.GroupGroupStore, groupAuthStore handlers.GroupAuthStore, messageAuthStore handlers.MessageAuthStore, messageMessageStore handlers.MessageMessageStore, middlewareUserStore middlewares.UserStore) *gin.Engine {
+func Setup(db gormdb.GormDBs) *gin.Engine {
 	r := gin.Default()
 	r.Use(middlewares.ErrorHandler())
 
