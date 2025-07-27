@@ -10,27 +10,6 @@ import (
 	"github.com/gragorther/epigo/types"
 )
 
-type MessageMessageStore interface {
-	DeleteLastMessageByID(lastMessageID uint) error
-	UpdateLastMessage(newMessage *models.LastMessage) error
-	CreateLastMessage(lastMessage *models.LastMessage) error
-	FindLastMessagesByUserID(userID uint) ([]types.LastMessageOut, error)
-}
-
-type MessageAuthStore interface {
-	CheckUserAuthorizationForLastMessage(messageID uint, userID uint) (bool, error)
-	CheckUserAuthorizationForGroup(groupIDs []uint, userID uint) (bool, error)
-}
-
-type MessageHandler struct {
-	m MessageMessageStore
-	a MessageAuthStore
-}
-
-func NewMessageHandler(m MessageMessageStore, a MessageAuthStore) *MessageHandler {
-	return &MessageHandler{m: m, a: a}
-}
-
 type messageInput struct {
 	Title    string `json:"title" binding:"required"`
 	Content  string `json:"content" binding:"required"`
@@ -48,7 +27,7 @@ func parseGroups(groupIDs []uint) ([]models.Group, error) {
 	return groups, nil
 }
 
-func (h *MessageHandler) AddLastMessage(db interface {
+func AddLastMessage(db interface {
 	CheckUserAuthorizationForGroup(groupIDs []uint, userID uint) (bool, error)
 	CreateLastMessage(lastMessage *models.LastMessage) error
 }) gin.HandlerFunc {
@@ -93,7 +72,7 @@ func (h *MessageHandler) AddLastMessage(db interface {
 	}
 }
 
-func (h *MessageHandler) ListLastMessages(db interface {
+func ListLastMessages(db interface {
 	FindLastMessagesByUserID(userID uint) ([]types.LastMessageOut, error)
 }) gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -111,7 +90,7 @@ func (h *MessageHandler) ListLastMessages(db interface {
 	}
 }
 
-func (h *MessageHandler) EditLastMessage(db interface {
+func EditLastMessage(db interface {
 	CheckUserAuthorizationForLastMessage(messageID uint, userID uint) (bool, error)
 	CheckUserAuthorizationForGroup(groupIDs []uint, userID uint) (bool, error)
 	UpdateLastMessage(newMessage *models.LastMessage) error
@@ -170,7 +149,7 @@ func (h *MessageHandler) EditLastMessage(db interface {
 
 }
 
-func (h *MessageHandler) DeleteLastMessage(db interface {
+func DeleteLastMessage(db interface {
 	CheckUserAuthorizationForLastMessage(messageID uint, userID uint) (bool, error)
 	DeleteLastMessageByID(lastMessageID uint) error
 }) gin.HandlerFunc {

@@ -4,18 +4,12 @@ import (
 	"gorm.io/gorm"
 )
 
-type GormDBs struct {
-	Auth    *AuthDB
-	Group   *GroupDB
-	User    *UserDB
-	Message *MessageDB
+type GormDB struct {
+	db *gorm.DB
 }
 
-func NewGormDB(gormdb *gorm.DB) *GormDBs {
-	return &GormDBs{
-		Auth:    &AuthDB{db: gormdb},
-		Message: &MessageDB{db: gormdb},
-		User:    &UserDB{db: gormdb},
-		Group:   &GroupDB{db: gormdb},
+func NewGormDB(gormdb *gorm.DB) *GormDB {
+	return &GormDB{
+		db: gormdb,
 	}
 }

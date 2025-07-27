@@ -17,27 +17,7 @@ type groupInput struct {
 	Description     string   `json:"description"`
 }
 
-type GroupGroupStore interface {
-	UpdateGroup(group *models.Group, recipientEmails *[]models.RecipientEmail) error
-	DeleteGroupByID(id uint) error
-	FindGroupsAndRecipientEmailsByUserID(userID uint) ([]types.GroupWithEmails, error)
-	CreateGroupAndRecipientEmails(group *models.Group, recipientEmails *[]models.RecipientEmail) error
-}
-
-type GroupAuthStore interface {
-	CheckUserAuthorizationForGroup(groupIDs []uint, userID uint) (bool, error)
-}
-
-type GroupHandler struct {
-	g GroupGroupStore //group part of the db
-	a GroupAuthStore  //auth
-}
-
-func NewGroupHandler(g GroupGroupStore, a GroupAuthStore) *GroupHandler {
-	return &GroupHandler{g: g, a: a}
-}
-
-func (h *GroupHandler) AddGroup(db interface {
+func AddGroup(db interface {
 	CreateGroupAndRecipientEmails(group *models.Group, recipientEmails *[]models.RecipientEmail) error
 }) gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -78,7 +58,7 @@ func (h *GroupHandler) AddGroup(db interface {
 	}
 }
 
-func (h *GroupHandler) DeleteGroup(db interface {
+func DeleteGroup(db interface {
 	DeleteGroupByID(id uint) error
 	CheckUserAuthorizationForGroup(groupIDs []uint, userID uint) (bool, error)
 }) gin.HandlerFunc {
@@ -111,7 +91,7 @@ func (h *GroupHandler) DeleteGroup(db interface {
 	}
 }
 
-func (h *GroupHandler) ListGroups(db interface {
+func ListGroups(db interface {
 	FindGroupsAndRecipientEmailsByUserID(userID uint) ([]types.GroupWithEmails, error)
 }) gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -143,7 +123,7 @@ type editGroupInput struct {
 	Description     string   `json:"description"`
 }
 
-func (h *GroupHandler) EditGroup(db interface {
+func EditGroup(db interface {
 	CheckUserAuthorizationForGroup(groupIDs []uint, userID uint) (bool, error)
 	UpdateGroup(group *models.Group, recipientEmails *[]models.RecipientEmail) error
 }) gin.HandlerFunc {

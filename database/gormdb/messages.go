@@ -10,8 +10,8 @@ type MessageDB struct {
 	db *gorm.DB
 }
 
-func (m *MessageDB) CreateLastMessage(lastMessage *models.LastMessage) error {
-	err := m.db.Transaction(func(tx *gorm.DB) error {
+func (g *GormDB) CreateLastMessage(lastMessage *models.LastMessage) error {
+	err := g.db.Transaction(func(tx *gorm.DB) error {
 		res := tx.Create(&lastMessage)
 		return res.Error
 	})
@@ -29,9 +29,9 @@ type lastMessage struct {
 	Content string  `json:"content"`
 }
 
-func (m *MessageDB) FindLastMessagesByUserID(userID uint) ([]types.LastMessageOut, error) {
+func (g *GormDB) FindLastMessagesByUserID(userID uint) ([]types.LastMessageOut, error) {
 	var lastMessages []lastMessage
-	res := m.db.Model(&models.LastMessage{}).Preload("Groups").Where("user_id = ?", userID).Find(&lastMessages)
+	res := g.db.Model(&models.LastMessage{}).Preload("Groups").Where("user_id = ?", userID).Find(&lastMessages)
 
 	var lastMessagesOut []types.LastMessageOut
 	for _, lastMessage := range lastMessages {
@@ -50,8 +50,8 @@ func (m *MessageDB) FindLastMessagesByUserID(userID uint) ([]types.LastMessageOu
 	return lastMessagesOut, res.Error
 }
 
-func (m *MessageDB) UpdateLastMessage(newMessage *models.LastMessage) error {
-	err := m.db.Transaction(func(tx *gorm.DB) error {
+func (g *GormDB) UpdateLastMessage(newMessage *models.LastMessage) error {
+	err := g.db.Transaction(func(tx *gorm.DB) error {
 		res := tx.Model(&models.LastMessage{ID: newMessage.ID}).Updates(newMessage)
 		if res.Error != nil {
 			return res.Error
@@ -61,8 +61,8 @@ func (m *MessageDB) UpdateLastMessage(newMessage *models.LastMessage) error {
 	})
 	return err
 }
-func (m *MessageDB) DeleteLastMessageByID(lastMessageID uint) error {
-	err := m.db.Transaction(func(tx *gorm.DB) error {
+func (g *GormDB) DeleteLastMessageByID(lastMessageID uint) error {
+	err := g.db.Transaction(func(tx *gorm.DB) error {
 		res := tx.Delete(&models.LastMessage{ID: lastMessageID})
 		return res.Error
 	})

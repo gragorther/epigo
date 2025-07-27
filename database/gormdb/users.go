@@ -13,21 +13,21 @@ type UserDB struct {
 	db *gorm.DB
 }
 
-func (u *UserDB) UpdateUserInterval(userID uint, cron string) error {
-	res := u.db.Model(&models.User{}).Where("id = ?", userID).Update("email_cron", cron)
+func (g *GormDB) UpdateUserInterval(userID uint, cron string) error {
+	res := g.db.Model(&models.User{}).Where("id = ?", userID).Update("email_cron", cron)
 	return res.Error
 }
 
-func (u *UserDB) GetUserIntervals() ([]types.UserIntervalsOutput, error) {
+func (g *GormDB) GetUserIntervals() ([]types.UserIntervalsOutput, error) {
 	var intervals []types.UserIntervalsOutput
-	res := u.db.Model(&models.User{}).Find(&intervals)
+	res := g.db.Model(&models.User{}).Find(&intervals)
 	return intervals, res.Error
 }
 
 // true if user exists, false if they don't exist
-func (u *UserDB) CheckIfUserExistsByUsernameAndEmail(username string, email string) (bool, error) {
+func (g *GormDB) CheckIfUserExistsByUsernameAndEmail(username string, email string) (bool, error) {
 	var foundUsers int64
-	res := u.db.Model(&models.User{}).
+	res := g.db.Model(&models.User{}).
 		Where("username = ? OR email = ?", username, email).Count(&foundUsers)
 
 	if res.Error != nil {
@@ -41,10 +41,10 @@ func (u *UserDB) CheckIfUserExistsByUsernameAndEmail(username string, email stri
 	}
 	return false, nil
 }
-func (u *UserDB) CheckIfUserExistsByUsername(username string) (bool, error) {
+func (g *GormDB) CheckIfUserExistsByUsername(username string) (bool, error) {
 	var userFound int64
 
-	res := u.db.Model(&models.User{}).Where("username=?", username).Count(&userFound)
+	res := g.db.Model(&models.User{}).Where("username=?", username).Count(&userFound)
 	if res.Error != nil {
 		return false, res.Error
 	}
@@ -55,20 +55,20 @@ func (u *UserDB) CheckIfUserExistsByUsername(username string) (bool, error) {
 	return true, nil
 }
 
-func (u *UserDB) CreateUser(user *models.User) error {
-	res := u.db.Create(user)
+func (g *GormDB) CreateUser(user *models.User) error {
+	res := g.db.Create(user)
 	return res.Error
 }
-func (u *UserDB) GetUserByUsername(username string) (*models.User, error) {
+func (g *GormDB) GetUserByUsername(username string) (*models.User, error) {
 	var userFound models.User
-	res := u.db.Model(&models.User{}).Where("username = ?", username).Find(&userFound)
+	res := g.db.Model(&models.User{}).Where("username = ?", username).Find(&userFound)
 	return &userFound, res.Error
 }
 
-func (u *UserDB) CheckIfUserExistsByID(ID uint) (bool, error) {
+func (g *GormDB) CheckIfUserExistsByID(ID uint) (bool, error) {
 	var userFound int64
 
-	res := u.db.Model(&models.User{}).Where("id=?", ID).Count(&userFound)
+	res := g.db.Model(&models.User{}).Where("id=?", ID).Count(&userFound)
 	if res.Error != nil {
 		return false, res.Error
 	}
@@ -78,27 +78,27 @@ func (u *UserDB) CheckIfUserExistsByID(ID uint) (bool, error) {
 	}
 	return true, nil
 }
-func (u *UserDB) GetUserByID(ID uint) (*models.User, error) {
+func (g *GormDB) GetUserByID(ID uint) (*models.User, error) {
 	var user models.User
-	res := u.db.Model(&models.User{ID: ID}).Find(&user)
+	res := g.db.Model(&models.User{ID: ID}).Find(&user)
 	return &user, res.Error
 }
-func (u *UserDB) SaveUserData(user *models.User) error {
-	res := u.db.Save(user)
+func (g *GormDB) SaveUserData(user *models.User) error {
+	res := g.db.Save(user)
 	return res.Error
 }
 
-func (u *UserDB) DeleteUser(ID uint) error {
-	res := u.db.Delete(&models.User{}, ID)
+func (g *GormDB) DeleteUser(ID uint) error {
+	res := g.db.Delete(&models.User{}, ID)
 	return res.Error
 }
 
-func (u *UserDB) EditUser(user *models.User) error {
-	res := u.db.Model(&models.User{ID: user.ID}).Updates(user)
+func (g *GormDB) EditUser(user *models.User) error {
+	res := g.db.Model(&models.User{ID: user.ID}).Updates(user)
 	return res.Error
 }
 
-func (u *UserDB) DeleteUserAndAllAssociations(ID uint) error {
-	res := u.db.Select(clause.Associations).Delete(&models.User{ID: ID})
+func (g *GormDB) DeleteUserAndAllAssociations(ID uint) error {
+	res := g.db.Select(clause.Associations).Delete(&models.User{ID: ID})
 	return res.Error
 }

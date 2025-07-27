@@ -39,7 +39,7 @@ func main() {
 	dbHandler := gormdb.NewGormDB(dbconn)
 	redisAddr := os.Getenv("REDIS_ADDRESS")
 	go workers.Run(redisAddr)
-	go scheduler.Run(dbHandler.User, redisAddr)
+	go scheduler.Run(dbHandler, redisAddr)
 	/*
 		adminUsername := os.Getenv("ADMIN_USERNAME")
 		adminPasswordHash, err := argon2id.CreateHash(os.Getenv("ADMIN_PASSWORD"), argon2id.DefaultParams)
@@ -53,7 +53,7 @@ func main() {
 			log.Print(res.Error)
 		}
 	*/
-	r := router.Setup(dbHandler.User, dbHandler.Group, dbHandler.Auth, dbHandler.Auth, dbHandler.Message, dbHandler.User)
+	r := router.Setup(dbHandler)
 
 	srv := &http.Server{
 		Addr:    ":8080",
