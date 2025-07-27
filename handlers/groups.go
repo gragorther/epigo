@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"log/slog"
 	"net/http"
 	"strconv"
 
@@ -52,7 +53,10 @@ func AddGroup(db interface {
 		}
 		err := db.CreateGroupAndRecipientEmails(&sendToGroup, &newRecipientEmails)
 		if err != nil {
-			c.AbortWithError(http.StatusInternalServerError, apperrors.ErrCreationOfObjectFailed)
+			slog.Error("failed to create group and recipient emails",
+				slog.Uint64("user_id", uint64(user.ID)),
+			)
+			c.AbortWithError(http.StatusInternalServerError, err)
 			return
 		}
 	}
@@ -67,23 +71,23 @@ func DeleteGroup(db interface {
 
 		id, err := strconv.Atoi(c.Param("id"))
 		if err != nil {
-			c.AbortWithError(http.StatusNotFound, apperrors.ErrUserNotFound)
+			c.AbortWithError(http.StatusNotFound, err)
 			return
 		}
 		user := currentUser.(*models.User)
 		authorized, err := db.CheckUserAuthorizationForGroup([]uint{uint(id)}, user.ID)
 		if err != nil {
-			c.AbortWithError(http.StatusUnauthorized, apperrors.ErrAuthCheckFailed)
+			c.AbortWithError(http.StatusUnauthorized, err)
 			return
 		}
 		if !authorized {
-			c.AbortWithError(http.StatusUnauthorized, apperrors.ErrUnauthorized)
+			c.AbortWithError(http.StatusUnauthorized, err)
 			return
 		}
 
 		err = db.DeleteGroupByID(uint(id))
 		if err != nil {
-			c.AbortWithError(http.StatusInternalServerError, apperrors.ErrCreationOfObjectFailed)
+			c.AbortWithError(http.StatusInternalServerError, err)
 			return
 		}
 
