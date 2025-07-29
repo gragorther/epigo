@@ -12,15 +12,22 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/gragorther/epigo/asynq/scheduler"
 	"github.com/gragorther/epigo/asynq/workers"
+	"github.com/gragorther/epigo/config"
 	"github.com/gragorther/epigo/database/gormdb"
 	"github.com/gragorther/epigo/database/initializers"
+	"github.com/gragorther/epigo/logger"
 	"github.com/gragorther/epigo/models"
 	"github.com/gragorther/epigo/router"
 )
 
 func main() {
+	config, err := config.Get()
+
+	_ = logger.Configure(config.Production, os.Stdout)
+
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
+
 	if os.Getenv("GIN_MODE") == "debug" {
 		gin.SetMode(gin.DebugMode)
 	} else {
