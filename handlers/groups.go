@@ -12,7 +12,7 @@ import (
 	"github.com/gragorther/epigo/types"
 )
 
-type groupInput struct {
+type GroupInput struct {
 	RecipientEmails []string `json:"recipientEmails"`
 	Name            string   `json:"name"`
 	Description     string   `json:"description"`
@@ -30,7 +30,7 @@ func AddGroup(db interface {
 			return
 		}
 
-		var input groupInput
+		var input GroupInput
 		if err := c.ShouldBindJSON(&input); err != nil {
 			c.AbortWithError(http.StatusInternalServerError, apperrors.ErrTypeConversionFailed)
 			return
