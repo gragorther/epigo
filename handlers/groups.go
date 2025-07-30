@@ -13,13 +13,13 @@ import (
 )
 
 type GroupInput struct {
-	RecipientEmails []string `json:"recipientEmails"`
-	Name            string   `json:"name"`
-	Description     string   `json:"description"`
+	Recipients  []models.Recipient `json:"recipients"`
+	Name        string             `json:"name"`
+	Description string             `json:"description"`
 }
 
 func AddGroup(db interface {
-	CreateGroupAndRecipientEmails(group *models.Group, recipientEmails *[]models.RecipientEmail) error
+	CreateGroupAndRecipientEmails(group *models.Group, recipientEmails *[]models.Recipient) error
 }) gin.HandlerFunc {
 	return func(c *gin.Context) {
 
@@ -40,18 +40,18 @@ func AddGroup(db interface {
 			Name:        input.Name,
 			Description: input.Description,
 		}
-		var newRecipientEmails []models.RecipientEmail
-		for _, e := range input.RecipientEmails {
-			if !email.Validate(e) {
-				c.Error(apperrors.ErrInvalidEmail)
+		var newRecipientEmails []models.Recipient
+		for _, e := range input.Recipients {
+			if !email.Validate(e.Email) {
+				c.AbortWithError(http.StatusBadRequest, apperrors.ErrInvalidEmail)
 				return
 			}
-			newRecipientEmails = append(newRecipientEmails, models.RecipientEmail{
+			newRecipientEmails = append(newRecipientEmails, models.Recipient{
 				GroupID: sendToGroup.ID,
-				Email:   e,
+				Email:   e.Email,
 			})
 		}
-		err := db.CreateGroupAndRecipientEmails(&sendToGroup, &newRecipientEmails)
+		err := db.CreateGroupAndRecipientEmails(&sendToGroup, &input.Recipients)
 		if err != nil {
 			slog.Error("failed to create group and recipient emails",
 				slog.Uint64("user_id", uint64(user.ID)),
@@ -129,7 +129,7 @@ type editGroupInput struct {
 
 func EditGroup(db interface {
 	CheckUserAuthorizationForGroup(groupIDs []uint, userID uint) (bool, error)
-	UpdateGroup(group *models.Group, recipientEmails *[]models.RecipientEmail) error
+	UpdateGroup(group *models.Group, recipientEmails *[]models.Recipient) error
 }) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		currentUser, _ := c.Get("currentUser")
@@ -160,14 +160,14 @@ func EditGroup(db interface {
 
 		var group models.Group
 
-		recipientEmails := make([]models.RecipientEmail, len(input.RecipientEmails))
+		recipientEmails := make([]models.Recipient, len(input.RecipientEmails))
 		for i, address := range input.RecipientEmails {
 			valid := email.Validate(address)
 			if !valid {
 				c.AbortWithError(http.StatusBadRequest, apperrors.ErrInvalidEmail)
 				return
 			}
-			recipientEmails[i] = models.RecipientEmail{Email: address}
+			recipientEmails[i] = models.Recipient{Email: address}
 		}
 
 		group.Name = input.Name

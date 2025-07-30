@@ -29,12 +29,12 @@ type recipientEmail struct {
 }
 
 type listGroupsDTO struct {
-	ID              uint             `gorm:"primarykey"`
-	CreatedAt       time.Time        `json:"createdAt"`
-	UpdatedAt       time.Time        `json:"updatedAt"`
-	Name            string           `json:"name"`
-	Description     string           `json:"description"`
-	RecipientEmails []recipientEmail `json:"recipientEmails" gorm:"foreignKey:GroupID"`
+	ID          uint             `gorm:"primarykey"`
+	CreatedAt   time.Time        `json:"createdAt"`
+	UpdatedAt   time.Time        `json:"updatedAt"`
+	Name        string           `json:"name"`
+	Description string           `json:"description"`
+	Recipients  []recipientEmail `json:"recipients" gorm:"foreignKey:GroupID"`
 }
 
 func (g *GormDB) FindGroupsAndRecipientEmailsByUserID(userID uint) ([]types.GroupWithEmails, error) {
@@ -45,8 +45,8 @@ func (g *GormDB) FindGroupsAndRecipientEmailsByUserID(userID uint) ([]types.Grou
 	}
 	var out []types.GroupWithEmails
 	for _, g := range groups {
-		emails := make([]string, len(g.RecipientEmails))
-		for i, re := range g.RecipientEmails {
+		emails := make([]string, len(g.Recipients))
+		for i, re := range g.Recipients {
 			emails[i] = re.Email
 		}
 
@@ -62,13 +62,13 @@ func (g *GormDB) FindGroupsAndRecipientEmailsByUserID(userID uint) ([]types.Grou
 	return out, nil
 }
 
-func (g *GormDB) CreateGroupAndRecipientEmails(group *models.Group, recipientEmails *[]models.RecipientEmail) error {
+func (g *GormDB) CreateGroupAndRecipientEmails(group *models.Group, recipientEmails *[]models.Recipient) error {
 
 	newGroup := models.Group{
-		UserID:          group.UserID,
-		Name:            group.Name,
-		Description:     group.Description,
-		RecipientEmails: *recipientEmails,
+		UserID:      group.UserID,
+		Name:        group.Name,
+		Description: group.Description,
+		Recipients:  *recipientEmails,
 	}
 	err := g.db.Transaction(func(tx *gorm.DB) error {
 		err := tx.Create(&newGroup).Error
@@ -77,7 +77,7 @@ func (g *GormDB) CreateGroupAndRecipientEmails(group *models.Group, recipientEma
 	return err
 }
 
-func (g *GormDB) UpdateGroup(group *models.Group, recipientEmails *[]models.RecipientEmail) error {
+func (g *GormDB) UpdateGroup(group *models.Group, recipientEmails *[]models.Recipient) error {
 	err := g.db.Transaction(func(tx *gorm.DB) error {
 		output := tx.Updates(&group)
 		if output.Error != nil {
