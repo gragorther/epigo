@@ -5,7 +5,6 @@ import (
 
 	"github.com/gragorther/epigo/apperrors"
 	"github.com/gragorther/epigo/models"
-	"github.com/gragorther/epigo/types"
 	"gorm.io/gorm"
 )
 
@@ -24,8 +23,7 @@ func (g *GormDB) DeleteGroupByID(id uint) error {
 }
 
 type recipient struct {
-	Email   string `json:"email"`
-	GroupID uint
+	Email string `json:"email"`
 }
 
 type listGroupsDTO struct {
@@ -37,29 +35,14 @@ type listGroupsDTO struct {
 	Recipients  []recipient `json:"recipients" gorm:"foreignKey:GroupID"`
 }
 
-func (g *GormDB) FindGroupsAndRecipientEmailsByUserID(userID uint) ([]types.GroupWithEmails, error) {
-	var groups []listGroupsDTO
-	res := g.db.Model(&models.Group{}).Where("user_id = ?", userID).Preload("RecipientEmails").Find(&groups)
+func (g *GormDB) FindGroupsAndRecipientsByUserID(userID uint) ([]models.Group, error) {
+	var groups []models.Group
+	res := g.db.Select("id", "name", "description", "recipients").Where("user_id = ?", userID).Preload("Recipients").Find(&groups)
 	if res.Error != nil {
 		return nil, res.Error
 	}
-	var out []types.GroupWithEmails
-	for _, g := range groups {
-		emails := make([]string, len(g.Recipients))
-		for i, re := range g.Recipients {
-			emails[i] = re.Email
-		}
 
-		out = append(out, types.GroupWithEmails{
-			ID:              g.ID,
-			CreatedAt:       g.CreatedAt,
-			UpdatedAt:       g.UpdatedAt,
-			Name:            g.Name,
-			Description:     g.Description,
-			RecipientEmails: emails,
-		})
-	}
-	return out, nil
+	return groups, nil
 }
 
 func (g *GormDB) CreateGroupAndRecipientEmails(group *models.Group) error {
@@ -71,16 +54,16 @@ func (g *GormDB) CreateGroupAndRecipientEmails(group *models.Group) error {
 	return err
 }
 
-func (g *GormDB) UpdateGroup(group *models.Group, recipientEmails *[]models.Recipient) error {
+func (g *GormDB) UpdateGroup(group *models.Group) error {
 	err := g.db.Transaction(func(tx *gorm.DB) error {
-		output := tx.Updates(&group)
+		output := tx.Updates(group)
 		if output.Error != nil {
 			return output.Error
 		}
 		if output.RowsAffected < 1 {
 			return apperrors.ErrNotFound
 		}
-		err := tx.Model(&group).Association("RecipientEmails").Replace(recipientEmails)
+		err := tx.Model(group).Association("Recipients").Replace(group.Recipients)
 
 		return err
 	})

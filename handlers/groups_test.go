@@ -2,6 +2,7 @@ package handlers_test
 
 import (
 	"bytes"
+	"encoding/json"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -15,18 +16,18 @@ import (
 )
 
 type mockDB struct {
-	Err              error
+	Err              error // the error mockDB methods will return
 	IsAuthorized     bool
 	DeleteGroupCalls uint
+	UpdateGroupCalls uint
+	FindGroupCalls   uint
 
-	Groups     map[uint]models.Group
+	Groups     []models.Group
 	Recipients []models.Recipient
 }
 
 func newMockDB(err error) *mockDB {
 	m := mockDB{Err: err}
-	// makes sure we don't get a panic because the map wasn't created
-	m.Groups = make(map[uint]models.Group)
 
 	return &m
 }
@@ -34,7 +35,7 @@ func newMockDB(err error) *mockDB {
 func (m *mockDB) CreateGroupAndRecipientEmails(group *models.Group) error {
 
 	// this gets the current length of the Groups map and sets the input group to the index at the uint of the length
-	m.Groups[uint(len(m.Groups))] = *group
+	m.Groups = append(m.Groups, *group)
 	return m.Err
 }
 func (m *mockDB) CheckUserAuthorizationForGroup(groupIDs []uint, userID uint) (bool, error) {
@@ -42,6 +43,21 @@ func (m *mockDB) CheckUserAuthorizationForGroup(groupIDs []uint, userID uint) (b
 }
 func (m *mockDB) DeleteGroupByID(id uint) error {
 	m.DeleteGroupCalls += 1
+	return m.Err
+}
+
+func (m *mockDB) FindGroupsAndRecipientsByUserID(userID uint) ([]models.Group, error) {
+	m.FindGroupCalls += 1
+	return m.Groups, m.Err
+}
+func (m *mockDB) UpdateGroup(group *models.Group) error {
+	for i := range m.Groups {
+		if m.Groups[i].ID == group.ID {
+			m.Groups[i] = *group
+			break
+		}
+	}
+
 	return m.Err
 }
 
@@ -145,8 +161,8 @@ func TestDeleteGroup(t *testing.T) {
 		mock.IsAuthorized = true
 		handler := handlers.DeleteGroup(mock)
 		c.AddParam("id", "0")
-		mock.Groups = map[uint]models.Group{
-			0: {
+		mock.Groups = []models.Group{
+			{
 				UserID: 1,
 			},
 		}
@@ -167,5 +183,104 @@ func TestDeleteGroup(t *testing.T) {
 		handler(c)
 		assert.Equal(http.StatusNotFound, w.Code, "group should not be found when there's no param")
 		assert.Equal(uint(0), mock.DeleteGroupCalls, "expect 0 delete group calls when there's no param")
+	})
+	t.Run("user does not own group", func(t *testing.T) {
+		c, w := setupGin()
+		fakeUser := &models.User{ID: 1, Username: "test"}
+		c.Set("currentUser", fakeUser)
+		mock := newMockDB(nil)
+		mock.IsAuthorized = false
+
+		handler := handlers.DeleteGroup(mock)
+		c.AddParam("id", "0")
+
+		handler(c)
+
+		assert.Equal(http.StatusUnauthorized, w.Code, "user should be unauthorized to perform this action")
+		assert.Equal(uint(0), mock.DeleteGroupCalls, "there should be no calls to delete the group because the user is unauthorized")
+	})
+}
+
+func TestListGroups(t *testing.T) {
+	assert := assert.New(t)
+
+	c, w := setupGin()
+	fakeUser := &models.User{ID: 1, Username: "test"}
+	c.Set("currentUser", fakeUser)
+	c.AddParam("id", "1")
+	mock := newMockDB(nil)
+	mock.Groups = []models.Group{
+		{ID: 2, Name: "test AAAAAAAAAAAA", LastMessages: []models.LastMessage{
+			{ID: 1},
+		}},
+	}
+	handler := handlers.ListGroups(mock)
+
+	handler(c)
+	var unmarshaledBody []models.Group
+
+	err := json.Unmarshal(w.Body.Bytes(), &unmarshaledBody)
+	if err != nil {
+		t.Fatalf("Failed to unmarshal json: %v", err)
+	}
+
+	for i := range mock.Groups {
+		assert.Equal(mock.Groups[i].Name, unmarshaledBody[i].Name)
+		assert.Equal(mock.Groups[i].Description, unmarshaledBody[i].Description)
+		assert.Equal(mock.Groups[i].LastMessages, unmarshaledBody[i].LastMessages)
+		assert.Equal(mock.Groups[i].Recipients, unmarshaledBody[i].Recipients)
+	}
+
+	assert.Equal(http.StatusOK, w.Code, "http status code should indicate success")
+
+	assert.Equal(mock.FindGroupCalls, uint(1), "expected 1 find group call")
+}
+
+func TestEditGroup(t *testing.T) {
+	assert := assert.New(t)
+	t.Run("valid input", func(t *testing.T) {
+		c, w := setupGin()
+		fakeUser := &models.User{ID: 1, Username: "test"}
+		c.Set("currentUser", fakeUser)
+		c.AddParam("id", "0")
+		mock := newMockDB(nil)
+		mock.IsAuthorized = true
+		// the constants to be used in the group.
+		const groupID uint = 0
+		const unchangedGroupName string = "not yet changed"
+		const unchangedGroupDesc string = "unchanged group desc"
+
+		// this can't be const for some reason
+		var unchangedGroupRecipients []models.Recipient = []models.Recipient{
+			{GroupID: groupID, Email: "gregor@gregtech.eu"},
+			{GroupID: groupID, Email: "gregor@gregtech.eu"},
+		}
+		mock.Groups = []models.Group{
+			{ID: groupID, Name: unchangedGroupName, Description: unchangedGroupDesc, Recipients: unchangedGroupRecipients},
+		}
+
+		// the new names of fields in the group which will be then asserted against to see if handler actually changed anything
+		const newGroupName string = "new name :3"
+		const newGroupDesc string = "new desc"
+		newRecipients := []models.Recipient{
+			{GroupID: groupID, Email: "test@thing.com"},
+		}
+		jsonString, _ := sonic.Marshal(&models.Group{
+			Name:        newGroupName,
+			Description: newGroupDesc,
+			Recipients:  newRecipients,
+		})
+		c.Request = &http.Request{
+			Body: io.NopCloser(bytes.NewBuffer(jsonString)),
+		}
+
+		handler := handlers.EditGroup(mock)
+		handler(c)
+
+		assert.Equal(http.StatusOK, w.Code, "http status code should indicate success")
+
+		assert.Equal(newGroupName, mock.Groups[0].Name, "the group name in the in-memory database should match the one sent to the API")
+		assert.Equal(newGroupDesc, mock.Groups[0].Description, "the group descripton in the in memory db should match the one sent to the api")
+		assert.Equal(newRecipients, mock.Groups[0].Recipients, "the recipients sent to the api should match the ones in the in memory db")
 	})
 }

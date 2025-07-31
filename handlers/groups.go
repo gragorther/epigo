@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"fmt"
 	"log/slog"
 	"net/http"
 	"strconv"
@@ -9,7 +10,6 @@ import (
 	"github.com/gragorther/epigo/apperrors"
 	"github.com/gragorther/epigo/email"
 	"github.com/gragorther/epigo/models"
-	"github.com/gragorther/epigo/types"
 )
 
 type GroupInput struct {
@@ -75,11 +75,11 @@ func DeleteGroup(db interface {
 		user := currentUser.(*models.User)
 		authorized, err := db.CheckUserAuthorizationForGroup([]uint{uint(id)}, user.ID)
 		if err != nil {
-			c.AbortWithError(http.StatusUnauthorized, err)
+			c.AbortWithError(http.StatusUnauthorized, fmt.Errorf("failed to check user authorization for group: %w", err))
 			return
 		}
 		if !authorized {
-			c.AbortWithError(http.StatusUnauthorized, err)
+			c.AbortWithStatus(http.StatusUnauthorized)
 			return
 		}
 
@@ -94,7 +94,7 @@ func DeleteGroup(db interface {
 }
 
 func ListGroups(db interface {
-	FindGroupsAndRecipientEmailsByUserID(userID uint) ([]types.GroupWithEmails, error)
+	FindGroupsAndRecipientsByUserID(userID uint) ([]models.Group, error)
 }) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		currentUser, _ := c.Get("currentUser")
@@ -104,7 +104,7 @@ func ListGroups(db interface {
 			c.AbortWithError(http.StatusInternalServerError, apperrors.ErrTypeConversionFailed)
 			return
 		}
-		groups, err := db.FindGroupsAndRecipientEmailsByUserID(user.ID) // gets the list of groups a user has via the association "Groups" on the User model
+		groups, err := db.FindGroupsAndRecipientsByUserID(user.ID) // gets the list of groups a user has via the association "Groups" on the User model
 		if err != nil {
 			c.AbortWithError(http.StatusInternalServerError, apperrors.ErrDatabaseFetchFailed)
 			return
@@ -119,23 +119,18 @@ func ListGroups(db interface {
 	}
 }
 
-type editGroupInput struct {
-	RecipientEmails []string `json:"recipientEmails"`
-	Name            string   `json:"name"`
-	Description     string   `json:"description"`
-}
-
 func EditGroup(db interface {
 	CheckUserAuthorizationForGroup(groupIDs []uint, userID uint) (bool, error)
-	UpdateGroup(group *models.Group, recipientEmails *[]models.Recipient) error
+	UpdateGroup(group *models.Group) error
 }) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		currentUser, _ := c.Get("currentUser")
 
 		user := currentUser.(*models.User)
 
-		var input editGroupInput
+		var input models.Group
 		err := c.ShouldBindJSON(&input)
+
 		if err != nil {
 			c.AbortWithError(http.StatusUnprocessableEntity, apperrors.ErrParsingFailed)
 			return
@@ -156,22 +151,7 @@ func EditGroup(db interface {
 			return
 		}
 
-		var group models.Group
-
-		recipientEmails := make([]models.Recipient, len(input.RecipientEmails))
-		for i, address := range input.RecipientEmails {
-			valid := email.Validate(address)
-			if !valid {
-				c.AbortWithError(http.StatusBadRequest, apperrors.ErrInvalidEmail)
-				return
-			}
-			recipientEmails[i] = models.Recipient{Email: address}
-		}
-
-		group.Name = input.Name
-		group.Description = input.Description
-		group.ID = uint(id)
-		err = db.UpdateGroup(&group, &recipientEmails)
+		err = db.UpdateGroup(&input)
 		if err != nil {
 			c.AbortWithError(http.StatusNotFound, apperrors.ErrNoGroups)
 			return
