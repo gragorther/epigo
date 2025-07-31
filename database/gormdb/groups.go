@@ -23,18 +23,18 @@ func (g *GormDB) DeleteGroupByID(id uint) error {
 	return err
 }
 
-type recipientEmail struct {
+type recipient struct {
 	Email   string `json:"email"`
 	GroupID uint
 }
 
 type listGroupsDTO struct {
-	ID          uint             `gorm:"primarykey"`
-	CreatedAt   time.Time        `json:"createdAt"`
-	UpdatedAt   time.Time        `json:"updatedAt"`
-	Name        string           `json:"name"`
-	Description string           `json:"description"`
-	Recipients  []recipientEmail `json:"recipients" gorm:"foreignKey:GroupID"`
+	ID          uint        `gorm:"primarykey"`
+	CreatedAt   time.Time   `json:"createdAt"`
+	UpdatedAt   time.Time   `json:"updatedAt"`
+	Name        string      `json:"name"`
+	Description string      `json:"description"`
+	Recipients  []recipient `json:"recipients" gorm:"foreignKey:GroupID"`
 }
 
 func (g *GormDB) FindGroupsAndRecipientEmailsByUserID(userID uint) ([]types.GroupWithEmails, error) {
@@ -62,16 +62,10 @@ func (g *GormDB) FindGroupsAndRecipientEmailsByUserID(userID uint) ([]types.Grou
 	return out, nil
 }
 
-func (g *GormDB) CreateGroupAndRecipientEmails(group *models.Group, recipientEmails *[]models.Recipient) error {
+func (g *GormDB) CreateGroupAndRecipientEmails(group *models.Group) error {
 
-	newGroup := models.Group{
-		UserID:      group.UserID,
-		Name:        group.Name,
-		Description: group.Description,
-		Recipients:  *recipientEmails,
-	}
 	err := g.db.Transaction(func(tx *gorm.DB) error {
-		err := tx.Create(&newGroup).Error
+		err := tx.Create(group).Error
 		return err
 	})
 	return err

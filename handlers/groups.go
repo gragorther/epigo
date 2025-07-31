@@ -14,12 +14,12 @@ import (
 
 type GroupInput struct {
 	Recipients  []models.Recipient `json:"recipients"`
-	Name        string             `json:"name"`
+	Name        string             `json:"name" binding:"required"`
 	Description string             `json:"description"`
 }
 
 func AddGroup(db interface {
-	CreateGroupAndRecipientEmails(group *models.Group, recipientEmails *[]models.Recipient) error
+	CreateGroupAndRecipientEmails(group *models.Group) error
 }) gin.HandlerFunc {
 	return func(c *gin.Context) {
 
@@ -40,18 +40,16 @@ func AddGroup(db interface {
 			Name:        input.Name,
 			Description: input.Description,
 		}
-		var newRecipientEmails []models.Recipient
+
 		for _, e := range input.Recipients {
 			if !email.Validate(e.Email) {
-				c.AbortWithError(http.StatusBadRequest, apperrors.ErrInvalidEmail)
+				c.AbortWithError(http.StatusUnprocessableEntity, apperrors.ErrInvalidEmail)
 				return
 			}
-			newRecipientEmails = append(newRecipientEmails, models.Recipient{
-				GroupID: sendToGroup.ID,
-				Email:   e.Email,
-			})
 		}
-		err := db.CreateGroupAndRecipientEmails(&sendToGroup, &input.Recipients)
+
+		sendToGroup.Recipients = input.Recipients
+		err := db.CreateGroupAndRecipientEmails(&sendToGroup)
 		if err != nil {
 			slog.Error("failed to create group and recipient emails",
 				slog.Uint64("user_id", uint64(user.ID)),
