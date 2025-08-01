@@ -22,8 +22,9 @@ type mockDB struct {
 	UpdateGroupCalls uint
 	FindGroupCalls   uint
 
-	Groups     []models.Group
-	Recipients []models.Recipient
+	Groups       []models.Group
+	LastMessages []models.LastMessage
+	Recipients   []models.Recipient
 }
 
 func newMockDB(err error) *mockDB {

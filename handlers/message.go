@@ -9,7 +9,7 @@ import (
 	"github.com/gragorther/epigo/types"
 )
 
-type messageInput struct {
+type MessageInput struct {
 	Title    string `json:"title" binding:"required"`
 	Content  string `json:"content" binding:"required"`
 	GroupIDs []uint `json:"groupIDs" binding:"required"`
@@ -36,7 +36,7 @@ func AddLastMessage(db interface {
 			c.AbortWithError(http.StatusInternalServerError, err)
 			return
 		}
-		var input messageInput
+		var input MessageInput
 
 		err = c.ShouldBindJSON(&input)
 		if err != nil {
@@ -67,6 +67,7 @@ func AddLastMessage(db interface {
 		}
 
 		err = db.CreateLastMessage(&newLastMessage)
+		c.Status(http.StatusOK)
 		if err != nil {
 			c.AbortWithError(http.StatusInternalServerError, fmt.Errorf("failed to create last message: %w", err))
 			return
@@ -111,7 +112,7 @@ func EditLastMessage(db interface {
 			return
 		}
 
-		var input messageInput
+		var input MessageInput
 		err = c.ShouldBindJSON(&input)
 		if err != nil {
 			c.AbortWithError(http.StatusUnprocessableEntity, fmt.Errorf("failed to bind edit last message json: %w", err))

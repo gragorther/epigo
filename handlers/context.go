@@ -11,7 +11,7 @@ import (
 
 var ErrNoSuchParam error = errors.New("no such param in the context")
 
-func GetKeyFromContext[T any](key string, c *gin.Context) (T, error) {
+func GetFromContext[T any](key string, c *gin.Context) (T, error) {
 	// empty var
 	var t T
 
@@ -24,7 +24,7 @@ func GetKeyFromContext[T any](key string, c *gin.Context) (T, error) {
 }
 
 func GetUserFromContext(c *gin.Context) (*models.User, error) {
-	currentUser, err := GetKeyFromContext[*models.User]("currentUser", c)
+	currentUser, err := GetFromContext[*models.User]("currentUser", c)
 	return currentUser, err
 }
 
