@@ -22,6 +22,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Install Task
+        uses: arduino/setup-task@v2
+        with:
+          version: 2.x
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Set GOAMD64 for amd64
         if: matrix.goarch == 'amd64'
         run: echo "GOAMD64=v3" >> $GITHUB_ENV
@@ -35,3 +41,4 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           goos: ${{ matrix.goos }}
           goarch: ${{ matrix.goarch }}
+          build_command: task build
