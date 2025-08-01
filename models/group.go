@@ -14,9 +14,9 @@ type Group struct {
 	DeletedAt    gorm.DeletedAt `json:"-" gorm:"index"`
 	UserID       uint           `json:"-"`
 	Name         string         `json:"name"`
-	Description  string         `json:"description"`
-	Recipients   []Recipient    `json:"recipients"`
-	LastMessages []LastMessage  `json:"lastMessages" gorm:"many2many:group_last_messages;"`
+	Description  *string        `json:"description,omitempty,omitzero"`
+	Recipients   *[]Recipient   `json:"recipients"`
+	LastMessages *[]LastMessage `json:"lastMessages" gorm:"many2many:group_last_messages;"`
 }
 
 // this, in combination with the omitzero tag, allows us to disable
@@ -35,9 +35,9 @@ func (g *Group) UnmarshalJSON(data []byte) error {
 	}
 
 	g.Name = temp.Name
-	g.Description = temp.Description
-	g.Recipients = temp.Recipients
-	g.LastMessages = temp.LastMessages
+	g.Description = &temp.Description
+	g.Recipients = &temp.Recipients
+	g.LastMessages = &temp.LastMessages
 	return nil
 }
 

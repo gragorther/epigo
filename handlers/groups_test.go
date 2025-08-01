@@ -103,9 +103,9 @@ func TestAddGroup(t *testing.T) {
 		handler(c)
 		assert.Equal(http.StatusOK, w.Code, "status code should indicate success")
 		assert.Equal(jsonInput.Name, mock.Groups[0].Name)
-		assert.Equal(jsonInput.Description, mock.Groups[0].Description)
+		assert.Equal(jsonInput.Description, *mock.Groups[0].Description)
 		assert.Equal(fakeUser.ID, mock.Groups[0].UserID)
-		assert.Equal(jsonInput.Recipients, mock.Groups[0].Recipients)
+		assert.Equal(jsonInput.Recipients, *mock.Groups[0].Recipients)
 	})
 	t.Run("with invalid json input", func(t *testing.T) {
 		c, w := setupGin()
@@ -210,9 +210,11 @@ func TestListGroups(t *testing.T) {
 	c.AddParam("id", "1")
 	mock := newMockDB(nil)
 	mock.Groups = []models.Group{
-		{ID: 2, Name: "test AAAAAAAAAAAA", LastMessages: []models.LastMessage{
+		{ID: 2, Name: "test AAAAAAAAAAAA", LastMessages: &[]models.LastMessage{
 			{ID: 1},
-		}},
+		}, Recipients: &[]models.Recipient{{
+			Email: "gregor@gregtech.eu",
+		}, {Email: "test@gregtech.eu"}}},
 	}
 	handler := handlers.ListGroups(mock)
 
@@ -226,7 +228,7 @@ func TestListGroups(t *testing.T) {
 
 	for i := range mock.Groups {
 		assert.Equal(mock.Groups[i].Name, unmarshaledBody[i].Name)
-		assert.Equal(mock.Groups[i].Description, unmarshaledBody[i].Description)
+		assert.Equal("", *unmarshaledBody[i].Description)
 		assert.Equal(mock.Groups[i].LastMessages, unmarshaledBody[i].LastMessages)
 		assert.Equal(mock.Groups[i].Recipients, unmarshaledBody[i].Recipients)
 	}
@@ -248,7 +250,7 @@ func TestEditGroup(t *testing.T) {
 		// the constants to be used in the group.
 		const groupID uint = 0
 		const unchangedGroupName string = "not yet changed"
-		const unchangedGroupDesc string = "unchanged group desc"
+		var unchangedGroupDesc string = "unchanged group desc"
 
 		// this can't be const for some reason
 		var unchangedGroupRecipients []models.Recipient = []models.Recipient{
@@ -256,19 +258,19 @@ func TestEditGroup(t *testing.T) {
 			{GroupID: groupID, Email: "gregor@gregtech.eu"},
 		}
 		mock.Groups = []models.Group{
-			{ID: groupID, Name: unchangedGroupName, Description: unchangedGroupDesc, Recipients: unchangedGroupRecipients},
+			{ID: groupID, Name: unchangedGroupName, Description: &unchangedGroupDesc, Recipients: &unchangedGroupRecipients},
 		}
 
 		// the new names of fields in the group which will be then asserted against to see if handler actually changed anything
 		const newGroupName string = "new name :3"
-		const newGroupDesc string = "new desc"
+		var newGroupDesc string = "new desc"
 		newRecipients := []models.Recipient{
 			{GroupID: groupID, Email: "test@thing.com"},
 		}
 		jsonString, _ := sonic.Marshal(&models.Group{
 			Name:        newGroupName,
-			Description: newGroupDesc,
-			Recipients:  newRecipients,
+			Description: &newGroupDesc,
+			Recipients:  &newRecipients,
 		})
 		c.Request = &http.Request{
 			Body: io.NopCloser(bytes.NewBuffer(jsonString)),
@@ -280,7 +282,7 @@ func TestEditGroup(t *testing.T) {
 		assert.Equal(http.StatusOK, w.Code, "http status code should indicate success")
 
 		assert.Equal(newGroupName, mock.Groups[0].Name, "the group name in the in-memory database should match the one sent to the API")
-		assert.Equal(newGroupDesc, mock.Groups[0].Description, "the group descripton in the in memory db should match the one sent to the api")
-		assert.Equal(newRecipients, mock.Groups[0].Recipients, "the recipients sent to the api should match the ones in the in memory db")
+		assert.Equal(newGroupDesc, *mock.Groups[0].Description, "the group descripton in the in memory db should match the one sent to the api")
+		assert.Equal(newRecipients, *mock.Groups[0].Recipients, "the recipients sent to the api should match the ones in the in memory db")
 	})
 }

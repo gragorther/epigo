@@ -38,7 +38,7 @@ func AddGroup(db interface {
 		sendToGroup := models.Group{
 			UserID:      user.ID,
 			Name:        input.Name,
-			Description: input.Description,
+			Description: &input.Description,
 		}
 
 		for _, e := range input.Recipients {
@@ -48,7 +48,7 @@ func AddGroup(db interface {
 			}
 		}
 
-		sendToGroup.Recipients = input.Recipients
+		sendToGroup.Recipients = &input.Recipients
 		err := db.CreateGroupAndRecipientEmails(&sendToGroup)
 		if err != nil {
 			slog.Error("failed to create group and recipient emails",
