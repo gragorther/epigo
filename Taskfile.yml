@@ -2,10 +2,10 @@
 
 version: "3"
 
-vars:
-  GREETING: Hello, World!
-
 tasks:
   build:
     cmds:
       - go build -tags="sonic avx" .
+  test:
+    cmds:
+      - go test ./...
