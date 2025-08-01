@@ -7,7 +7,6 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
-	"github.com/gragorther/epigo/apperrors"
 	"github.com/gragorther/epigo/email"
 	"github.com/gragorther/epigo/models"
 )
@@ -23,16 +22,15 @@ func AddGroup(db interface {
 }) gin.HandlerFunc {
 	return func(c *gin.Context) {
 
-		currentUser, _ := c.Get("currentUser")
-		user, ok := currentUser.(*models.User)
-		if !ok {
-			c.AbortWithError(http.StatusInternalServerError, apperrors.ErrTypeConversionFailed)
+		user, err := GetUserFromContext(c)
+		if err != nil {
+			c.AbortWithError(http.StatusInternalServerError, err)
 			return
 		}
 
 		var input GroupInput
 		if err := c.ShouldBindJSON(&input); err != nil {
-			c.AbortWithError(http.StatusInternalServerError, apperrors.ErrTypeConversionFailed)
+			c.AbortWithError(http.StatusInternalServerError, fmt.Errorf("Failed to bind add group JSON: %w", err))
 			return
 		}
 		sendToGroup := models.Group{
@@ -43,13 +41,13 @@ func AddGroup(db interface {
 
 		for _, e := range input.Recipients {
 			if !email.Validate(e.Email) {
-				c.AbortWithError(http.StatusUnprocessableEntity, apperrors.ErrInvalidEmail)
+				c.AbortWithStatus(http.StatusUnprocessableEntity)
 				return
 			}
 		}
 
 		sendToGroup.Recipients = &input.Recipients
-		err := db.CreateGroupAndRecipientEmails(&sendToGroup)
+		err = db.CreateGroupAndRecipientEmails(&sendToGroup)
 		if err != nil {
 			slog.Error("failed to create group and recipient emails",
 				slog.Uint64("user_id", uint64(user.ID)),
@@ -65,14 +63,18 @@ func DeleteGroup(db interface {
 	CheckUserAuthorizationForGroup(groupIDs []uint, userID uint) (bool, error)
 }) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		currentUser, _ := c.Get("currentUser")
+		user, err := GetUserFromContext(c)
+		if err != nil {
+			c.AbortWithError(http.StatusInternalServerError, err)
+			return
+		}
 
 		id, err := strconv.Atoi(c.Param("id"))
 		if err != nil {
 			c.AbortWithError(http.StatusNotFound, err)
 			return
 		}
-		user := currentUser.(*models.User)
+
 		authorized, err := db.CheckUserAuthorizationForGroup([]uint{uint(id)}, user.ID)
 		if err != nil {
 			c.AbortWithError(http.StatusUnauthorized, fmt.Errorf("failed to check user authorization for group: %w", err))
@@ -97,21 +99,20 @@ func ListGroups(db interface {
 	FindGroupsAndRecipientsByUserID(userID uint) ([]models.Group, error)
 }) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		currentUser, _ := c.Get("currentUser")
-
-		user, ok := currentUser.(*models.User)
-		if !ok {
-			c.AbortWithError(http.StatusInternalServerError, apperrors.ErrTypeConversionFailed)
+		user, err := GetUserFromContext(c)
+		if err != nil {
+			c.AbortWithError(http.StatusInternalServerError, err)
 			return
 		}
+
 		groups, err := db.FindGroupsAndRecipientsByUserID(user.ID) // gets the list of groups a user has via the association "Groups" on the User model
 		if err != nil {
-			c.AbortWithError(http.StatusInternalServerError, apperrors.ErrDatabaseFetchFailed)
+			c.AbortWithError(http.StatusInternalServerError, fmt.Errorf("Failed to find groups and recipients by user ID during ListGroups: %w", err))
 			return
 		}
 
 		if len(groups) == 0 {
-			c.AbortWithError(http.StatusNotFound, apperrors.ErrNoGroups)
+			c.AbortWithStatus(http.StatusNotFound)
 			return
 		}
 
@@ -124,36 +125,38 @@ func EditGroup(db interface {
 	UpdateGroup(group *models.Group) error
 }) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		currentUser, _ := c.Get("currentUser")
-
-		user := currentUser.(*models.User)
-
-		var input models.Group
-		err := c.ShouldBindJSON(&input)
-
+		user, err := GetUserFromContext(c)
 		if err != nil {
-			c.AbortWithError(http.StatusUnprocessableEntity, apperrors.ErrParsingFailed)
+			c.AbortWithError(http.StatusInternalServerError, err)
 			return
 		}
-		id, err := strconv.Atoi(c.Param("id"))
+
+		var input models.Group
+		err = c.ShouldBindJSON(&input)
+
 		if err != nil {
-			c.AbortWithError(http.StatusInternalServerError, apperrors.ErrTypeConversionFailed)
+			c.AbortWithError(http.StatusUnprocessableEntity, fmt.Errorf("failed to bind edit group json: %w", err))
+			return
+		}
+		id, err := GetIDFromContext(c)
+		if err != nil {
+			c.AbortWithError(http.StatusInternalServerError, fmt.Errorf("failed to get ID from context while editing group: %w", err))
 			return
 		}
 
 		authorized, err := db.CheckUserAuthorizationForGroup([]uint{uint(id)}, user.ID)
 		if err != nil {
-			c.AbortWithError(http.StatusInternalServerError, apperrors.ErrAuthCheckFailed)
+			c.AbortWithError(http.StatusInternalServerError, fmt.Errorf("failed to check user authorization for group: %w", err))
 			return
 		}
 		if !authorized {
-			c.AbortWithError(http.StatusUnauthorized, apperrors.ErrUnauthorizedToEdit)
+			c.AbortWithStatus(http.StatusUnauthorized)
 			return
 		}
 
 		err = db.UpdateGroup(&input)
 		if err != nil {
-			c.AbortWithError(http.StatusNotFound, apperrors.ErrNoGroups)
+			c.AbortWithStatus(http.StatusNotFound)
 			return
 		}
 	}

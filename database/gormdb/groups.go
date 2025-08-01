@@ -1,16 +1,12 @@
 package gormdb
 
 import (
+	"fmt"
 	"time"
 
-	"github.com/gragorther/epigo/apperrors"
 	"github.com/gragorther/epigo/models"
 	"gorm.io/gorm"
 )
-
-type GroupDB struct {
-	db *gorm.DB
-}
 
 func (g *GormDB) DeleteGroupByID(id uint) error {
 	err := g.db.Transaction(func(tx *gorm.DB) error {
@@ -61,7 +57,7 @@ func (g *GormDB) UpdateGroup(group *models.Group) error {
 			return output.Error
 		}
 		if output.RowsAffected < 1 {
-			return apperrors.ErrNotFound
+			return fmt.Errorf("failed to update group: less than 1 rows affected")
 		}
 		err := tx.Model(group).Association("Recipients").Replace(group.Recipients)
 

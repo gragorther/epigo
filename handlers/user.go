@@ -1,14 +1,14 @@
 package handlers
 
 import (
-	"log"
+	"errors"
+	"fmt"
 	"net/http"
 	"os"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/gragorther/epigo/apperrors"
 	"github.com/gragorther/epigo/email"
 	argon2id "github.com/gragorther/epigo/hash"
 	"github.com/gragorther/epigo/models"
@@ -34,29 +34,29 @@ func RegisterUser(db interface {
 		var authInput RegistrationInput
 
 		if err := c.ShouldBindJSON(&authInput); err != nil {
-			c.AbortWithError(http.StatusUnprocessableEntity, apperrors.ErrParsingFailed)
+			c.AbortWithError(http.StatusUnprocessableEntity, fmt.Errorf("failed to bind register user JSON: %w", err))
 			return
 		}
 		validEmail := email.Validate(authInput.Email)
 		if !validEmail {
-			c.AbortWithError(http.StatusBadRequest, apperrors.ErrInvalidEmail)
+			c.AbortWithStatus(http.StatusUnprocessableEntity)
 			return
 		}
 
-		userExists, userExistsErr := db.CheckIfUserExistsByUsernameAndEmail(authInput.Username, authInput.Email)
+		userExists, err := db.CheckIfUserExistsByUsernameAndEmail(authInput.Username, authInput.Email)
 
-		if userExistsErr != nil {
-			c.AbortWithError(http.StatusInternalServerError, apperrors.ErrDatabaseFetchFailed)
+		if err != nil {
+			c.AbortWithError(http.StatusInternalServerError, fmt.Errorf("failed to register user: %w", err))
 			return
 		}
 		if userExists {
-			c.AbortWithError(http.StatusConflict, apperrors.ErrUserAlreadyExists)
+			c.AbortWithStatus(http.StatusConflict)
 			return
 		}
 
 		passwordHash, err := argon2id.CreateHash(authInput.Password, argon2id.DefaultParams)
 		if err != nil {
-			c.AbortWithError(http.StatusInternalServerError, apperrors.ErrHashingFailed)
+			c.AbortWithError(http.StatusInternalServerError, fmt.Errorf("failed to register user: %w", err))
 			return
 		}
 
@@ -68,14 +68,14 @@ func RegisterUser(db interface {
 		}
 
 		if err := db.CreateUser(&user); err != nil {
-			log.Printf("failed to create user: %v", err)
-			c.AbortWithError(http.StatusInternalServerError, apperrors.ErrCreationOfObjectFailed)
+			c.AbortWithError(http.StatusInternalServerError, fmt.Errorf("failed to create user: %w", err))
 			return
 		}
 
 		c.JSON(http.StatusOK, authInput)
 	}
 }
+
 func LoginUser(db interface {
 	CheckIfUserExistsByUsername(username string) (bool, error)
 	GetUserByUsername(username string) (*models.User, error)
@@ -84,35 +84,32 @@ func LoginUser(db interface {
 	return func(c *gin.Context) {
 		var authInput LoginInput
 		if err := c.ShouldBindJSON(&authInput); err != nil {
-			c.AbortWithError(http.StatusUnprocessableEntity, apperrors.ErrParsingFailed)
+			c.AbortWithError(http.StatusUnprocessableEntity, fmt.Errorf("Failed to parse login input: %w", err))
 			return
 		}
 
 		userExists, err := db.CheckIfUserExistsByUsername(authInput.Username)
 		if err != nil {
-			c.AbortWithError(http.StatusInternalServerError, apperrors.ErrUserNotFound)
-			log.Print(err)
+			c.AbortWithError(http.StatusInternalServerError, fmt.Errorf("Failed to check if users exists by username: %w", err))
 			return
 		}
 		if !userExists {
-			c.AbortWithError(http.StatusNotFound, apperrors.ErrUserNotFound)
+			c.AbortWithError(http.StatusNotFound, errors.New("user not found"))
 			return
 		}
 		userFound, err := db.GetUserByUsername(authInput.Username)
 		if err != nil {
-			c.AbortWithError(http.StatusNotFound, apperrors.ErrUserNotFound)
-			log.Printf("Couldn't fetch user: %v", err)
+			c.AbortWithError(http.StatusInternalServerError, fmt.Errorf("Failed to get user by username: %w", err))
 			return
 		}
 		match, err := argon2id.ComparePasswordAndHash(authInput.Password, userFound.PasswordHash) //check hash
 		if err != nil {
-			log.Printf("Password hash checking error: %v", err)
-			c.AbortWithError(http.StatusInternalServerError, apperrors.ErrHashCheckFailed)
+			c.AbortWithError(http.StatusInternalServerError, fmt.Errorf("Failed to compare password and hash: %w", err))
 			return
 		}
 
 		if !match {
-			c.AbortWithError(http.StatusUnauthorized, apperrors.ErrInvalidPassword)
+			c.AbortWithStatus(http.StatusUnauthorized)
 			return
 		}
 
@@ -123,15 +120,13 @@ func LoginUser(db interface {
 
 		token, err := generateToken.SignedString([]byte(os.Getenv("JWT_SECRET")))
 		if err != nil {
-			c.AbortWithError(http.StatusInternalServerError, apperrors.ErrJWTCreationError)
+			c.AbortWithError(http.StatusInternalServerError, fmt.Errorf("Failed to generate JWT token: %w", err))
 			return
 		}
 		currentTime := time.Now()
 		userFound.LastLogin = &currentTime
 		if err := db.SaveUserData(userFound); err != nil {
-			c.Error(apperrors.ErrCreationOfObjectFailed)
-			log.Printf("failed to save user lastLogin: %v", err)
-			return
+			c.Error(fmt.Errorf("Failed to store user last login: %w", err))
 		}
 		c.JSON(200, gin.H{
 			"token": token,
@@ -141,12 +136,9 @@ func LoginUser(db interface {
 func GetUserProfile() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Retrieve the user object from the context
-		userValue, _ := c.Get("currentUser")
-
-		// Type assertion to convert the interface{} to models.User
-		user, ok := userValue.(*models.User)
-		if !ok {
-			c.AbortWithError(http.StatusInternalServerError, apperrors.ErrTypeConversionFailed)
+		user, err := GetUserFromContext(c)
+		if err != nil {
+			c.AbortWithError(http.StatusInternalServerError, fmt.Errorf("Failed to get user profile: %w", err))
 			return
 		}
 
@@ -167,18 +159,19 @@ func SetEmailInterval(db interface {
 	UpdateUserInterval(userID uint, cron string) error
 }) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		currentUser, _ := c.Get("currentUser")
-		user := currentUser.(*models.User)
-		var input setEmailIntervalInput
-		err := c.ShouldBindJSON(&input)
+		user, err := GetUserFromContext(c)
 		if err != nil {
-			c.AbortWithError(http.StatusUnprocessableEntity, apperrors.ErrParsingFailed)
+			c.AbortWithError(http.StatusInternalServerError, err)
+		}
+		var input setEmailIntervalInput
+		err = c.ShouldBindJSON(&input)
+		if err != nil {
+			c.AbortWithError(http.StatusUnprocessableEntity, fmt.Errorf("Failed to bind json while setting user email interval: %w", err))
 			return
 		}
 		err = db.UpdateUserInterval(user.ID, input.Cron)
 		if err != nil {
-			c.AbortWithError(http.StatusInternalServerError, apperrors.ErrCreationOfObjectFailed)
-			log.Printf("failed to set email interval: %v", err)
+			c.AbortWithError(http.StatusInternalServerError, fmt.Errorf("Failed to update user interval: %w", err))
 			return
 		}
 	}

@@ -8,7 +8,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gragorther/epigo/apperrors"
 	"github.com/gragorther/epigo/models"
 
 	"github.com/gin-gonic/gin"
@@ -23,13 +22,13 @@ func CheckAuth(db interface {
 		authHeader := c.GetHeader("Authorization")
 
 		if authHeader == "" {
-			c.AbortWithError(http.StatusUnauthorized, apperrors.ErrMissingAuthHeader)
+			c.AbortWithStatus(http.StatusUnauthorized)
 			return
 		}
 
 		authToken := strings.Split(authHeader, " ")
 		if len(authToken) != 2 || authToken[0] != "Bearer" {
-			c.AbortWithError(http.StatusUnauthorized, apperrors.ErrInvalidAuthTokenFormat)
+			c.AbortWithStatus(http.StatusUnauthorized)
 			return
 		}
 
@@ -41,26 +40,25 @@ func CheckAuth(db interface {
 			return []byte(os.Getenv("JWT_SECRET")), nil
 		})
 		if err != nil || !token.Valid {
-			log.Printf("Token error: %v", err)
-			c.AbortWithError(http.StatusUnauthorized, apperrors.ErrInvalidToken)
+			c.AbortWithError(http.StatusUnauthorized, fmt.Errorf("token error: %w", err))
 			return
 		}
 
 		claims, ok := token.Claims.(jwt.MapClaims)
 		if !ok {
-			c.AbortWithError(http.StatusUnauthorized, apperrors.ErrInvalidAuthTokenFormat)
+			c.AbortWithError(http.StatusUnauthorized, fmt.Errorf("invalid auth token format: %v", claims))
 			return
 		}
 
 		if float64(time.Now().Unix()) > claims["exp"].(float64) {
-			c.AbortWithError(http.StatusUnauthorized, apperrors.ErrExpiredToken)
+			c.AbortWithStatus(http.StatusUnauthorized)
 			return
 		}
 
 		user, err := db.GetUserByID(uint(claims["id"].(float64)))
 		if err != nil {
 			log.Print("failed to get user by ID during auth")
-			c.AbortWithError(http.StatusUnauthorized, apperrors.ErrFailedToGetUserID)
+			c.AbortWithError(http.StatusUnauthorized, fmt.Errorf("failed to check auth: %w", err))
 			return
 		}
 

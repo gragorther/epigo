@@ -6,10 +6,6 @@ import (
 	"gorm.io/gorm"
 )
 
-type MessageDB struct {
-	db *gorm.DB
-}
-
 func (g *GormDB) CreateLastMessage(lastMessage *models.LastMessage) error {
 	err := g.db.Transaction(func(tx *gorm.DB) error {
 		res := tx.Create(&lastMessage)

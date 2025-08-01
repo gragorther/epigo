@@ -5,13 +5,8 @@ import (
 
 	"github.com/gragorther/epigo/models"
 	"github.com/gragorther/epigo/types"
-	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
-
-type UserDB struct {
-	db *gorm.DB
-}
 
 func (g *GormDB) UpdateUserInterval(userID uint, cron string) error {
 	res := g.db.Model(&models.User{}).Where("id = ?", userID).Update("email_cron", cron)

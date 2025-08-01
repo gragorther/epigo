@@ -2,12 +2,7 @@ package gormdb
 
 import (
 	"github.com/gragorther/epigo/models"
-	"gorm.io/gorm"
 )
-
-type AuthDB struct {
-	db *gorm.DB
-}
 
 func (a *GormDB) CheckUserAuthorizationForGroup(groupIDs []uint, userID uint) (bool, error) {
 	var authorizedGroups int64
