@@ -21,7 +21,7 @@ func TestAddLastMessage(t *testing.T) {
 	assert := assert.New(t)
 	t.Run("valid input", func(t *testing.T) {
 		c, w := setupGin()
-		userName := "femboy"
+		userName := "testname"
 		currentUser := &models.User{ID: 1, Name: &userName}
 		c.Set("currentUser", currentUser)
 		mock := newMockDB(nil)

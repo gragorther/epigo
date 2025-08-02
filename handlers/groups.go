@@ -12,9 +12,17 @@ import (
 )
 
 type GroupInput struct {
-	Recipients  []models.Recipient `json:"recipients"`
-	Name        string             `json:"name" binding:"required"`
-	Description string             `json:"description"`
+	Name        string                `json:"name" binding:"required"`
+	Description *string               `json:"description"`
+	Recipients  []models.APIRecipient `json:"recipients"`
+}
+
+func parseAPIRecipients(recipients []models.APIRecipient) []models.Recipient {
+	var newRecipients []models.Recipient
+	for _, recipient := range recipients {
+		newRecipients = append(newRecipients, models.Recipient{APIRecipient: recipient})
+	}
+	return newRecipients
 }
 
 func AddGroup(db interface {
@@ -30,13 +38,17 @@ func AddGroup(db interface {
 
 		var input GroupInput
 		if err := c.ShouldBindJSON(&input); err != nil {
-			c.AbortWithError(http.StatusInternalServerError, fmt.Errorf("Failed to bind add group JSON: %w", err))
+			c.AbortWithError(http.StatusUnprocessableEntity, fmt.Errorf("Failed to bind add group JSON: %w", err))
 			return
 		}
 		sendToGroup := models.Group{
 			UserID:      user.ID,
 			Name:        input.Name,
-			Description: &input.Description,
+			Description: input.Description,
+		}
+		if sendToGroup.Name == "" {
+			c.AbortWithStatus(http.StatusUnprocessableEntity)
+			return
 		}
 
 		for _, e := range input.Recipients {
@@ -46,7 +58,7 @@ func AddGroup(db interface {
 			}
 		}
 
-		sendToGroup.Recipients = &input.Recipients
+		sendToGroup.Recipients = parseAPIRecipients(input.Recipients)
 		err = db.CreateGroupAndRecipientEmails(&sendToGroup)
 		if err != nil {
 			slog.Error("failed to create group and recipient emails",
@@ -130,10 +142,8 @@ func EditGroup(db interface {
 			c.AbortWithError(http.StatusInternalServerError, err)
 			return
 		}
-
-		var input models.Group
+		var input GroupInput
 		err = c.ShouldBindJSON(&input)
-
 		if err != nil {
 			c.AbortWithError(http.StatusUnprocessableEntity, fmt.Errorf("failed to bind edit group json: %w", err))
 			return
@@ -143,7 +153,6 @@ func EditGroup(db interface {
 			c.AbortWithError(http.StatusInternalServerError, fmt.Errorf("failed to get ID from context while editing group: %w", err))
 			return
 		}
-
 		authorized, err := db.CheckUserAuthorizationForGroup([]uint{uint(id)}, user.ID)
 		if err != nil {
 			c.AbortWithError(http.StatusInternalServerError, fmt.Errorf("failed to check user authorization for group: %w", err))
@@ -154,11 +163,17 @@ func EditGroup(db interface {
 			return
 		}
 
-		err = db.UpdateGroup(&input)
+		groupToUpdate := &models.Group{
+			ID:          uint(id),
+			Name:        input.Name,
+			Description: input.Description,
+			Recipients:  parseAPIRecipients(input.Recipients),
+		}
+
+		err = db.UpdateGroup(groupToUpdate)
 		if err != nil {
 			c.AbortWithStatus(http.StatusNotFound)
 			return
 		}
 	}
-
 }

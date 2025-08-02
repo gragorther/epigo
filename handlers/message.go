@@ -12,9 +12,10 @@ import (
 type MessageInput struct {
 	Title    string `json:"title" binding:"required"`
 	Content  string `json:"content" binding:"required"`
-	GroupIDs []uint `json:"groupIDs" binding:"required"`
+	GroupIDs []uint `json:"groupIDs"`
 }
 
+// converts group IDs into groups
 func parseGroups(groupIDs []uint) ([]models.Group, error) {
 	var groups []models.Group
 	for _, id := range groupIDs {

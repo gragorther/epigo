@@ -73,9 +73,9 @@ func setupGin() (*gin.Context, *httptest.ResponseRecorder) {
 }
 
 type invalidGroupInput struct {
-	Recipients  []models.Recipient `json:"recipientsoopsietypo"` //simulates a typo in the json key
-	Name        string             `json:"nameaaaeraser"`
-	Description string             `json:"descriptionuu"`
+	Recipients  []models.APIRecipient `json:"recipientsoopsietypo"` //simulates a typo in the json key
+	Name        string                `json:"nameaaaeraser"`
+	Description string                `json:"descriptionuu"`
 }
 
 func TestAddGroup(t *testing.T) {
@@ -87,13 +87,15 @@ func TestAddGroup(t *testing.T) {
 		c.Set("currentUser", fakeUser)
 
 		mock := newMockDB(nil)
+
+		description := "test description"
 		jsonInput := handlers.GroupInput{
-			Recipients: []models.Recipient{
+			Recipients: []models.APIRecipient{
 				{Email: "gregor@gregtech.eu"},
 				{Email: "test@gregtech.eu"},
 			},
 			Name:        "test name",
-			Description: "test description",
+			Description: &description,
 		}
 		jsonString, _ := sonic.Marshal(&jsonInput)
 		c.Request = &http.Request{
@@ -104,9 +106,11 @@ func TestAddGroup(t *testing.T) {
 		handler(c)
 		assert.Equal(http.StatusOK, w.Code, "status code should indicate success")
 		assert.Equal(jsonInput.Name, mock.Groups[0].Name)
-		assert.Equal(jsonInput.Description, *mock.Groups[0].Description)
+		assert.Equal(*jsonInput.Description, *mock.Groups[0].Description)
 		assert.Equal(fakeUser.ID, mock.Groups[0].UserID)
-		assert.Equal(jsonInput.Recipients, *mock.Groups[0].Recipients)
+		for i, _ := range jsonInput.Recipients {
+			assert.Equal(jsonInput.Recipients[i].Email, mock.Groups[0].Recipients[i].Email)
+		}
 	})
 	t.Run("with invalid json input", func(t *testing.T) {
 		c, w := setupGin()
@@ -115,7 +119,7 @@ func TestAddGroup(t *testing.T) {
 		fakeUser := &models.User{ID: 1, Name: &username}
 		c.Set("currentUser", fakeUser)
 		jsonInput, _ := sonic.Marshal(invalidGroupInput{
-			Recipients: []models.Recipient{
+			Recipients: []models.APIRecipient{
 				{Email: "uwu@gregtech.eu"},
 			},
 		})
@@ -126,7 +130,7 @@ func TestAddGroup(t *testing.T) {
 
 		handler(c)
 
-		assert.Equal(http.StatusInternalServerError, w.Code, "status code should not indicate success")
+		assert.Equal(http.StatusUnprocessableEntity, w.Code, "status code should not indicate success")
 
 	})
 	t.Run("with invalid emails", func(t *testing.T) {
@@ -135,13 +139,15 @@ func TestAddGroup(t *testing.T) {
 		c.Set("currentUser", fakeUser)
 		mock := newMockDB(nil)
 		handler := handlers.AddGroup(mock)
+
+		description := "test description"
 		jsonInput, _ := sonic.Marshal(handlers.GroupInput{
-			Recipients: []models.Recipient{
+			Recipients: []models.APIRecipient{
 				{Email: "asdf@"},
 				{Email: "@email."},
 			},
 			Name:        "test group",
-			Description: "test description",
+			Description: &description,
 		})
 		c.Request = &http.Request{
 			Body: io.NopCloser(bytes.NewBuffer(jsonInput)),
@@ -210,12 +216,19 @@ func TestListGroups(t *testing.T) {
 	c.Set("currentUser", fakeUser)
 	c.AddParam("id", "1")
 	mock := newMockDB(nil)
+	desc := "test desc"
 	mock.Groups = []models.Group{
-		{ID: 2, Name: "test AAAAAAAAAAAA", LastMessages: &[]models.LastMessage{
-			{ID: 1},
-		}, Recipients: &[]models.Recipient{{
-			Email: "gregor@gregtech.eu",
-		}, {Email: "test@gregtech.eu"}}},
+		{
+			Name:        "test group 1",
+			Description: &desc,
+			Recipients: []models.Recipient{
+				{APIRecipient: models.APIRecipient{Email: "gregor@gregtech.eu"}},
+				{APIRecipient: models.APIRecipient{Email: "test@email.com"}},
+			},
+			LastMessages: []models.LastMessage{
+				{Title: "test"},
+			},
+		},
 	}
 	handler := handlers.ListGroups(mock)
 
@@ -229,7 +242,7 @@ func TestListGroups(t *testing.T) {
 
 	for i := range mock.Groups {
 		assert.Equal(mock.Groups[i].Name, unmarshaledBody[i].Name)
-		assert.Equal("", *unmarshaledBody[i].Description)
+		assert.Equal(desc, *unmarshaledBody[i].Description)
 		assert.Equal(mock.Groups[i].LastMessages, unmarshaledBody[i].LastMessages)
 		assert.Equal(mock.Groups[i].Recipients, unmarshaledBody[i].Recipients)
 	}
@@ -255,23 +268,25 @@ func TestEditGroup(t *testing.T) {
 
 		// this can't be const for some reason
 		var unchangedGroupRecipients []models.Recipient = []models.Recipient{
-			{GroupID: groupID, Email: "gregor@gregtech.eu"},
-			{GroupID: groupID, Email: "gregor@gregtech.eu"},
+			{GroupID: groupID, APIRecipient: models.APIRecipient{Email: "gregor@gregtech.eu"}},
+			{GroupID: groupID, APIRecipient: models.APIRecipient{Email: "gregor@gregtech.eu"}},
 		}
 		mock.Groups = []models.Group{
-			{ID: groupID, Name: unchangedGroupName, Description: &unchangedGroupDesc, Recipients: &unchangedGroupRecipients},
+
+			{Name: unchangedGroupName, Description: &unchangedGroupDesc, Recipients: unchangedGroupRecipients, ID: groupID},
 		}
 
 		// the new names of fields in the group which will be then asserted against to see if handler actually changed anything
 		const newGroupName string = "new name :3"
 		var newGroupDesc string = "new desc"
-		newRecipients := []models.Recipient{
-			{GroupID: groupID, Email: "test@thing.com"},
+		newRecipients := []models.APIRecipient{
+			{Email: "test@thing.com"},
 		}
-		jsonString, _ := sonic.Marshal(&models.Group{
+		jsonString, _ := sonic.Marshal(&handlers.GroupInput{
+
 			Name:        newGroupName,
 			Description: &newGroupDesc,
-			Recipients:  &newRecipients,
+			Recipients:  newRecipients,
 		})
 		c.Request = &http.Request{
 			Body: io.NopCloser(bytes.NewBuffer(jsonString)),
@@ -282,8 +297,11 @@ func TestEditGroup(t *testing.T) {
 
 		assert.Equal(http.StatusOK, w.Code, "http status code should indicate success")
 
+		newRecipient := newRecipients[0]
+		recipient := mock.Groups[0].Recipients[0]
 		assert.Equal(newGroupName, mock.Groups[0].Name, "the group name in the in-memory database should match the one sent to the API")
 		assert.Equal(newGroupDesc, *mock.Groups[0].Description, "the group descripton in the in memory db should match the one sent to the api")
-		assert.Equal(newRecipients, *mock.Groups[0].Recipients, "the recipients sent to the api should match the ones in the in memory db")
+		assert.Equal(newRecipient.Email, recipient.Email, "the recipients sent to the api should match the ones in the in memory db")
+
 	})
 }
