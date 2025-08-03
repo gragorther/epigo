@@ -72,7 +72,7 @@ func RegisterUser(db interface {
 			return
 		}
 
-		c.JSON(http.StatusOK, authInput)
+		c.Status(http.StatusCreated)
 	}
 }
 

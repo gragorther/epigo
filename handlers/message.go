@@ -6,12 +6,11 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/gragorther/epigo/models"
-	"github.com/gragorther/epigo/types"
 )
 
-type MessageInput struct {
+type AddMessageInput struct {
 	Title    string `json:"title" binding:"required"`
-	Content  string `json:"content" binding:"required"`
+	Content  string `json:"content"`
 	GroupIDs []uint `json:"groupIDs"`
 }
 
@@ -37,7 +36,7 @@ func AddLastMessage(db interface {
 			c.AbortWithError(http.StatusInternalServerError, err)
 			return
 		}
-		var input MessageInput
+		var input AddMessageInput
 
 		err = c.ShouldBindJSON(&input)
 		if err != nil {
@@ -68,16 +67,17 @@ func AddLastMessage(db interface {
 		}
 
 		err = db.CreateLastMessage(&newLastMessage)
-		c.Status(http.StatusOK)
 		if err != nil {
 			c.AbortWithError(http.StatusInternalServerError, fmt.Errorf("failed to create last message: %w", err))
 			return
 		}
+		c.Status(http.StatusOK)
+
 	}
 }
 
 func ListLastMessages(db interface {
-	FindLastMessagesByUserID(userID uint) ([]types.LastMessageOut, error)
+	FindLastMessagesByUserID(userID uint) ([]models.LastMessage, error)
 }) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		user, err := GetUserFromContext(c)
@@ -94,6 +94,12 @@ func ListLastMessages(db interface {
 
 		c.JSON(http.StatusOK, lastMessages)
 	}
+}
+
+type EditMessageInput struct {
+	Title    string `json:"title"`
+	Content  string `json:"content"`
+	GroupIDs []uint `json:"groupIDs"`
 }
 
 func EditLastMessage(db interface {
@@ -113,7 +119,7 @@ func EditLastMessage(db interface {
 			return
 		}
 
-		var input MessageInput
+		var input EditMessageInput
 		err = c.ShouldBindJSON(&input)
 		if err != nil {
 			c.AbortWithError(http.StatusUnprocessableEntity, fmt.Errorf("failed to bind edit last message json: %w", err))
@@ -154,6 +160,11 @@ func EditLastMessage(db interface {
 			c.AbortWithError(http.StatusInternalServerError, fmt.Errorf("failed to update last message: %w", err))
 			return
 		}
+
+		// TODO: figure out why c.Status doesn't set the status to 201
+		c.JSON(http.StatusCreated, gin.H{
+			"message": editedMessage,
+		})
 	}
 
 }
