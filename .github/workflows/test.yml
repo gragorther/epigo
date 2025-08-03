@@ -16,10 +16,6 @@ jobs:
       group: ci-dependency-review
       cancel-in-progress: true
     steps:
-      - name: Harden Runner
-        uses: step-security/harden-runner@0080882f6c36860b6ba35c610c98ce87d4e2f26f # v2.10.2
-        with:
-          egress-policy: audit
       - name: Checkout Code
         uses: actions/checkout@61b9e3751b92087fd0b06925ba6dd6314e06f089 # master
       - name: "Dependency Review"
@@ -34,12 +30,8 @@ jobs:
       group: ci-govulncheck
       cancel-in-progress: true
     steps:
-      - name: Harden Runner
-        uses: step-security/harden-runner@0080882f6c36860b6ba35c610c98ce87d4e2f26f # v2.10.2
-        with:
-          egress-policy: audit
       - name: Run govulncheck
-        uses: golang/govulncheck-action@b625fbe08f3bccbe446d94fbf87fcc875a4f50ee # v1.0.4
+        uses: golang/govulncheck-action@v1
   test:
     name: Test (${{ matrix.os }} / ${{ matrix.go }})
     runs-on: ${{ matrix.os }}
@@ -54,10 +46,6 @@ jobs:
       TEST_BASEPORT: ${{ vars.TEST_BASEPORT }}
       TEST_BASEPORT_SMTP: ${{ vars.TEST_BASEPORT_SMTP }}
     steps:
-      - name: Harden Runner
-        uses: step-security/harden-runner@0080882f6c36860b6ba35c610c98ce87d4e2f26f # v2.10.2
-        with:
-          egress-policy: audit
       - name: Checkout Code
         uses: actions/checkout@61b9e3751b92087fd0b06925ba6dd6314e06f089 # master
       - name: Setup go
