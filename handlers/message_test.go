@@ -193,4 +193,67 @@ func TestEditLastMessage(t *testing.T) {
 
 		assert.Equal(http.StatusCreated, w.Code)
 	})
+	t.Run("user does not own the groups the message is being assigned to", func(t *testing.T) {
+		c, w := setupGin()
+		userName := "testname"
+		userID := uint(1)
+		currentUser := &models.User{ID: userID, Name: &userName}
+		handlers.SetUser(c, currentUser)
+		mock := newMockDB(nil)
+		mock.IsAuthorized = true
+		c.AddParam("id", "1")
+		unmodifiedLastMessages := []models.LastMessage{
+			{ID: 1},
+		}
+		mock.LastMessages = unmodifiedLastMessages
+		input, err := sonic.Marshal(handlers.EditMessageInput{Title: "newtitle", Content: "content thingy", GroupIDs: []uint{1, 2, 3}}) // user doesn't own 3
+		if err != nil {
+			t.Fatalf("sonic failed to bind json, %v", err)
+		}
+		setGinHttpBody(c, input)
+
+		//the user we're testing doesn't own 3
+		oldGroups := []models.Group{
+			{UserID: userID, ID: 1},
+			{UserID: userID, ID: 2},
+			{UserID: 2, ID: 3},
+		}
+		mock.Groups = oldGroups
+		handler := handlers.EditLastMessage(mock)
+		handler(c)
+
+		assert.Equal(http.StatusUnauthorized, w.Code, "user shouldn't be authorized to assign last messages to a group he doesn't own")
+		assert.Equal(oldGroups, mock.Groups, "the groups should be unmodified")
+		assert.Equal(unmodifiedLastMessages, mock.LastMessages, "last messages array should be unmodified because the user is not authorized to edit it")
+
+	})
+
+	t.Run("user is unauthorized to edit the message", func(t *testing.T) {
+		c, w := setupGin()
+		userName := "testname"
+		userID := uint(1)
+		currentUser := &models.User{ID: userID, Name: &userName}
+		handlers.SetUser(c, currentUser)
+		mock := newMockDB(nil)
+		//mock.IsAuthorized = true
+		c.AddParam("id", "1")
+		unchangedLastMessages := []models.LastMessage{
+			{ID: 1, UserID: 2}, // user 1 doesn't own this, they shouldn't be authorized to make edits
+		}
+		mock.LastMessages = unchangedLastMessages
+		input, err := sonic.Marshal(handlers.EditMessageInput{
+			Title:   "new title",
+			Content: "I am very evil and want to edit this last message, which I'm not authorized to",
+		})
+		if err != nil {
+			t.Fatalf("sonic failed to bind json: %v", err)
+		}
+		setGinHttpBody(c, input)
+		handlers.EditLastMessage(mock)(c)
+
+		assert.Equal(http.StatusUnauthorized, w.Code, "user shouldn't be authorized to edit this last message")
+		assert.Equal(unchangedLastMessages, mock.LastMessages, "last messages shouldn't be changed because the user was unauthorized to make edits")
+
+	})
+
 }
