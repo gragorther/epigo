@@ -32,7 +32,7 @@ func GetUserFromContext(c *gin.Context) (*models.User, error) {
 
 func GetIDFromContext(c *gin.Context) (uint, error) {
 
-	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	id, err := strconv.ParseUint(c.Param("id"), 10, strconv.IntSize)
 
 	if err != nil {
 		return uint(0), fmt.Errorf("failed to parse uint: %w", err)
