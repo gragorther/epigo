@@ -4,6 +4,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/gragorther/epigo/database/gormdb"
 	"github.com/gragorther/epigo/handlers"
+	argon2id "github.com/gragorther/epigo/hash"
 	"github.com/gragorther/epigo/middlewares"
 )
 
@@ -12,7 +13,7 @@ func Setup(db *gormdb.GormDB) *gin.Engine {
 	r.Use(middlewares.ErrorHandler())
 
 	// user stuff
-	r.POST("/user/register", handlers.RegisterUser(db))
+	r.POST("/user/register", handlers.RegisterUser(db, argon2id.CreateHash))
 	r.POST("/user/login", handlers.LoginUser(db))
 	r.GET("/user/profile", middlewares.CheckAuth(db), handlers.GetUserProfile())
 	r.PUT("/user/setEmailInterval", middlewares.CheckAuth(db), handlers.SetEmailInterval(db))

@@ -34,7 +34,7 @@ func setHTTPStatus(c *gin.Context, status int) {
 func RegisterUser(db interface {
 	CheckIfUserExistsByUsernameAndEmail(username string, email string) (bool, error)
 	CreateUser(*models.User) error
-}) gin.HandlerFunc {
+}, createHash func(string, *argon2id.Params) (string, error)) gin.HandlerFunc {
 	return func(c *gin.Context) {
 
 		var authInput RegistrationInput
@@ -60,7 +60,7 @@ func RegisterUser(db interface {
 			return
 		}
 
-		passwordHash, err := argon2id.CreateHash(authInput.Password, argon2id.DefaultParams)
+		passwordHash, err := createHash(authInput.Password, argon2id.DefaultParams)
 		if err != nil {
 			c.AbortWithError(http.StatusInternalServerError, fmt.Errorf("failed to register user: %w", err))
 			return

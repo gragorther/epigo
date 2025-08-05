@@ -24,6 +24,14 @@ func (m *mockDB) CreateUser(newUser *models.User) error {
 	return nil
 }
 
+// a predefined hash so tests are much faster to run because they don't have to *actually* hash the password
+const predefinedHash string = "verysecurehash"
+
+// a mock of argon2id.CreateHash
+func createHash(password string, params *argon2id.Params) (string, error) {
+	return predefinedHash, nil
+}
+
 func TestRegisterUser(t *testing.T) {
 	t.Run("valid input", func(t *testing.T) {
 		c, w, assert := setupHandlerTest(t)
@@ -43,20 +51,36 @@ func TestRegisterUser(t *testing.T) {
 		}
 		setGinHttpBody(c, input)
 
-		handlers.RegisterUser(mock)(c)
+		handlers.RegisterUser(mock, createHash)(c)
 
 		assert.Equal(http.StatusCreated, w.Code, "http status code should indicate that the user was created")
 		field := mock.Users[0]
-		passMatch, err := argon2id.ComparePasswordAndHash(password, field.PasswordHash)
-		if err != nil {
-			t.Fatalf("failed to verify password hash match: %v", err)
-		}
-		if !passMatch {
-			t.Errorf("Expected password hash of %v to match the one in the database", password)
-		}
 
+		assert.Equal(predefinedHash, field.PasswordHash)
 		assert.Equal(username, field.Username)
 		assert.Equal(name, *field.Name)
 		assert.Equal(email, field.Email)
+	})
+	t.Run("user already exists", func(t *testing.T) {
+		c, w, assert := setupHandlerTest(t)
+		mock := newMockDB()
+		alreadyExistingUserName := "asdfasdf"
+		alreadyExistinguser := models.User{
+			ID: 1, Name: &alreadyExistingUserName, Username: "testuseralreadyexists", Email: "gregor@gregtech.eu",
+		}
+		mock.Users = append(mock.Users, alreadyExistinguser)
+
+		input, err := sonic.Marshal(handlers.RegistrationInput{
+			Username: alreadyExistinguser.Username, Email: alreadyExistinguser.Email, Password: "vverysecurepassword", Name: alreadyExistinguser.Name,
+		})
+		if err != nil {
+			t.Fatalf("sonic failed to bind json: %v", err)
+		}
+		setGinHttpBody(c, input)
+
+		handlers.RegisterUser(mock, createHash)(c)
+
+		assert.Equal(http.StatusConflict, w.Code, "http status code should indicate that a user already exists")
+		assert.Equal([]models.User{alreadyExistinguser}, mock.Users, "there should be just one user created")
 	})
 }
