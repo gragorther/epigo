@@ -25,10 +25,11 @@ type mockDB struct {
 	Groups       []models.Group
 	LastMessages []models.LastMessage
 	Recipients   []models.Recipient
+	Users        []models.User
 }
 
-func newMockDB(err error) *mockDB {
-	m := mockDB{Err: err}
+func newMockDB() *mockDB {
+	m := mockDB{}
 
 	return &m
 }
@@ -92,7 +93,7 @@ func TestAddGroup(t *testing.T) {
 		fakeUser := &models.User{ID: 1, Name: &username}
 		c.Set("currentUser", fakeUser)
 
-		mock := newMockDB(nil)
+		mock := newMockDB()
 
 		description := "test description"
 		jsonInput := handlers.GroupInput{
@@ -120,7 +121,7 @@ func TestAddGroup(t *testing.T) {
 	})
 	t.Run("with invalid json input", func(t *testing.T) {
 		c, w, assert := setupHandlerTest(t)
-		mock := newMockDB(nil)
+		mock := newMockDB()
 		username := "test"
 		fakeUser := &models.User{ID: 1, Name: &username}
 		c.Set("currentUser", fakeUser)
@@ -143,7 +144,7 @@ func TestAddGroup(t *testing.T) {
 		c, w, assert := setupHandlerTest(t)
 		fakeUser := &models.User{ID: 1, Username: "test"}
 		c.Set("currentUser", fakeUser)
-		mock := newMockDB(nil)
+		mock := newMockDB()
 		handler := handlers.AddGroup(mock)
 
 		description := "test description"
@@ -169,7 +170,7 @@ func TestDeleteGroup(t *testing.T) {
 		c, w, assert := setupHandlerTest(t)
 		fakeUser := &models.User{ID: 1, Username: "test"}
 		c.Set("currentUser", fakeUser)
-		mock := newMockDB(nil)
+		mock := newMockDB()
 		mock.IsAuthorized = true
 		handler := handlers.DeleteGroup(mock)
 		c.AddParam("id", "0")
@@ -188,7 +189,7 @@ func TestDeleteGroup(t *testing.T) {
 		c, w, assert := setupHandlerTest(t)
 		fakeUser := &models.User{ID: 1, Username: "test"}
 		c.Set("currentUser", fakeUser)
-		mock := newMockDB(nil)
+		mock := newMockDB()
 		mock.IsAuthorized = true
 		handler := handlers.DeleteGroup(mock)
 
@@ -200,7 +201,7 @@ func TestDeleteGroup(t *testing.T) {
 		c, w, assert := setupHandlerTest(t)
 		fakeUser := &models.User{ID: 1, Username: "test"}
 		c.Set("currentUser", fakeUser)
-		mock := newMockDB(nil)
+		mock := newMockDB()
 		mock.IsAuthorized = false
 
 		handler := handlers.DeleteGroup(mock)
@@ -219,7 +220,7 @@ func TestListGroups(t *testing.T) {
 	fakeUser := &models.User{ID: 1, Username: "test"}
 	c.Set("currentUser", fakeUser)
 	c.AddParam("id", "1")
-	mock := newMockDB(nil)
+	mock := newMockDB()
 	desc := "test desc"
 	mock.Groups = []models.Group{
 		{
@@ -262,7 +263,7 @@ func TestEditGroup(t *testing.T) {
 		fakeUser := &models.User{ID: 1, Username: "test"}
 		c.Set("currentUser", fakeUser)
 		c.AddParam("id", "0")
-		mock := newMockDB(nil)
+		mock := newMockDB()
 		mock.IsAuthorized = true
 		// the constants to be used in the group.
 		const groupID uint = 0

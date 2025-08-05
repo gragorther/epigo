@@ -65,7 +65,7 @@ func TestAddLastMessage(t *testing.T) {
 		userName := "testname"
 		currentUser := &models.User{ID: 1, Name: &userName}
 		c.Set("currentUser", currentUser)
-		mock := newMockDB(nil)
+		mock := newMockDB()
 		mock.IsAuthorized = true
 
 		// TODO: use struct composition instead of this weird duplication
@@ -95,7 +95,7 @@ func TestAddLastMessage(t *testing.T) {
 		userName := "testname"
 		currentUser := &models.User{ID: 1, Name: &userName}
 		c.Set("currentUser", currentUser)
-		mock := newMockDB(nil)
+		mock := newMockDB()
 		mock.IsAuthorized = true
 
 		// TODO: use struct composition instead of this weird duplication
@@ -121,7 +121,7 @@ func TestAddLastMessage(t *testing.T) {
 		userName := "testname"
 		currentUser := &models.User{ID: 1, Name: &userName}
 		c.Set("currentUser", currentUser)
-		mock := newMockDB(nil)
+		mock := newMockDB()
 		mock.IsAuthorized = false // not authorized
 		messageInput, err := sonic.Marshal(handlers.AddMessageInput{
 			Title:    "uwu",
@@ -145,7 +145,7 @@ func TestListLastMessages(t *testing.T) {
 		c, w, assert := setupHandlerTest(t)
 		userName := "testname"
 		currentUser := &models.User{ID: 1, Name: &userName}
-		mock := newMockDB(nil)
+		mock := newMockDB()
 		mock.IsAuthorized = true
 
 		handlers.SetUser(c, currentUser)
@@ -165,7 +165,7 @@ func TestEditLastMessage(t *testing.T) {
 		userID := uint(1)
 		currentUser := &models.User{ID: userID, Name: &userName}
 		handlers.SetUser(c, currentUser)
-		mock := newMockDB(nil)
+		mock := newMockDB()
 		mock.IsAuthorized = true
 		c.AddParam("id", "1")
 
@@ -195,7 +195,7 @@ func TestEditLastMessage(t *testing.T) {
 		userID := uint(1)
 		currentUser := &models.User{ID: userID, Name: &userName}
 		handlers.SetUser(c, currentUser)
-		mock := newMockDB(nil)
+		mock := newMockDB()
 		mock.IsAuthorized = true
 		c.AddParam("id", "1")
 		unmodifiedLastMessages := []models.LastMessage{
@@ -230,7 +230,7 @@ func TestEditLastMessage(t *testing.T) {
 		userID := uint(1)
 		currentUser := &models.User{ID: userID, Name: &userName}
 		handlers.SetUser(c, currentUser)
-		mock := newMockDB(nil)
+		mock := newMockDB()
 		//mock.IsAuthorized = true
 		c.AddParam("id", "1")
 		unchangedLastMessages := []models.LastMessage{
