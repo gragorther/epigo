@@ -10,7 +10,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/gragorther/epigo/handlers"
 	"github.com/gragorther/epigo/models"
-	"github.com/stretchr/testify/assert"
 )
 
 func setGinHttpBody(c *gin.Context, buf []byte) {
@@ -61,9 +60,8 @@ type invalidMessageInput struct {
 }
 
 func TestAddLastMessage(t *testing.T) {
-	assert := assert.New(t)
 	t.Run("valid input", func(t *testing.T) {
-		c, w := setupGin()
+		c, w, assert := setupHandlerTest(t)
 		userName := "testname"
 		currentUser := &models.User{ID: 1, Name: &userName}
 		c.Set("currentUser", currentUser)
@@ -93,7 +91,7 @@ func TestAddLastMessage(t *testing.T) {
 		}
 	})
 	t.Run("invalid input", func(t *testing.T) {
-		c, w := setupGin()
+		c, w, assert := setupHandlerTest(t)
 		userName := "testname"
 		currentUser := &models.User{ID: 1, Name: &userName}
 		c.Set("currentUser", currentUser)
@@ -119,7 +117,7 @@ func TestAddLastMessage(t *testing.T) {
 
 	})
 	t.Run("user does not own group to which the last message is being added", func(t *testing.T) {
-		c, w := setupGin()
+		c, w, assert := setupHandlerTest(t)
 		userName := "testname"
 		currentUser := &models.User{ID: 1, Name: &userName}
 		c.Set("currentUser", currentUser)
@@ -143,9 +141,8 @@ func TestAddLastMessage(t *testing.T) {
 	})
 }
 func TestListLastMessages(t *testing.T) {
-	assert := assert.New(t)
 	t.Run("valid input", func(t *testing.T) {
-		c, w := setupGin()
+		c, w, assert := setupHandlerTest(t)
 		userName := "testname"
 		currentUser := &models.User{ID: 1, Name: &userName}
 		mock := newMockDB(nil)
@@ -161,10 +158,9 @@ func TestListLastMessages(t *testing.T) {
 }
 
 func TestEditLastMessage(t *testing.T) {
-	assert := assert.New(t)
 
 	t.Run("valid input", func(t *testing.T) {
-		c, w := setupGin()
+		c, w, assert := setupHandlerTest(t)
 		userName := "testname"
 		userID := uint(1)
 		currentUser := &models.User{ID: userID, Name: &userName}
@@ -194,7 +190,7 @@ func TestEditLastMessage(t *testing.T) {
 		assert.Equal(http.StatusCreated, w.Code)
 	})
 	t.Run("user does not own the groups the message is being assigned to", func(t *testing.T) {
-		c, w := setupGin()
+		c, w, assert := setupHandlerTest(t)
 		userName := "testname"
 		userID := uint(1)
 		currentUser := &models.User{ID: userID, Name: &userName}
@@ -229,7 +225,7 @@ func TestEditLastMessage(t *testing.T) {
 	})
 
 	t.Run("user is unauthorized to edit the message", func(t *testing.T) {
-		c, w := setupGin()
+		c, w, assert := setupHandlerTest(t)
 		userName := "testname"
 		userID := uint(1)
 		currentUser := &models.User{ID: userID, Name: &userName}

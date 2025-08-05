@@ -40,6 +40,7 @@ func (m *mockDB) CreateGroupAndRecipientEmails(group *models.Group) error {
 	return m.Err
 }
 func (m *mockDB) CheckUserAuthorizationForGroup(groupIDs []uint, userID uint) (bool, error) {
+
 	return m.IsAuthorized, m.Err
 }
 func (m *mockDB) DeleteGroupByID(id uint) error {
@@ -72,6 +73,12 @@ func setupGin() (*gin.Context, *httptest.ResponseRecorder) {
 	return c, w
 }
 
+func setupHandlerTest(t *testing.T) (*gin.Context, *httptest.ResponseRecorder, *assert.Assertions) {
+	c, w := setupGin()
+	assert := assert.New(t)
+	return c, w, assert
+}
+
 type invalidGroupInput struct {
 	Recipients  []models.APIRecipient `json:"recipientsoopsietypo"` //simulates a typo in the json key
 	Name        string                `json:"nameaaaeraser"`
@@ -79,9 +86,8 @@ type invalidGroupInput struct {
 }
 
 func TestAddGroup(t *testing.T) {
-	assert := assert.New(t)
 	t.Run("with valid json input", func(t *testing.T) {
-		c, w := setupGin()
+		c, w, assert := setupHandlerTest(t)
 		username := "test"
 		fakeUser := &models.User{ID: 1, Name: &username}
 		c.Set("currentUser", fakeUser)
@@ -113,7 +119,7 @@ func TestAddGroup(t *testing.T) {
 		}
 	})
 	t.Run("with invalid json input", func(t *testing.T) {
-		c, w := setupGin()
+		c, w, assert := setupHandlerTest(t)
 		mock := newMockDB(nil)
 		username := "test"
 		fakeUser := &models.User{ID: 1, Name: &username}
@@ -134,7 +140,7 @@ func TestAddGroup(t *testing.T) {
 
 	})
 	t.Run("with invalid emails", func(t *testing.T) {
-		c, w := setupGin()
+		c, w, assert := setupHandlerTest(t)
 		fakeUser := &models.User{ID: 1, Username: "test"}
 		c.Set("currentUser", fakeUser)
 		mock := newMockDB(nil)
@@ -159,9 +165,8 @@ func TestAddGroup(t *testing.T) {
 }
 
 func TestDeleteGroup(t *testing.T) {
-	assert := assert.New(t)
 	t.Run("with valid input", func(t *testing.T) {
-		c, w := setupGin()
+		c, w, assert := setupHandlerTest(t)
 		fakeUser := &models.User{ID: 1, Username: "test"}
 		c.Set("currentUser", fakeUser)
 		mock := newMockDB(nil)
@@ -180,7 +185,7 @@ func TestDeleteGroup(t *testing.T) {
 		assert.Equal(uint(1), mock.DeleteGroupCalls, "expected 1 delete group call")
 	})
 	t.Run("missing param", func(t *testing.T) {
-		c, w := setupGin()
+		c, w, assert := setupHandlerTest(t)
 		fakeUser := &models.User{ID: 1, Username: "test"}
 		c.Set("currentUser", fakeUser)
 		mock := newMockDB(nil)
@@ -192,7 +197,7 @@ func TestDeleteGroup(t *testing.T) {
 		assert.Equal(uint(0), mock.DeleteGroupCalls, "expect 0 delete group calls when there's no param")
 	})
 	t.Run("user does not own group", func(t *testing.T) {
-		c, w := setupGin()
+		c, w, assert := setupHandlerTest(t)
 		fakeUser := &models.User{ID: 1, Username: "test"}
 		c.Set("currentUser", fakeUser)
 		mock := newMockDB(nil)
@@ -209,9 +214,8 @@ func TestDeleteGroup(t *testing.T) {
 }
 
 func TestListGroups(t *testing.T) {
-	assert := assert.New(t)
 
-	c, w := setupGin()
+	c, w, assert := setupHandlerTest(t)
 	fakeUser := &models.User{ID: 1, Username: "test"}
 	c.Set("currentUser", fakeUser)
 	c.AddParam("id", "1")
@@ -253,9 +257,8 @@ func TestListGroups(t *testing.T) {
 }
 
 func TestEditGroup(t *testing.T) {
-	assert := assert.New(t)
 	t.Run("valid input", func(t *testing.T) {
-		c, w := setupGin()
+		c, w, assert := setupHandlerTest(t)
 		fakeUser := &models.User{ID: 1, Username: "test"}
 		c.Set("currentUser", fakeUser)
 		c.AddParam("id", "0")
