@@ -8,4 +8,11 @@ tasks:
       - go build -tags="sonic avx" .
   test:
     cmds:
-      - go test -tags="sonic avx" ./...
+      - go test -tags="sonic avx" ./... # we use sonic here for fast json binding B
+
+  vet:
+    cmds:
+      - go vet ./...
+  race:
+    cmds:
+      - go test -race ./...

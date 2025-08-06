@@ -26,10 +26,6 @@ type LoginInput struct {
 }
 
 // gin's implementation of the test context doesn't write the status for some reason - tracked here: https://github.com/gin-gonic/gin/issues/3443
-func setHTTPStatus(c *gin.Context, status int) {
-	c.Status(status)
-	c.Writer.WriteHeaderNow()
-}
 
 func RegisterUser(db interface {
 	CheckIfUserExistsByUsernameAndEmail(username string, email string) (bool, error)
@@ -77,7 +73,7 @@ func RegisterUser(db interface {
 			c.AbortWithError(http.StatusInternalServerError, fmt.Errorf("failed to create user: %w", err))
 			return
 		}
-		setHTTPStatus(c, http.StatusCreated)
+		c.Status(http.StatusCreated)
 	}
 }
 

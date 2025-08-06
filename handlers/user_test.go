@@ -2,13 +2,25 @@ package handlers_test
 
 import (
 	"net/http"
+	"net/http/httptest"
 	"testing"
 
 	"github.com/bytedance/sonic"
+	"github.com/gin-gonic/gin"
 	"github.com/gragorther/epigo/handlers"
 	argon2id "github.com/gragorther/epigo/hash"
 	"github.com/gragorther/epigo/models"
+	"github.com/stretchr/testify/assert"
 )
+
+func assertHTTPStatus(t *testing.T, c *gin.Context, expected int, w *httptest.ResponseRecorder, message string) {
+	t.Helper()
+	assert := assert.New(t)
+	// to make sure the http header is actually written.
+	c.Writer.WriteHeaderNow()
+
+	assert.Equal(expected, w.Code, message)
+}
 
 func (m *mockDB) CheckIfUserExistsByUsernameAndEmail(username string, email string) (bool, error) {
 
@@ -53,7 +65,7 @@ func TestRegisterUser(t *testing.T) {
 
 		handlers.RegisterUser(mock, createHash)(c)
 
-		assert.Equal(http.StatusCreated, w.Code, "http status code should indicate that the user was created")
+		assertHTTPStatus(t, c, http.StatusCreated, w, "http status code should indicate that the user was created")
 		field := mock.Users[0]
 
 		assert.Equal(predefinedHash, field.PasswordHash)
@@ -80,7 +92,7 @@ func TestRegisterUser(t *testing.T) {
 
 		handlers.RegisterUser(mock, createHash)(c)
 
-		assert.Equal(http.StatusConflict, w.Code, "http status code should indicate that a user already exists")
+		assertHTTPStatus(t, c, http.StatusConflict, w, "http status code should indicate that a user already exists")
 		assert.Equal([]models.User{alreadyExistinguser}, mock.Users, "there should be just one user created")
 	})
 }
