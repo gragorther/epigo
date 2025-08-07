@@ -8,13 +8,13 @@ import (
 	"github.com/gragorther/epigo/middlewares"
 )
 
-func Setup(db *gormdb.GormDB) *gin.Engine {
+func Setup(db *gormdb.GormDB, jwtSecret string) *gin.Engine {
 	r := gin.Default()
 	r.Use(middlewares.ErrorHandler())
 
 	// user stuff
 	r.POST("/user/register", handlers.RegisterUser(db, argon2id.CreateHash))
-	r.POST("/user/login", handlers.LoginUser(db))
+	r.POST("/user/login", handlers.LoginUser(db, argon2id.ComparePasswordAndHash, jwtSecret))
 	r.GET("/user/profile", middlewares.CheckAuth(db), handlers.GetUserProfile())
 	r.PUT("/user/setEmailInterval", middlewares.CheckAuth(db), handlers.SetEmailInterval(db))
 

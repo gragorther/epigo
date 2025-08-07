@@ -1,10 +1,8 @@
 package handlers
 
 import (
-	"errors"
 	"fmt"
 	"net/http"
-	"os"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -24,8 +22,6 @@ type LoginInput struct {
 	Username string `json:"username" binding:"required"`
 	Password string `json:"password" binding:"required"`
 }
-
-// gin's implementation of the test context doesn't write the status for some reason - tracked here: https://github.com/gin-gonic/gin/issues/3443
 
 func RegisterUser(db interface {
 	CheckIfUserExistsByUsernameAndEmail(username string, email string) (bool, error)
@@ -80,8 +76,8 @@ func RegisterUser(db interface {
 func LoginUser(db interface {
 	CheckIfUserExistsByUsername(username string) (bool, error)
 	GetUserByUsername(username string) (*models.User, error)
-	SaveUserData(*models.User) error
-}) gin.HandlerFunc {
+	EditUser(*models.User) error
+}, comparePasswordAndHash func(password string, hash string) (match bool, err error), jwtSecret string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var authInput LoginInput
 		if err := c.ShouldBindJSON(&authInput); err != nil {
@@ -95,7 +91,7 @@ func LoginUser(db interface {
 			return
 		}
 		if !userExists {
-			c.AbortWithError(http.StatusNotFound, errors.New("user not found"))
+			c.AbortWithStatus(http.StatusNotFound)
 			return
 		}
 		userFound, err := db.GetUserByUsername(authInput.Username)
@@ -103,7 +99,7 @@ func LoginUser(db interface {
 			c.AbortWithError(http.StatusInternalServerError, fmt.Errorf("Failed to get user by username: %w", err))
 			return
 		}
-		match, err := argon2id.ComparePasswordAndHash(authInput.Password, userFound.PasswordHash) //check hash
+		match, err := comparePasswordAndHash(authInput.Password, userFound.PasswordHash) //check hash
 		if err != nil {
 			c.AbortWithError(http.StatusInternalServerError, fmt.Errorf("Failed to compare password and hash: %w", err))
 			return
@@ -119,17 +115,17 @@ func LoginUser(db interface {
 			"exp": time.Now().Add(time.Hour * 24).Unix(),
 		})
 
-		token, err := generateToken.SignedString([]byte(os.Getenv("JWT_SECRET")))
+		token, err := generateToken.SignedString([]byte(jwtSecret))
 		if err != nil {
 			c.AbortWithError(http.StatusInternalServerError, fmt.Errorf("Failed to generate JWT token: %w", err))
 			return
 		}
 		currentTime := time.Now()
 		userFound.LastLogin = &currentTime
-		if err := db.SaveUserData(userFound); err != nil {
+		if err := db.EditUser(userFound); err != nil {
 			c.Error(fmt.Errorf("Failed to store user last login: %w", err))
 		}
-		c.JSON(200, gin.H{
+		c.JSON(http.StatusOK, gin.H{
 			"token": token,
 		})
 	}

@@ -22,6 +22,9 @@ import (
 
 func main() {
 	config, err := config.Get()
+	if err != nil {
+		os.Exit(1)
+	}
 
 	_ = logger.Configure(config.Production, os.Stdout)
 
@@ -44,23 +47,11 @@ func main() {
 	}
 
 	dbHandler := gormdb.NewGormDB(dbconn)
-	redisAddr := os.Getenv("REDIS_ADDRESS")
-	go workers.Run(redisAddr)
-	go scheduler.Run(dbHandler, redisAddr)
-	/*
-		adminUsername := os.Getenv("ADMIN_USERNAME")
-		adminPasswordHash, err := argon2id.CreateHash(os.Getenv("ADMIN_PASSWORD"), argon2id.DefaultParams)
-		if err != nil {
-			log.Fatalf("Failed to create admin account %v", err)
-		}
 
-		adminEmail := os.Getenv("ADMIN_EMAIL")
-		res := dbconn.Create(&models.User{Username: adminUsername, Email: adminEmail, PasswordHash: adminPasswordHash, EmailCron: &adminCron, IsAdmin: true})
-		if res.Error != nil {
-			log.Print(res.Error)
-		}
-	*/
-	r := router.Setup(dbHandler)
+	go workers.Run(config.RedisAddress)
+	go scheduler.Run(dbHandler, config.RedisAddress)
+
+	r := router.Setup(dbHandler, config.JWTSecret)
 
 	srv := &http.Server{
 		Addr:    ":8080",
@@ -84,6 +75,7 @@ func main() {
 	}
 	log.Print("closing db connection")
 	sqlerr := sqlDB.Close()
+
 	if sqlerr != nil {
 		log.Printf("Failed to close db connection: %v", sqlerr)
 	}

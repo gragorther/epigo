@@ -15,6 +15,7 @@ import (
 
 func assertHTTPStatus(t *testing.T, c *gin.Context, expected int, w *httptest.ResponseRecorder, message string) {
 	t.Helper()
+
 	assert := assert.New(t)
 	// to make sure the http header is actually written.
 	c.Writer.WriteHeaderNow()
@@ -30,6 +31,32 @@ func (m *mockDB) CheckIfUserExistsByUsernameAndEmail(username string, email stri
 		}
 	}
 	return false, nil
+}
+func (m *mockDB) CheckIfUserExistsByUsername(username string) (bool, error) {
+	for _, user := range m.Users {
+		if user.Username == username {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+func (m *mockDB) GetUserByUsername(username string) (*models.User, error) {
+	for _, user := range m.Users {
+		if user.Username == username {
+			return &user, nil
+		}
+	}
+	return nil, nil
+}
+func (m *mockDB) EditUser(newUser *models.User) error {
+	for _, user := range m.Users {
+		if user.ID == newUser.ID {
+			user = *newUser
+			break
+		}
+	}
+	return nil
 }
 func (m *mockDB) CreateUser(newUser *models.User) error {
 	m.Users = append(m.Users, *newUser)
@@ -94,5 +121,50 @@ func TestRegisterUser(t *testing.T) {
 
 		assertHTTPStatus(t, c, http.StatusConflict, w, "http status code should indicate that a user already exists")
 		assert.Equal([]models.User{alreadyExistinguser}, mock.Users, "there should be just one user created")
+	})
+}
+
+func comparePasswordAndHash(password string, hash string) (bool, error) {
+
+	hashedpass, _ := createHash(password, argon2id.DefaultParams)
+	return hashedpass == predefinedHash, nil
+}
+
+func TestLoginUser(t *testing.T) {
+	t.Run("valid input", func(t *testing.T) {
+		c, w, assert := setupHandlerTest(t)
+		mock := newMockDB()
+
+		userPassword := "securepass123"
+		hashedPass, _ := createHash(userPassword, argon2id.DefaultParams)
+		// the user logging in
+		userLoggingIn := models.User{
+			ID: 1, Username: "test", PasswordHash: hashedPass,
+		}
+		mock.Users = append(mock.Users, userLoggingIn)
+
+		input, err := sonic.Marshal(handlers.LoginInput{
+			Username: userLoggingIn.Username, Password: userPassword,
+		})
+		if err != nil {
+			t.Fatalf("sonic failed to marshal json: %v", err)
+		}
+		setGinHttpBody(c, input)
+
+		jwtSecret := "secure jwt"
+		handlers.LoginUser(mock, comparePasswordAndHash, jwtSecret)(c)
+
+		assertHTTPStatus(t, c, http.StatusOK, w, "http status code should indicate success")
+
+		var body struct {
+			Token string `json:"token"`
+		}
+
+		if err := sonic.Unmarshal(w.Body.Bytes(), &body); err != nil {
+			t.Errorf("invalid output: %v, got error %v", body, err)
+		}
+
+		assert.NotEmpty(body.Token, "token should not be empty")
+
 	})
 }

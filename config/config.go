@@ -11,6 +11,8 @@ type Config struct {
 	LogLevel      slog.Level `env:"LOG_LEVEL"`
 	AdminUsername string     `env:"ADMIN_USERNAME"`
 	AdminPassword string     `env:"ADMIN_PASSWORD"`
+	JWTSecret     string     `env:"JWT_SECRET"`
+	RedisAddress  string     `env:"REDIS_ADDRESS"`
 }
 
 func Get() (Config, error) {
