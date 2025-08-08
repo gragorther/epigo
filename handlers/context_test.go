@@ -15,8 +15,8 @@ func TestGetKeyFromContext(t *testing.T) {
 		c, _ := setupGin()
 		testName := "test"
 		expected := &models.User{
-			ID:   1,
-			Name: &testName}
+			ID:      1,
+			Profile: &models.Profile{Name: &testName}}
 		c.Set("currentUser", expected)
 
 		respUser, err := handlers.GetFromContext[*models.User]("currentUser", c)

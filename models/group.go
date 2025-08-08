@@ -8,10 +8,10 @@ import (
 
 type Group struct {
 	ID           uint           `json:"ID,omitzero" gorm:"primarykey"`
+	UserID       uint           `json:"-"`
 	CreatedAt    time.Time      `json:"createdAt"`
 	UpdatedAt    time.Time      `json:"updatedAt"`
 	DeletedAt    gorm.DeletedAt `json:"-" gorm:"index"`
-	UserID       uint           `json:"-"`
 	Name         string         `json:"name"`
 	Description  *string        `json:"description"`
 	Recipients   []Recipient    `json:"recipients"`

@@ -101,7 +101,7 @@ func TestRegisterUser(t *testing.T) {
 		hash, _ := createHash(password, argon2id.DefaultParams)
 		assert.Equal(hash, field.PasswordHash)
 		assert.Equal(username, field.Username)
-		assert.Equal(name, *field.Name)
+		assert.Equal(name, *field.Profile.Name)
 		assert.Equal(email, field.Email)
 	})
 	t.Run("user already exists", func(t *testing.T) {
@@ -109,12 +109,12 @@ func TestRegisterUser(t *testing.T) {
 		mock := newMockDB()
 		alreadyExistingUserName := "asdfasdf"
 		alreadyExistinguser := models.User{
-			ID: 1, Name: &alreadyExistingUserName, Username: "testuseralreadyexists", Email: "gregor@gregtech.eu",
+			ID: 1, Profile: &models.Profile{Name: &alreadyExistingUserName}, Username: "testuseralreadyexists", Email: "gregor@gregtech.eu",
 		}
 		mock.Users = append(mock.Users, alreadyExistinguser)
 
 		input, err := sonic.Marshal(handlers.RegistrationInput{
-			Username: alreadyExistinguser.Username, Email: alreadyExistinguser.Email, Password: "vverysecurepassword", Name: alreadyExistinguser.Name,
+			Username: alreadyExistinguser.Username, Email: alreadyExistinguser.Email, Password: "vverysecurepassword", Name: alreadyExistinguser.Profile.Name,
 		})
 		if err != nil {
 			t.Fatalf("sonic failed to bind json: %v", err)
@@ -238,4 +238,32 @@ func TestLoginUser(t *testing.T) {
 		assertHTTPStatus(t, c, http.StatusNotFound, w, "http status code should indicate that the user was not found")
 		assert.Empty(w.Body.Bytes(), "the response body should be empty because the user was not found")
 	})
+}
+
+func TestGetUserData(t *testing.T) {
+	c, w, assert := setupHandlerTest(t)
+	userName := "myname"
+	lastLoginTime := time.Date(2025, time.January, 1, 12, 12, 12, 12, time.Now().Location())
+	user := &models.User{
+		Profile:   &models.Profile{Name: &userName},
+		Username:  "myusername",
+		LastLogin: &lastLoginTime,
+		Email:     "eeemail@gregtech.eu",
+	}
+	handlers.SetUser(c, user)
+	handlers.GetUserData()(c)
+
+	var output struct {
+		Username  string    `json:"username"`
+		LastLogin time.Time `json:"lastLogin"`
+		Name      string    `json:"name"`
+		Email     string    `json:"email"`
+	}
+	assertHTTPStatus(t, c, http.StatusOK, w, "http status should indicate success")
+
+	sonic.Unmarshal(w.Body.Bytes(), &output)
+	assert.Equal(userName, output.Name)
+	assert.Equal(user.Username, output.Username)
+	assert.Equal(lastLoginTime, output.LastLogin)
+	assert.Equal(user.Email, output.Email)
 }

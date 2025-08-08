@@ -17,7 +17,7 @@ func Setup(db *gormdb.GormDB, jwtSecret string) *gin.Engine {
 	// user stuff
 	r.POST("/user/register", handlers.RegisterUser(db, argon2id.CreateHash))
 	r.POST("/user/login", handlers.LoginUser(db, argon2id.ComparePasswordAndHash, jwtSecret))
-	r.GET("/user/profile", checkAuth, handlers.GetUserProfile())
+	r.GET("/user/profile", checkAuth, handlers.GetUserData())
 	r.PUT("/user/setEmailInterval", checkAuth, handlers.SetEmailInterval(db))
 
 	// groups

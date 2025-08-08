@@ -90,7 +90,7 @@ func TestAddGroup(t *testing.T) {
 	t.Run("with valid json input", func(t *testing.T) {
 		c, w, assert := setupHandlerTest(t)
 		username := "test"
-		fakeUser := &models.User{ID: 1, Name: &username}
+		fakeUser := &models.User{ID: 1, Profile: &models.Profile{Name: &username}}
 		c.Set("currentUser", fakeUser)
 
 		mock := newMockDB()
@@ -123,7 +123,7 @@ func TestAddGroup(t *testing.T) {
 		c, w, assert := setupHandlerTest(t)
 		mock := newMockDB()
 		username := "test"
-		fakeUser := &models.User{ID: 1, Name: &username}
+		fakeUser := &models.User{ID: 1, Profile: &models.Profile{Name: &username}}
 		c.Set("currentUser", fakeUser)
 		jsonInput, _ := sonic.Marshal(invalidGroupInput{
 			Recipients: []models.APIRecipient{

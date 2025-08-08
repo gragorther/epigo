@@ -1,6 +1,7 @@
 package initializers
 
 import (
+	"github.com/gragorther/epigo/models"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
@@ -11,5 +12,6 @@ func ConnectDB() (*gorm.DB, error) {
 	if err != nil {
 		return nil, err
 	}
+	db.AutoMigrate(&models.User{}, &models.LastMessage{}, &models.Group{}, &models.Recipient{}, models.Profile{})
 	return db, nil
 }

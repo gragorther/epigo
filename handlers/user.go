@@ -62,7 +62,7 @@ func RegisterUser(db interface {
 			Username:     authInput.Username,
 			PasswordHash: string(passwordHash),
 			Email:        authInput.Email,
-			Name:         authInput.Name,
+			Profile:      &models.Profile{Name: authInput.Name},
 		}
 
 		if err := db.CreateUser(&user); err != nil {
@@ -130,7 +130,7 @@ func LoginUser(db interface {
 		})
 	}
 }
-func GetUserProfile() gin.HandlerFunc {
+func GetUserData() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Retrieve the user object from the context
 		user, err := GetUserFromContext(c)
@@ -142,7 +142,7 @@ func GetUserProfile() gin.HandlerFunc {
 		c.JSON(http.StatusOK, gin.H{
 			"username":  user.Username,
 			"lastLogin": user.LastLogin,
-			"name":      user.Name,
+			"name":      user.Profile.Name,
 			"email":     user.Email,
 		})
 	}

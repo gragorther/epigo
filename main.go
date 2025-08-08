@@ -16,7 +16,6 @@ import (
 	"github.com/gragorther/epigo/database/gormdb"
 	"github.com/gragorther/epigo/database/initializers"
 	"github.com/gragorther/epigo/logger"
-	"github.com/gragorther/epigo/models"
 	"github.com/gragorther/epigo/router"
 )
 
@@ -40,10 +39,6 @@ func main() {
 	dbconn, err := initializers.ConnectDB()
 	if err != nil {
 		log.Fatalf("DB connection error: %v", err)
-	}
-	err = dbconn.AutoMigrate(&models.User{}, &models.LastMessage{}, &models.Group{}, &models.Recipient{})
-	if err != nil {
-		log.Fatalf("Database migration failed: %v", err)
 	}
 
 	dbHandler := gormdb.NewGormDB(dbconn)
