@@ -14,6 +14,8 @@ type Config struct {
 	JWTSecret     string     `env:"JWT_SECRET"`
 	RedisAddress  string     `env:"REDIS_ADDRESS"`
 }
+type PostgresConfig struct {
+}
 
 func Get() (Config, error) {
 	var conf Config
