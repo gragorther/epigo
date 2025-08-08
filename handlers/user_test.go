@@ -67,11 +67,11 @@ func (m *mockDB) CreateUser(newUser *models.User) error {
 }
 
 // a predefined hash so tests are much faster to run because they don't have to *actually* hash the password
-const predefinedHash string = "verysecurehash"
+const hashSuffix string = "this is hashed"
 
 // a mock of argon2id.CreateHash
 func createHash(password string, params *argon2id.Params) (string, error) {
-	return predefinedHash, nil
+	return password + hashSuffix, nil
 }
 
 func TestRegisterUser(t *testing.T) {
@@ -98,7 +98,8 @@ func TestRegisterUser(t *testing.T) {
 		assertHTTPStatus(t, c, http.StatusCreated, w, "http status code should indicate that the user was created")
 		field := mock.Users[0]
 
-		assert.Equal(predefinedHash, field.PasswordHash)
+		hash, _ := createHash(password, argon2id.DefaultParams)
+		assert.Equal(hash, field.PasswordHash)
 		assert.Equal(username, field.Username)
 		assert.Equal(name, *field.Name)
 		assert.Equal(email, field.Email)
@@ -128,9 +129,8 @@ func TestRegisterUser(t *testing.T) {
 }
 
 func comparePasswordAndHash(password string, hash string) (bool, error) {
-
-	hashedpass, _ := createHash(password, argon2id.DefaultParams)
-	return hashedpass == predefinedHash, nil
+	hashedPass, _ := createHash(password, argon2id.DefaultParams)
+	return hashedPass == hash, nil
 }
 
 func TestLoginUser(t *testing.T) {
@@ -192,5 +192,33 @@ func TestLoginUser(t *testing.T) {
 			t.Errorf("expired token (invalid time?) %v", claims["exp"])
 			return
 		}
+	})
+	t.Run("invalid password", func(t *testing.T) {
+		c, w, assert := setupHandlerTest(t)
+		mock := newMockDB()
+
+		userPassword := "securepass123"
+		hashedPass, _ := createHash(userPassword, argon2id.DefaultParams)
+		// the user logging in
+		userLoggingIn := models.User{
+			ID: 1, Username: "test", PasswordHash: hashedPass,
+		}
+		mock.Users = append(mock.Users, userLoggingIn)
+
+		input, err := sonic.Marshal(handlers.LoginInput{
+			Username: userLoggingIn.Username, Password: "invalid password oopsie",
+		})
+		if err != nil {
+			t.Fatalf("sonic failed to marshal json: %v", err)
+		}
+		setGinHttpBody(c, input)
+		jwtSecret := "secure jwt !!"
+
+		handlers.LoginUser(mock, comparePasswordAndHash, jwtSecret)(c)
+
+		assertHTTPStatus(t, c, http.StatusUnauthorized, w, "user should be unauthorized")
+
+		assert.Empty(w.Body.Bytes())
+
 	})
 }
