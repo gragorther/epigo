@@ -12,22 +12,24 @@ func Setup(db *gormdb.GormDB, jwtSecret string) *gin.Engine {
 	r := gin.Default()
 	r.Use(middlewares.ErrorHandler())
 
+	checkAuth := middlewares.CheckAuth(db, jwtSecret)
+
 	// user stuff
 	r.POST("/user/register", handlers.RegisterUser(db, argon2id.CreateHash))
 	r.POST("/user/login", handlers.LoginUser(db, argon2id.ComparePasswordAndHash, jwtSecret))
-	r.GET("/user/profile", middlewares.CheckAuth(db), handlers.GetUserProfile())
-	r.PUT("/user/setEmailInterval", middlewares.CheckAuth(db), handlers.SetEmailInterval(db))
+	r.GET("/user/profile", checkAuth, handlers.GetUserProfile())
+	r.PUT("/user/setEmailInterval", checkAuth, handlers.SetEmailInterval(db))
 
 	// groups
-	r.DELETE("/user/groups/delete/:id", middlewares.CheckAuth(db), handlers.DeleteGroup(db))
-	r.POST("/user/groups/add", middlewares.CheckAuth(db), handlers.AddGroup(db))
-	r.GET("/user/groups", middlewares.CheckAuth(db), handlers.ListGroups(db)) // list groups
-	r.PATCH("/user/groups/edit/:id", middlewares.CheckAuth(db), handlers.EditGroup(db))
+	r.DELETE("/user/groups/delete/:id", checkAuth, handlers.DeleteGroup(db))
+	r.POST("/user/groups/add", checkAuth, handlers.AddGroup(db))
+	r.GET("/user/groups", checkAuth, handlers.ListGroups(db)) // list groups
+	r.PATCH("/user/groups/edit/:id", checkAuth, handlers.EditGroup(db))
 
 	// lastMessages
-	r.POST("/user/lastMessages/add", middlewares.CheckAuth(db), handlers.AddLastMessage(db))
-	r.GET("/user/lastMessages", middlewares.CheckAuth(db), handlers.ListLastMessages(db))
-	r.PATCH("/user/lastMessages/edit/:id", middlewares.CheckAuth(db), handlers.EditLastMessage(db))
-	r.DELETE("/user/lastMessages/delete/:id", middlewares.CheckAuth(db), handlers.DeleteLastMessage(db))
+	r.POST("/user/lastMessages/add", checkAuth, handlers.AddLastMessage(db))
+	r.GET("/user/lastMessages", checkAuth, handlers.ListLastMessages(db))
+	r.PATCH("/user/lastMessages/edit/:id", checkAuth, handlers.EditLastMessage(db))
+	r.DELETE("/user/lastMessages/delete/:id", checkAuth, handlers.DeleteLastMessage(db))
 	return r
 }

@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"os"
 	"strings"
 	"time"
 
@@ -16,7 +15,7 @@ import (
 
 func CheckAuth(db interface {
 	GetUserByID(ID uint) (*models.User, error)
-}) gin.HandlerFunc {
+}, jwtSecret string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 
 		authHeader := c.GetHeader("Authorization")
@@ -37,11 +36,14 @@ func CheckAuth(db interface {
 			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 				return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
 			}
-			return []byte(os.Getenv("JWT_SECRET")), nil
+			return []byte(jwtSecret), nil
 		})
-		if err != nil || !token.Valid {
+		if err != nil {
 			c.AbortWithError(http.StatusUnauthorized, fmt.Errorf("token error: %w", err))
 			return
+		}
+		if !token.Valid {
+			c.AbortWithStatus(http.StatusUnauthorized)
 		}
 
 		claims, ok := token.Claims.(jwt.MapClaims)
@@ -50,6 +52,7 @@ func CheckAuth(db interface {
 			return
 		}
 
+		// checks if the claim has expired
 		if float64(time.Now().Unix()) > claims["exp"].(float64) {
 			c.AbortWithStatus(http.StatusUnauthorized)
 			return

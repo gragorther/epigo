@@ -1,12 +1,15 @@
 package handlers_test
 
 import (
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/bytedance/sonic"
 	"github.com/gin-gonic/gin"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/gragorther/epigo/handlers"
 	argon2id "github.com/gragorther/epigo/hash"
 	"github.com/gragorther/epigo/models"
@@ -166,5 +169,28 @@ func TestLoginUser(t *testing.T) {
 
 		assert.NotEmpty(body.Token, "token should not be empty")
 
+		token, err := jwt.Parse(body.Token, func(token *jwt.Token) (any, error) {
+			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+				return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+			}
+			return []byte(jwtSecret), nil
+		}, jwt.WithValidMethods([]string{"HS256"}))
+		if err != nil {
+			t.Errorf("invalid token: %v", err)
+		}
+
+		if !token.Valid {
+			t.Errorf("invalid token: %v", token.Raw)
+		}
+		claims, ok := token.Claims.(jwt.MapClaims)
+		if !ok {
+			t.Fatal("could not parse token claims")
+		}
+
+		assert.Equal(float64(userLoggingIn.ID), claims["id"])
+		if float64(time.Now().Unix()) > claims["exp"].(float64) {
+			t.Errorf("expired token (invalid time?) %v", claims["exp"])
+			return
+		}
 	})
 }
