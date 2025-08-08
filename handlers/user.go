@@ -173,3 +173,53 @@ func SetEmailInterval(db interface {
 		}
 	}
 }
+
+type ProfileInput struct {
+	Name string `json:"name,omitempty"`
+}
+
+func CreateProfile(db interface {
+	CreateProfile(*models.Profile) error
+}) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		user, err := GetUserFromContext(c)
+		if err != nil {
+			c.AbortWithError(http.StatusUnauthorized, fmt.Errorf("failed to get user from context: %w", err))
+			return
+		}
+		var input ProfileInput
+		if err := c.ShouldBindJSON(&input); err != nil {
+			c.AbortWithStatus(http.StatusUnprocessableEntity)
+			return
+		}
+
+		db.CreateProfile(&models.Profile{
+			UserID: user.ID,
+			Name:   &input.Name,
+		})
+		c.Status(http.StatusCreated)
+	}
+}
+
+func UpdateProfile(db interface {
+	UpdateProfile(*models.Profile) error
+}) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		user, err := GetUserFromContext(c)
+		if err != nil {
+			c.AbortWithError(http.StatusInternalServerError, fmt.Errorf("failed to get user from context: %v", err))
+			return
+		}
+		var input ProfileInput
+		err = c.ShouldBindJSON(&input)
+		if err != nil {
+			c.AbortWithStatus(http.StatusUnprocessableEntity)
+			return
+		}
+		db.UpdateProfile(&models.Profile{
+			UserID: user.ID,
+			Name:   &input.Name,
+		})
+		c.Status(http.StatusNoContent)
+	}
+}

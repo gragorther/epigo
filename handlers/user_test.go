@@ -53,9 +53,9 @@ func (m *mockDB) GetUserByUsername(username string) (*models.User, error) {
 	return nil, nil
 }
 func (m *mockDB) EditUser(newUser *models.User) error {
-	for _, user := range m.Users {
+	for i, user := range m.Users {
 		if user.ID == newUser.ID {
-			user = *newUser
+			m.Users[i] = *newUser
 			break
 		}
 	}
@@ -63,6 +63,19 @@ func (m *mockDB) EditUser(newUser *models.User) error {
 }
 func (m *mockDB) CreateUser(newUser *models.User) error {
 	m.Users = append(m.Users, *newUser)
+	return nil
+}
+func (m *mockDB) UpdateProfile(newProfile *models.Profile) error {
+	for i, profile := range m.Profiles {
+		if profile.UserID == newProfile.UserID {
+			m.Profiles[i] = *newProfile
+			break
+		}
+	}
+	return nil
+}
+func (m *mockDB) CreateProfile(newProfile *models.Profile) error {
+	m.Profiles = append(m.Profiles, *newProfile)
 	return nil
 }
 
@@ -243,7 +256,7 @@ func TestLoginUser(t *testing.T) {
 func TestGetUserData(t *testing.T) {
 	c, w, assert := setupHandlerTest(t)
 	userName := "myname"
-	lastLoginTime := time.Date(2025, time.January, 1, 12, 12, 12, 12, time.Now().Location())
+	lastLoginTime := time.Date(2025, time.January, 1, 12, 12, 12, 12, time.UTC)
 	user := &models.User{
 		Profile:   &models.Profile{Name: &userName},
 		Username:  "myusername",
@@ -266,4 +279,56 @@ func TestGetUserData(t *testing.T) {
 	assert.Equal(user.Username, output.Username)
 	assert.Equal(lastLoginTime, output.LastLogin)
 	assert.Equal(user.Email, output.Email)
+}
+func TestCreateProfile(t *testing.T) {
+	t.Run("valid input", func(t *testing.T) {
+		c, w, assert := setupHandlerTest(t)
+		mock := newMockDB()
+		handlers.SetUser(c, &models.User{
+			ID:       1,
+			Username: "username",
+		})
+		profileInput := handlers.ProfileInput{
+			Name: "newname",
+		}
+		input, err := sonic.Marshal(profileInput)
+		if err != nil {
+			t.Fatalf("sonic failed to bind json: %v", err)
+		}
+		setGinHttpBody(c, input)
+		handlers.CreateProfile(mock)(c)
+
+		assertHTTPStatus(t, c, http.StatusCreated, w, "http status should indicate that the profile was created")
+		assert.Equal(*mock.Profiles[0].Name, profileInput.Name)
+	})
+}
+
+func TestUpdateProfile(t *testing.T) {
+	t.Run("valid input", func(t *testing.T) {
+		c, w, assert := setupHandlerTest(t)
+		mock := newMockDB()
+		profileInput := handlers.ProfileInput{
+			Name: "uwu",
+		}
+		input, err := sonic.Marshal(profileInput)
+		if err != nil {
+			t.Fatalf("sonic failed to marshal json: %v", err)
+		}
+
+		oldName := "oldn naem"
+		mock.CreateProfile(&models.Profile{
+			Name:   &oldName,
+			UserID: 1,
+		})
+		currentUser := models.User{
+			Username: "bob", ID: 1,
+		}
+		handlers.SetUser(c, &currentUser)
+
+		setGinHttpBody(c, input)
+		handlers.UpdateProfile(mock)(c)
+
+		assertHTTPStatus(t, c, http.StatusNoContent, w, "http status code should indicate that the profile was updated")
+		assert.Equal(profileInput.Name, *mock.Profiles[0].Name)
+	})
 }

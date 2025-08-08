@@ -26,6 +26,7 @@ type mockDB struct {
 	LastMessages []models.LastMessage
 	Recipients   []models.Recipient
 	Users        []models.User
+	Profiles     []models.Profile
 }
 
 func newMockDB() *mockDB {

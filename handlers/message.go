@@ -161,10 +161,7 @@ func EditLastMessage(db interface {
 			return
 		}
 
-		// TODO: figure out why c.Status doesn't set the status to 201
-		c.JSON(http.StatusCreated, gin.H{
-			"message": editedMessage,
-		})
+		c.Status(http.StatusNoContent)
 	}
 
 }

@@ -34,9 +34,9 @@ func (m *mockDB) FindLastMessagesByUserID(userID uint) ([]models.LastMessage, er
 	return output, m.Err
 }
 func (m *mockDB) UpdateLastMessage(newMessage *models.LastMessage) error {
-	for _, message := range m.LastMessages {
+	for i, message := range m.LastMessages {
 		if message.ID == newMessage.ID {
-			message = *newMessage
+			m.LastMessages[i] = *newMessage
 		}
 	}
 	return m.Err
@@ -172,12 +172,12 @@ func TestEditLastMessage(t *testing.T) {
 		mock.LastMessages = []models.LastMessage{
 			{ID: 1, Title: "stuff", UserID: userID},
 		}
-
-		jsonInput, err := sonic.Marshal(handlers.EditMessageInput{
+		input := handlers.EditMessageInput{
 			Title:    "test title",
 			Content:  "test content",
 			GroupIDs: []uint{1, 2, 4, 5, 6, 7},
-		})
+		}
+		jsonInput, err := sonic.Marshal(input)
 		if err != nil {
 			t.Fatalf("failed to bind json: %v", err)
 		}
@@ -187,7 +187,12 @@ func TestEditLastMessage(t *testing.T) {
 		handler(c)
 		t.Log(c.Errors)
 
-		assert.Equal(http.StatusCreated, w.Code)
+		assertHTTPStatus(t, c, http.StatusNoContent, w, "http status code should indicate that the message was updated")
+
+		field := mock.LastMessages[0]
+		assert.Equal(input.Title, field.Title)
+		assert.Equal(input.Content, field.Content)
+
 	})
 	t.Run("user does not own the groups the message is being assigned to", func(t *testing.T) {
 		c, w, assert := setupHandlerTest(t)
