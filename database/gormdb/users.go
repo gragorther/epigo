@@ -1,10 +1,13 @@
 package gormdb
 
 import (
+	"context"
+	"errors"
 	"log"
 
 	"github.com/gragorther/epigo/models"
 	"github.com/gragorther/epigo/types"
+	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
 
@@ -96,4 +99,21 @@ func (g *GormDB) EditUser(user *models.User) error {
 func (g *GormDB) DeleteUserAndAllAssociations(ID uint) error {
 	res := g.db.Select(clause.Associations).Delete(&models.User{ID: ID})
 	return res.Error
+}
+func (g *GormDB) CreateProfile(newProfile *models.Profile) error {
+	err := g.db.Create(newProfile).Error
+	return err
+}
+
+var ErrNoRowsAffected error = errors.New("no rows affected")
+
+func (g *GormDB) UpdateProfile(ctx context.Context, profile models.Profile) error {
+	rowsAffected, err := gorm.G[models.Profile](g.db).Where("id = ?", profile.ID).Updates(ctx, profile)
+	if err != nil {
+		return err
+	}
+	if rowsAffected == 0 {
+		return ErrNoRowsAffected
+	}
+	return nil
 }

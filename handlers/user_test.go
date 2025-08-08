@@ -1,6 +1,7 @@
 package handlers_test
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -65,10 +66,10 @@ func (m *mockDB) CreateUser(newUser *models.User) error {
 	m.Users = append(m.Users, *newUser)
 	return nil
 }
-func (m *mockDB) UpdateProfile(newProfile *models.Profile) error {
+func (m *mockDB) UpdateProfile(_ context.Context, newProfile models.Profile) error {
 	for i, profile := range m.Profiles {
 		if profile.UserID == newProfile.UserID {
-			m.Profiles[i] = *newProfile
+			m.Profiles[i] = newProfile
 			break
 		}
 	}

@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"time"
@@ -202,9 +203,10 @@ func CreateProfile(db interface {
 }
 
 func UpdateProfile(db interface {
-	UpdateProfile(*models.Profile) error
+	UpdateProfile(context.Context, models.Profile) error
 }) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		ctx := c.Request.Context()
 		user, err := GetUserFromContext(c)
 		if err != nil {
 			c.AbortWithError(http.StatusInternalServerError, fmt.Errorf("failed to get user from context: %v", err))
@@ -216,7 +218,7 @@ func UpdateProfile(db interface {
 			c.AbortWithStatus(http.StatusUnprocessableEntity)
 			return
 		}
-		db.UpdateProfile(&models.Profile{
+		db.UpdateProfile(ctx, models.Profile{
 			UserID: user.ID,
 			Name:   &input.Name,
 		})

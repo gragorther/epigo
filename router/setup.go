@@ -15,21 +15,28 @@ func Setup(db *gormdb.GormDB, jwtSecret string) *gin.Engine {
 	checkAuth := middlewares.CheckAuth(db, jwtSecret)
 
 	// user stuff
-	r.POST("/user/register", handlers.RegisterUser(db, argon2id.CreateHash))
-	r.POST("/user/login", handlers.LoginUser(db, argon2id.ComparePasswordAndHash, jwtSecret))
-	r.GET("/user/profile", checkAuth, handlers.GetUserData())
-	r.PUT("/user/setEmailInterval", checkAuth, handlers.SetEmailInterval(db))
+	{
+		user := r.Group("/user")
+		user.POST("/register", handlers.RegisterUser(db, argon2id.CreateHash))
+		user.POST("/login", handlers.LoginUser(db, argon2id.ComparePasswordAndHash, jwtSecret))
+		user.GET("/profile", checkAuth, handlers.GetUserData())
+		user.PUT("/setEmailInterval", checkAuth, handlers.SetEmailInterval(db))
+		{
+			profile := user.Group("/profile")
+			profile.POST("/create", checkAuth, handlers.CreateProfile(db))
+			profile.PATCH("/edit", checkAuth, handlers.UpdateProfile(db))
+		}
+		// groups
+		user.DELETE("/groups/delete/:id", checkAuth, handlers.DeleteGroup(db))
+		user.POST("/groups/add", checkAuth, handlers.AddGroup(db))
+		user.GET("/groups", checkAuth, handlers.ListGroups(db)) // list groups
+		user.PATCH("/groups/edit/:id", checkAuth, handlers.EditGroup(db))
 
-	// groups
-	r.DELETE("/user/groups/delete/:id", checkAuth, handlers.DeleteGroup(db))
-	r.POST("/user/groups/add", checkAuth, handlers.AddGroup(db))
-	r.GET("/user/groups", checkAuth, handlers.ListGroups(db)) // list groups
-	r.PATCH("/user/groups/edit/:id", checkAuth, handlers.EditGroup(db))
-
-	// lastMessages
-	r.POST("/user/lastMessages/add", checkAuth, handlers.AddLastMessage(db))
-	r.GET("/user/lastMessages", checkAuth, handlers.ListLastMessages(db))
-	r.PATCH("/user/lastMessages/edit/:id", checkAuth, handlers.EditLastMessage(db))
-	r.DELETE("/user/lastMessages/delete/:id", checkAuth, handlers.DeleteLastMessage(db))
+		// lastMessages
+		user.POST("/lastMessages/add", checkAuth, handlers.AddLastMessage(db))
+		user.GET("/lastMessages", checkAuth, handlers.ListLastMessages(db))
+		user.PATCH("/lastMessages/edit/:id", checkAuth, handlers.EditLastMessage(db))
+		user.DELETE("/lastMessages/delete/:id", checkAuth, handlers.DeleteLastMessage(db))
+	}
 	return r
 }
