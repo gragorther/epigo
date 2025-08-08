@@ -176,11 +176,11 @@ func TestLoginUser(t *testing.T) {
 			return []byte(jwtSecret), nil
 		}, jwt.WithValidMethods([]string{"HS256"}))
 		if err != nil {
-			t.Errorf("invalid token: %v", err)
+			t.Fatalf("invalid token: %v", err)
 		}
 
 		if !token.Valid {
-			t.Errorf("invalid token: %v", token.Raw)
+			t.Fatalf("invalid token: %v", token.Raw)
 		}
 		claims, ok := token.Claims.(jwt.MapClaims)
 		if !ok {
@@ -220,5 +220,22 @@ func TestLoginUser(t *testing.T) {
 
 		assert.Empty(w.Body.Bytes())
 
+	})
+	t.Run("user not found", func(t *testing.T) {
+		c, w, assert := setupHandlerTest(t)
+
+		mock := newMockDB()
+		input, err := sonic.Marshal(handlers.LoginInput{
+			Username: "iDontExist", Password: "invalid password oopsie",
+		})
+		if err != nil {
+			t.Fatalf("sonic failed to marshal json: %v", err)
+		}
+		setGinHttpBody(c, input)
+		jwtSecret := "secure jwt !!"
+
+		handlers.LoginUser(mock, comparePasswordAndHash, jwtSecret)(c)
+		assertHTTPStatus(t, c, http.StatusNotFound, w, "http status code should indicate that the user was not found")
+		assert.Empty(w.Body.Bytes(), "the response body should be empty because the user was not found")
 	})
 }
