@@ -15,7 +15,7 @@ type PostgresContainer struct {
 func CreatePostgresContainer(ctx context.Context) (*PostgresContainer, error) {
 	ctr, err := postgres.Run(
 		ctx,
-		"postgres:17-alpine",
+		"postgres:17",
 		postgres.WithDatabase("epigo"),
 		postgres.WithUsername("epigo"),
 		postgres.WithPassword("password"),
