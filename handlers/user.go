@@ -180,7 +180,7 @@ type ProfileInput struct {
 }
 
 func CreateProfile(db interface {
-	CreateProfile(*models.Profile) error
+	CreateProfile(context.Context, *models.Profile) error
 }) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		user, err := GetUserFromContext(c)
@@ -194,7 +194,7 @@ func CreateProfile(db interface {
 			return
 		}
 
-		db.CreateProfile(&models.Profile{
+		db.CreateProfile(c, &models.Profile{
 			UserID: user.ID,
 			Name:   &input.Name,
 		})
@@ -206,7 +206,6 @@ func UpdateProfile(db interface {
 	UpdateProfile(context.Context, models.Profile) error
 }) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		ctx := c.Request.Context()
 		user, err := GetUserFromContext(c)
 		if err != nil {
 			c.AbortWithError(http.StatusInternalServerError, fmt.Errorf("failed to get user from context: %v", err))
@@ -218,7 +217,7 @@ func UpdateProfile(db interface {
 			c.AbortWithStatus(http.StatusUnprocessableEntity)
 			return
 		}
-		db.UpdateProfile(ctx, models.Profile{
+		db.UpdateProfile(c, models.Profile{
 			UserID: user.ID,
 			Name:   &input.Name,
 		})

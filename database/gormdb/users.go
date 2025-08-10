@@ -100,8 +100,8 @@ func (g *GormDB) DeleteUserAndAllAssociations(ID uint) error {
 	res := g.db.Select(clause.Associations).Delete(&models.User{ID: ID})
 	return res.Error
 }
-func (g *GormDB) CreateProfile(newProfile *models.Profile) error {
-	err := g.db.Create(newProfile).Error
+func (g *GormDB) CreateProfile(ctx context.Context, newProfile *models.Profile) error {
+	err := gorm.G[models.Profile](g.db).Create(ctx, newProfile)
 	return err
 }
 

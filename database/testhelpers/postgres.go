@@ -2,12 +2,9 @@ package testhelpers
 
 import (
 	"context"
-	"path/filepath"
-	"time"
+	"fmt"
 
-	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
-	"github.com/testcontainers/testcontainers-go/wait"
 )
 
 type PostgresContainer struct {
@@ -16,26 +13,28 @@ type PostgresContainer struct {
 }
 
 func CreatePostgresContainer(ctx context.Context) (*PostgresContainer, error) {
-	pgContainer, err := postgres.Run(ctx,
+	ctr, err := postgres.Run(
+		ctx,
 		"postgres:17-alpine",
-		postgres.WithInitScripts(filepath.Join("..", "testdata", "init-db.sql")),
-		postgres.WithDatabase("test-db"),
-		postgres.WithUsername("postgres"),
-		postgres.WithPassword("postgres"),
-		testcontainers.WithWaitStrategy(
-			wait.ForLog("database system is ready to accept connections").
-				WithOccurrence(2).WithStartupTimeout(5*time.Second)),
+		postgres.WithDatabase("epigo"),
+		postgres.WithUsername("epigo"),
+		postgres.WithPassword("password"),
+		postgres.BasicWaitStrategies(),
+		postgres.WithSQLDriver("pgx"),
 	)
+
+	// Run any migrations on the database
+
+	// 2. Create a snapshot of the database to restore later
+	// tt.options comes the test case, it can be specified as e.g. `postgres.WithSnapshotName("custom-snapshot")` or omitted, to use default name
+
+	dbURL, err := ctr.ConnectionString(ctx)
 	if err != nil {
-		return nil, err
-	}
-	connStr, err := pgContainer.ConnectionString(ctx, "sslmode=disable")
-	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get connection string: %w", err)
 	}
 
 	return &PostgresContainer{
-		PostgresContainer: pgContainer,
-		ConnectionString:  connStr,
+		PostgresContainer: ctr,
+		ConnectionString:  dbURL,
 	}, nil
 }

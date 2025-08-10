@@ -75,7 +75,7 @@ func (m *mockDB) UpdateProfile(_ context.Context, newProfile models.Profile) err
 	}
 	return nil
 }
-func (m *mockDB) CreateProfile(newProfile *models.Profile) error {
+func (m *mockDB) CreateProfile(ctx context.Context, newProfile *models.Profile) error {
 	m.Profiles = append(m.Profiles, *newProfile)
 	return nil
 }
@@ -306,6 +306,7 @@ func TestCreateProfile(t *testing.T) {
 
 func TestUpdateProfile(t *testing.T) {
 	t.Run("valid input", func(t *testing.T) {
+		ctx := context.Background()
 		c, w, assert := setupHandlerTest(t)
 		mock := newMockDB()
 		profileInput := handlers.ProfileInput{
@@ -317,7 +318,7 @@ func TestUpdateProfile(t *testing.T) {
 		}
 
 		oldName := "oldn naem"
-		mock.CreateProfile(&models.Profile{
+		mock.CreateProfile(ctx, &models.Profile{
 			Name:   &oldName,
 			UserID: 1,
 		})

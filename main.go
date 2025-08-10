@@ -36,14 +36,7 @@ func main() {
 		gin.SetMode(gin.ReleaseMode)
 	}
 
-	dbconn, err := initializers.ConnectDB(ctx, initializers.PostgresConfig{
-		User:     "epigo",
-		DBName:   "epigo",
-		Password: "password",
-		Port:     "5432",
-		TimeZone: "Europe/Ljubljana",
-		Host:     "localhost",
-	})
+	dbconn, err := initializers.ConnectDB(ctx, config.DatabaseURL)
 	if err != nil {
 		log.Fatalf("DB connection error: %v", err)
 	}

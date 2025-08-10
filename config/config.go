@@ -13,8 +13,7 @@ type Config struct {
 	AdminPassword string     `env:"ADMIN_PASSWORD"`
 	JWTSecret     string     `env:"JWT_SECRET"`
 	RedisAddress  string     `env:"REDIS_ADDRESS"`
-}
-type PostgresConfig struct {
+	DatabaseURL   string     `env:"DATABASE_URL"`
 }
 
 func Get() (Config, error) {

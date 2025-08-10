@@ -22,7 +22,10 @@ type User struct {
 	Profile      *Profile       `json:"profile"`
 }
 type Profile struct {
-	gorm.Model
-	UserID uint
-	Name   *string `json:"name"`
+	ID        uint `gorm:"primarykey"`
+	CreatedAt time.Time
+	UpdatedAt time.Time
+	DeletedAt gorm.DeletedAt `gorm:"index"`
+	UserID    uint
+	Name      *string `json:"name" sql:"name"`
 }
