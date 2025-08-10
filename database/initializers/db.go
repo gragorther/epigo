@@ -15,7 +15,10 @@ func ConnectDB(ctx context.Context, dsn string) (*gorm.DB, error) {
 	if err != nil {
 		return nil, err
 	}
-	err = db.AutoMigrate(&models.User{}, &models.LastMessage{}, &models.Group{}, &models.Recipient{}, &models.Profile{})
 
 	return db, err
+}
+
+func Migrate(db *gorm.DB) error {
+	return db.AutoMigrate(&models.User{}, &models.LastMessage{}, &models.Group{}, &models.Recipient{}, &models.Profile{})
 }

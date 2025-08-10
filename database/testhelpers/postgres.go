@@ -22,6 +22,9 @@ func CreatePostgresContainer(ctx context.Context) (*PostgresContainer, error) {
 		postgres.BasicWaitStrategies(),
 		postgres.WithSQLDriver("pgx"),
 	)
+	if err != nil {
+		return nil, err
+	}
 
 	// Run any migrations on the database
 

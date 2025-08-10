@@ -40,6 +40,10 @@ func main() {
 	if err != nil {
 		log.Fatalf("DB connection error: %v", err)
 	}
+	err = initializers.Migrate(dbconn)
+	if err != nil {
+		log.Fatalf("failed to migrate db: %v", err)
+	}
 
 	dbHandler := gormdb.NewGormDB(dbconn)
 
