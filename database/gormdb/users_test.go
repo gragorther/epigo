@@ -21,6 +21,10 @@ type DBTestSuite struct {
 	db          *sql.DB
 }
 
+func TestDB(t *testing.T) {
+	suite.Run(t, new(DBTestSuite))
+}
+
 func (suite *DBTestSuite) SetupSuite() {
 	suite.ctx = context.Background()
 
@@ -35,7 +39,6 @@ func (suite *DBTestSuite) SetupSuite() {
 	conn, err := initializers.ConnectDB(suite.ctx, pgContainer.ConnectionString)
 	suite.Require().NoError(err)
 	suite.Require().NoError(initializers.Migrate(conn))
-	suite.Require().NoError(err)
 	sqldb, err := conn.DB()
 	suite.Require().NoError(err)
 	sqldb.Close()
@@ -59,12 +62,7 @@ func (suite *DBTestSuite) TearDownSuite() {
 	}
 }
 
-func (suite *DBTestSuite) AfterTest(suiteName, testName string) {
-	// close existing sql.DB so the restore can succeed cleanly
-	if suite.db != nil {
-		_ = suite.db.Close()
-	}
-
+func setupTest(suite *DBTestSuite) {
 	err := suite.pgContainer.Restore(suite.ctx)
 	suite.Require().NoError(err)
 
@@ -75,6 +73,10 @@ func (suite *DBTestSuite) AfterTest(suiteName, testName string) {
 	suite.Require().NoError(err)
 
 	suite.repo = gormdb.NewGormDB(conn)
+}
+
+func (suite *DBTestSuite) BeforeTest(suiteName, testName string) {
+	setupTest(suite)
 }
 
 func (suite *DBTestSuite) TestCreateProfile() {
@@ -96,14 +98,13 @@ func (suite *DBTestSuite) TestCreateProfile() {
 
 func (suite *DBTestSuite) TestUpdateProfile() {
 	name := "uwu"
-	var userID int64
-	suite.db.QueryRowContext(suite.ctx, "INSERT INTO users (username) VALUES ('femboy') RETURNING id").Scan(&userID)
+	userID, err := createTestUser(suite.ctx, suite.db)
 
 	oldProfile := models.Profile{
 		Name:   &name,
 		UserID: uint(userID),
 	}
-	err := suite.repo.CreateProfile(suite.ctx, &oldProfile)
+	err = suite.repo.CreateProfile(suite.ctx, &oldProfile)
 	suite.NoError(err)
 
 	newName := "owo"
@@ -120,6 +121,89 @@ func (suite *DBTestSuite) TestUpdateProfile() {
 	suite.Equal(*newProfile.Name, *got.Name)
 }
 
-func TestDB(t *testing.T) {
-	suite.Run(t, new(DBTestSuite))
+func createTestUser(ctx context.Context, db *sql.DB) (userID uint, err error) {
+	err = db.QueryRowContext(ctx, "INSERT INTO users (username) VALUES ('femboy') RETURNING id").Scan(&userID)
+	return
+}
+
+func (s *DBTestSuite) TestUpdateUserInterval() {
+	userID, err := createTestUser(s.ctx, s.db)
+	s.NoError(err)
+	userCron := "5 4 * * *"
+	s.NoError(s.repo.UpdateUserInterval(userID, userCron))
+
+	var gotCron string
+	s.NoError(s.db.QueryRowContext(s.ctx, "SELECT cron FROM users WHERE id = $1", userID).Scan(&gotCron))
+
+	s.Equal(userCron, gotCron)
+}
+
+func (s *DBTestSuite) TestCheckIfUserExistsByUsernameAndEmail() {
+	s.Run("user exists", func() {
+		username := "bruh"
+		email := "thing@google.com"
+		var userID uint
+		err := s.db.QueryRowContext(s.ctx, "INSERT INTO users (username, email) VALUES ($1, $2) RETURNING id", username, email).Scan(&userID)
+		s.Require().NoError(err)
+
+		exists, err := s.repo.CheckIfUserExistsByUsernameAndEmail(username, email)
+		s.Require().NoError(err)
+
+		s.True(exists, "should be true because the user does exist")
+	})
+	s.Run("user doesn't exist", func() {
+
+		exists, err := s.repo.CheckIfUserExistsByUsernameAndEmail("idontexist", "idontexist@test.com")
+		s.Require().NoError(err)
+
+		s.False(exists, "should be true because the user does exist")
+	})
+
+}
+
+func (s *DBTestSuite) TestCheckIfUserExistsByUsername() {
+	s.Run("user exists", func() {
+		username := "bruh"
+		var userID uint
+		err := s.db.QueryRowContext(s.ctx, "INSERT INTO users (username) VALUES ($1) RETURNING id", username).Scan(&userID)
+		s.Require().NoError(err)
+
+		exists, err := s.repo.CheckIfUserExistsByUsername(username)
+		s.Require().NoError(err)
+
+		s.True(exists, "should be true because the user does exist")
+	})
+	s.Run("user doesn't exist", func() {
+
+		exists, err := s.repo.CheckIfUserExistsByUsername("idontexist")
+		s.Require().NoError(err)
+
+		s.False(exists, "should be true because the user does exist")
+	})
+}
+
+func (s *DBTestSuite) TestCreateUser() {
+	newUser := &models.User{
+		Username: "name",
+		Email:    "email@email.com",
+	}
+	s.Require().NoError(s.repo.CreateUser(newUser))
+
+	var username, email string
+	err := s.db.QueryRowContext(s.ctx, "SELECT username, email FROM users WHERE id = $1", newUser.ID).Scan(&username, &email)
+	s.Require().NoError(err)
+	s.Equal(newUser.Username, username)
+	s.Equal(newUser.Email, email)
+}
+
+func (s *DBTestSuite) TestGetUserByUsername() {
+	username := "ime"
+	email := "email@email.com"
+	s.db.QueryRowContext(s.ctx, "INSERT INTO users (username, email) VALUES ($1, $2)", username, email)
+
+	user, err := s.repo.GetUserByUsername(username)
+	s.Require().NoError(err)
+
+	s.Equal(username, user.Username)
+	s.Equal(email, user.Email)
 }

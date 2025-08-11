@@ -16,7 +16,7 @@ type User struct {
 	PasswordHash string         `json:"-"`
 	LastLogin    *time.Time     `json:"lastLogin"`
 	Groups       []Group        `json:"groups"`
-	EmailCron    *string        `json:"emailCron"`
+	Cron         *string        `json:"cron"`
 	IsAdmin      bool           `json:"isAdmin"`
 	IsVerified   bool           `json:"isVerified"`
 	Profile      *Profile       `json:"profile"`

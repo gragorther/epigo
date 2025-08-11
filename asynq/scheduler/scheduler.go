@@ -5,12 +5,12 @@ import (
 	"time"
 
 	"github.com/gragorther/epigo/asynq/tasks"
-	"github.com/gragorther/epigo/types"
+	"github.com/gragorther/epigo/database/gormdb"
 	"github.com/hibiken/asynq"
 )
 
 type intervalGetter interface {
-	GetUserIntervals() ([]types.UserIntervalsOutput, error)
+	GetUserIntervals() ([]gormdb.UserInterval, error)
 }
 
 type ConfigProvider struct {

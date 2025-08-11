@@ -5,17 +5,17 @@ import (
 
 	"github.com/gragorther/epigo/asynq/scheduler"
 	"github.com/gragorther/epigo/asynq/tasks"
-	"github.com/gragorther/epigo/types"
+	"github.com/gragorther/epigo/database/gormdb"
 	"github.com/hibiken/asynq"
 	"github.com/stretchr/testify/assert"
 )
 
 type getIntervalsStub struct {
 	err           error
-	userIntervals []types.UserIntervalsOutput
+	userIntervals []gormdb.UserInterval
 }
 
-func (g getIntervalsStub) GetUserIntervals() ([]types.UserIntervalsOutput, error) {
+func (g getIntervalsStub) GetUserIntervals() ([]gormdb.UserInterval, error) {
 	return g.userIntervals, g.err
 }
 
@@ -23,7 +23,7 @@ func TestGetConfigs(t *testing.T) {
 
 	assert := assert.New(t)
 	t.Run("with users", func(t *testing.T) {
-		getIntervals := getIntervalsStub{err: nil, userIntervals: []types.UserIntervalsOutput{
+		getIntervals := getIntervalsStub{err: nil, userIntervals: []gormdb.UserInterval{
 			{ID: 1, Email: "gregor@gregtech.eu", EmailCron: "5 4 * * *"},
 			{ID: 2, Email: "test@gregtech.eu", EmailCron: "5 4 * * *"},
 		}}
@@ -45,7 +45,7 @@ func TestGetConfigs(t *testing.T) {
 
 	// this tests if the function handles zero configs gracefully
 	t.Run("no users", func(t *testing.T) {
-		getIntervals := getIntervalsStub{err: nil, userIntervals: []types.UserIntervalsOutput{}}
+		getIntervals := getIntervalsStub{err: nil, userIntervals: []gormdb.UserInterval{}}
 		want := []*asynq.PeriodicTaskConfig{}
 
 		configprovider := scheduler.ConfigProvider{DB: getIntervals}

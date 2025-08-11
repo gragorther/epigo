@@ -6,18 +6,23 @@ import (
 	"log"
 
 	"github.com/gragorther/epigo/models"
-	"github.com/gragorther/epigo/types"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
 
 func (g *GormDB) UpdateUserInterval(userID uint, cron string) error {
-	res := g.db.Model(&models.User{}).Where("id = ?", userID).Update("email_cron", cron)
+	res := g.db.Model(&models.User{}).Where("id = ?", userID).UpdateColumn("cron", cron)
 	return res.Error
 }
 
-func (g *GormDB) GetUserIntervals() ([]types.UserIntervalsOutput, error) {
-	var intervals []types.UserIntervalsOutput
+type UserInterval struct {
+	ID        uint   `gorm:"primarykey"`
+	Email     string `json:"email" gorm:"unique"`
+	EmailCron string `json:"emailCron"`
+}
+
+func (g *GormDB) GetUserIntervals() ([]UserInterval, error) {
+	var intervals []UserInterval
 	res := g.db.Model(&models.User{}).Find(&intervals)
 	return intervals, res.Error
 }
