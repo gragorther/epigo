@@ -77,7 +77,7 @@ func RegisterUser(db interface {
 func LoginUser(db interface {
 	CheckIfUserExistsByUsername(username string) (bool, error)
 	GetUserByUsername(username string) (*models.User, error)
-	EditUser(*models.User) error
+	EditUser(context.Context, models.User) error
 }, comparePasswordAndHash func(password string, hash string) (match bool, err error), jwtSecret string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var authInput LoginInput
@@ -123,7 +123,7 @@ func LoginUser(db interface {
 		}
 		currentTime := time.Now()
 		userFound.LastLogin = &currentTime
-		if err := db.EditUser(userFound); err != nil {
+		if err := db.EditUser(c, *userFound); err != nil {
 			c.Error(fmt.Errorf("Failed to store user last login: %w", err))
 		}
 		c.JSON(http.StatusOK, gin.H{

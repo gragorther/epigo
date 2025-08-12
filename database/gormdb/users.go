@@ -3,6 +3,7 @@ package gormdb
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log"
 
 	"github.com/gragorther/epigo/models"
@@ -86,19 +87,29 @@ func (g *GormDB) GetUserByID(ID uint) (*models.User, error) {
 	res := g.db.Model(&models.User{ID: ID}).Find(&user)
 	return &user, res.Error
 }
-func (g *GormDB) SaveUserData(user *models.User) error {
-	res := g.db.Save(user)
-	return res.Error
+
+func (g *GormDB) DeleteUser(ctx context.Context, ID uint) error {
+	rowsaffected, err := gorm.G[models.User](g.db).Where("id = ?", ID).Delete(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to delete user: %w", err)
+	}
+	if rowsaffected < 1 {
+		return ErrNoRowsAffected
+	}
+	return nil
+
 }
 
-func (g *GormDB) DeleteUser(ID uint) error {
-	res := g.db.Delete(&models.User{}, ID)
-	return res.Error
-}
+func (g *GormDB) EditUser(ctx context.Context, user models.User) error {
+	rowsAffected, err := gorm.G[models.User](g.db).Where("id = ?", user.ID).Updates(ctx, user)
+	if err != nil {
+		return err
+	}
+	if rowsAffected < 1 {
+		return ErrNoRowsAffected
+	}
+	return nil
 
-func (g *GormDB) EditUser(user *models.User) error {
-	res := g.db.Model(&models.User{ID: user.ID}).Updates(user)
-	return res.Error
 }
 
 func (g *GormDB) DeleteUserAndAllAssociations(ID uint) error {

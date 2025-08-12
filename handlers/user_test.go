@@ -53,10 +53,10 @@ func (m *mockDB) GetUserByUsername(username string) (*models.User, error) {
 	}
 	return nil, nil
 }
-func (m *mockDB) EditUser(newUser *models.User) error {
+func (m *mockDB) EditUser(ctx context.Context, newUser models.User) error {
 	for i, user := range m.Users {
 		if user.ID == newUser.ID {
-			m.Users[i] = *newUser
+			m.Users[i] = newUser
 			break
 		}
 	}

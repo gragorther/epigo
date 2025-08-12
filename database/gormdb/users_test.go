@@ -207,3 +207,59 @@ func (s *DBTestSuite) TestGetUserByUsername() {
 	s.Equal(username, user.Username)
 	s.Equal(email, user.Email)
 }
+
+func (s *DBTestSuite) TestCheckIfUserExistsByID() {
+	s.Run("user doesn't exist", func() {
+		exists, err := s.repo.CheckIfUserExistsByID(99999)
+		s.NoError(err, "check if user exists by id shouldn't fail")
+		s.False(exists)
+	})
+	s.Run("user exists", func() {
+		userID, err := createTestUser(s.ctx, s.db)
+		s.Require().NoError(err, "creation of test user shouldn't fail")
+		s.repo.CheckIfUserExistsByID(userID)
+	})
+}
+
+func (s *DBTestSuite) TestGetUserByID() {
+	newUser := models.User{
+		Email:    "test@gregtech.eu",
+		Username: "username",
+	}
+	s.db.QueryRowContext(s.ctx, "INSERT INTO users (email, username) VALUES ($1, $2) RETURNING id", newUser.Email, newUser.Username).Scan(&newUser.ID)
+
+	got, err := s.repo.GetUserByID(newUser.ID)
+	s.Require().NoError(err, "getting user by id should not fail")
+	s.Equal(newUser.Email, got.Email)
+	s.Equal(newUser.Username, got.Username)
+}
+
+func (s *DBTestSuite) TestDeleteUser() {
+	newUser := models.User{Username: "gregor", Email: "test@test.email"}
+	err := s.db.QueryRowContext(s.ctx, "INSERT INTO users (email, username) VALUES ($1, $2) RETURNING id", newUser.Email, newUser.Username).Scan(&newUser.ID)
+	s.Require().NoError(err, "creating user for test shouldn't fail")
+	s.Require().NoError(s.repo.DeleteUser(s.ctx, newUser.ID))
+
+	var got models.User
+	err = s.db.QueryRowContext(s.ctx, "SELECT deleted_at FROM users WHERE id = $1", newUser.ID).Scan(&got.DeletedAt)
+	s.Require().NoError(err, "selecting users shouldn't fail")
+
+	s.NotEmpty(got.DeletedAt)
+}
+
+func (s *DBTestSuite) TestEditUser() {
+	user := models.User{
+		Email: "gregor@gregtech.eu", Username: "gregor",
+	}
+	s.db.QueryRowContext(s.ctx, "INSERT INTO users (email, username) VALUES ($1, $2) RETURNING id", user.Email, user.Username).Scan(&user.ID)
+
+	user.Email = "newemail@newemail.email"
+	user.Username = "newusername"
+	s.repo.EditUser(s.ctx, user)
+
+	var got models.User
+	s.db.QueryRowContext(s.ctx, "SELECT email, username FROM users WHERE id = $1", user.ID).Scan(&got.Email, &got.Username)
+
+	s.Equal(user.Email, got.Email)
+	s.Equal(user.Username, got.Username)
+}
