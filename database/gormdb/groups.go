@@ -1,6 +1,7 @@
 package gormdb
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -64,5 +65,11 @@ func (g *GormDB) UpdateGroup(group *models.Group) error {
 		return err
 	})
 	return err
+
+}
+
+func (g *GormDB) CheckIfGroupExistsByID(ctx context.Context, groupID uint) (exists bool, err error) {
+	count, err := gorm.G[models.Group](g.db).Where("id = ?", groupID).Count(ctx, "id")
+	return count > 0, err
 
 }

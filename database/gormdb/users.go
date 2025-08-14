@@ -69,12 +69,12 @@ func (g *GormDB) GetUserByUsername(username string) (*models.User, error) {
 	return &userFound, res.Error
 }
 
-func (g *GormDB) CheckIfUserExistsByID(ID uint) (bool, error) {
-	var userFound int64
+func (g *GormDB) CheckIfUserExistsByID(ctx context.Context, ID uint) (bool, error) {
 
-	res := g.db.Model(&models.User{}).Where("id=?", ID).Count(&userFound)
-	if res.Error != nil {
-		return false, res.Error
+	userFound, err := gorm.G[models.User](g.db).Where("id = ?", ID).Count(ctx, "id")
+
+	if err != nil {
+		return false, err
 	}
 
 	if userFound == 0 {

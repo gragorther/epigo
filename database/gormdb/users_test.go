@@ -183,11 +183,19 @@ func (s *DBTestSuite) TestCheckIfUserExistsByUsername() {
 }
 
 func (s *DBTestSuite) TestCreateUser() {
+
 	newUser := &models.User{
 		Username: "name",
 		Email:    "email@email.com",
+		Groups: []models.Group{
+			{Name: "grouponname"},
+		},
 	}
 	s.Require().NoError(s.repo.CreateUser(newUser))
+
+	for _, group := range newUser.Groups {
+		s.Equal(newUser.ID, group.UserID, "user ID in group should be the same as the user ID")
+	}
 
 	var username, email string
 	err := s.db.QueryRowContext(s.ctx, "SELECT username, email FROM users WHERE id = $1", newUser.ID).Scan(&username, &email)
@@ -210,14 +218,14 @@ func (s *DBTestSuite) TestGetUserByUsername() {
 
 func (s *DBTestSuite) TestCheckIfUserExistsByID() {
 	s.Run("user doesn't exist", func() {
-		exists, err := s.repo.CheckIfUserExistsByID(99999)
+		exists, err := s.repo.CheckIfUserExistsByID(s.ctx, 99999)
 		s.NoError(err, "check if user exists by id shouldn't fail")
 		s.False(exists)
 	})
 	s.Run("user exists", func() {
 		userID, err := createTestUser(s.ctx, s.db)
 		s.Require().NoError(err, "creation of test user shouldn't fail")
-		s.repo.CheckIfUserExistsByID(userID)
+		s.repo.CheckIfUserExistsByID(s.ctx, userID)
 	})
 }
 
@@ -262,4 +270,27 @@ func (s *DBTestSuite) TestEditUser() {
 
 	s.Equal(user.Email, got.Email)
 	s.Equal(user.Username, got.Username)
+}
+
+func (s *DBTestSuite) TestDeleteUserAndAllAssociations() {
+	userGroups := []models.Group{
+		{Name: "greoup"},
+		{Name: "group2"},
+	}
+	user := models.User{
+		Username: "ussername",
+		Groups:   userGroups,
+	}
+	s.Require().NoError(s.repo.CreateUser(&user))
+
+	s.Require().NoError(s.repo.DeleteUserAndAllAssociations(user.ID))
+
+	exists, err := s.repo.CheckIfUserExistsByID(s.ctx, user.ID)
+
+	s.Require().NoError(err)
+	s.False(exists, "user shouldn't exist")
+
+	groupExists, err := s.repo.CheckIfGroupExistsByID(s.ctx, user.Groups[0].ID)
+	s.Require().NoError(err)
+	s.False(groupExists, "group shouldn't exist because this function deletes *all* associations")
 }
