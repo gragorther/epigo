@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 
@@ -28,7 +29,7 @@ func parseGroups(groupIDs []uint) ([]models.Group, error) {
 
 func AddLastMessage(db interface {
 	CheckUserAuthorizationForGroup(groupIDs []uint, userID uint) (bool, error)
-	CreateLastMessage(lastMessage *models.LastMessage) error
+	CreateLastMessage(ctx context.Context, lastMessage *models.LastMessage) error
 }) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		user, err := GetUserFromContext(c)
@@ -61,12 +62,12 @@ func AddLastMessage(db interface {
 
 		newLastMessage := models.LastMessage{
 			Title:   input.Title,
-			Content: input.Content,
+			Content: &input.Content,
 			Groups:  groups,
 			UserID:  user.ID,
 		}
 
-		err = db.CreateLastMessage(&newLastMessage)
+		err = db.CreateLastMessage(c, &newLastMessage)
 		if err != nil {
 			c.AbortWithError(http.StatusInternalServerError, fmt.Errorf("failed to create last message: %w", err))
 			return
@@ -152,7 +153,7 @@ func EditLastMessage(db interface {
 		editedMessage := models.LastMessage{
 			ID:      uint(id),
 			Title:   input.Title,
-			Content: input.Content,
+			Content: &input.Content,
 			Groups:  groups,
 		}
 		err = db.UpdateLastMessage(&editedMessage)

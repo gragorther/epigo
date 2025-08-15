@@ -1,16 +1,14 @@
 package gormdb
 
 import (
+	"context"
+
 	"github.com/gragorther/epigo/models"
 	"gorm.io/gorm"
 )
 
-func (g *GormDB) CreateLastMessage(lastMessage *models.LastMessage) error {
-	err := g.db.Transaction(func(tx *gorm.DB) error {
-		res := tx.Create(&lastMessage)
-		return res.Error
-	})
-	return err
+func (g *GormDB) CreateLastMessage(ctx context.Context, lastMessage *models.LastMessage) error {
+	return gorm.G[models.LastMessage](g.db).Create(ctx, lastMessage)
 }
 
 type group struct {
@@ -22,6 +20,11 @@ func (g *GormDB) FindLastMessagesByUserID(userID uint) ([]models.LastMessage, er
 	res := g.db.Model(&models.LastMessage{}).Preload("Groups").Where("user_id = ?", userID).Find(&lastMessages)
 
 	return lastMessages, res.Error
+}
+
+func (g *GormDB) CreateLastMessages(ctx context.Context, lastMessages *[]models.LastMessage) error {
+	// this wants me to specify the size of batches, so 200 it is i guess
+	return gorm.G[models.LastMessage](g.db).CreateInBatches(ctx, lastMessages, 200)
 }
 
 func (g *GormDB) UpdateLastMessage(newMessage *models.LastMessage) error {
@@ -41,4 +44,8 @@ func (g *GormDB) DeleteLastMessageByID(lastMessageID uint) error {
 		return res.Error
 	})
 	return err
+}
+
+func (g *GormDB) GetLastMessageByID(ctx context.Context, id uint) (models.LastMessage, error) {
+	return gorm.G[models.LastMessage](g.db).Where("id = ?", id).First(ctx)
 }

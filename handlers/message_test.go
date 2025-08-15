@@ -2,6 +2,7 @@ package handlers_test
 
 import (
 	"bytes"
+	"context"
 	"io"
 	"net/http"
 	"testing"
@@ -18,7 +19,7 @@ func setGinHttpBody(c *gin.Context, buf []byte) {
 	}
 }
 
-func (m *mockDB) CreateLastMessage(lastMessage *models.LastMessage) error {
+func (m *mockDB) CreateLastMessage(ctx context.Context, lastMessage *models.LastMessage) error {
 	m.LastMessages = append(m.LastMessages, *lastMessage)
 	return m.Err
 }
@@ -85,7 +86,7 @@ func TestAddLastMessage(t *testing.T) {
 		definedField := mock.LastMessages[0]
 		assert.Equal(http.StatusOK, w.Code, "http status code should indicate success")
 		assert.Equal(messageInput.Title, definedField.Title)
-		assert.Equal(messageInput.Content, definedField.Content)
+		assert.Equal(messageInput.Content, *definedField.Content)
 		for i, group := range definedField.Groups {
 			assert.Equal(messageInput.GroupIDs[i], group.ID)
 		}
@@ -191,7 +192,7 @@ func TestEditLastMessage(t *testing.T) {
 
 		field := mock.LastMessages[0]
 		assert.Equal(input.Title, field.Title)
-		assert.Equal(input.Content, field.Content)
+		assert.Equal(input.Content, *field.Content)
 
 	})
 	t.Run("user does not own the groups the message is being assigned to", func(t *testing.T) {
