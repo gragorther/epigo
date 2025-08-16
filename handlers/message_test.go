@@ -34,10 +34,10 @@ func (m *mockDB) FindLastMessagesByUserID(userID uint) ([]models.LastMessage, er
 
 	return output, m.Err
 }
-func (m *mockDB) UpdateLastMessage(newMessage *models.LastMessage) error {
+func (m *mockDB) UpdateLastMessage(ctx context.Context, newMessage models.LastMessage) error {
 	for i, message := range m.LastMessages {
 		if message.ID == newMessage.ID {
-			m.LastMessages[i] = *newMessage
+			m.LastMessages[i] = newMessage
 		}
 	}
 	return m.Err

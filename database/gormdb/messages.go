@@ -27,7 +27,7 @@ func (g *GormDB) CreateLastMessages(ctx context.Context, lastMessages *[]models.
 	return gorm.G[models.LastMessage](g.db).CreateInBatches(ctx, lastMessages, 200)
 }
 
-func (g *GormDB) UpdateLastMessage(newMessage *models.LastMessage) error {
+func (g *GormDB) UpdateLastMessage(ctx context.Context, newMessage models.LastMessage) error {
 	err := g.db.Transaction(func(tx *gorm.DB) error {
 		res := tx.Model(&models.LastMessage{ID: newMessage.ID}).Updates(newMessage)
 		if res.Error != nil {

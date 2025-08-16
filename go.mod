@@ -1,6 +1,6 @@
 module github.com/gragorther/epigo
 
-go 1.24
+go 1.25.0
 
 require (
 	github.com/bytedance/sonic v1.14.0

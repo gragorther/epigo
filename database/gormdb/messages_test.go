@@ -43,29 +43,119 @@ func (s *DBTestSuite) TestFindLastMessagesByUserID() {
 	table := []struct {
 		Name             string
 		UserLastMessages []models.LastMessage
+		Want             []models.LastMessage
 	}{
 		{Name: "user has last messages", UserLastMessages: []models.LastMessage{
 			{Title: "testtitle", Content: lo.ToPtr("testcontent")},
-		}},
-		{Name: "user doesn't have any lastMessages", UserLastMessages: nil},
+		}, Want: []models.LastMessage{{Title: "testtitle", Content: lo.ToPtr("testcontent")}}},
+		{Name: "user doesn't have any lastMessages", UserLastMessages: nil, Want: nil},
+		{Name: "model has groups", UserLastMessages: []models.LastMessage{
+			{Title: "testtitle", Content: lo.ToPtr("testcontent"), Groups: []models.Group{
+				{Name: "testgroupanme", Description: lo.ToPtr("testdesc")},
+			}},
+		}, Want: []models.LastMessage{ // shouldn't return groups
+			{Title: "testtitle", Content: lo.ToPtr("testcontent")}}}}
+	user := &models.User{
+		Username: "testusername", Email: "test@testemails.com",
 	}
-
+	s.Require().NoError(s.repo.CreateUser(user))
 	for _, test := range table {
 		s.Run(test.Name, func() {
-			user := &models.User{
-				Username: "testusername", Email: "test@testemails.com",
-			}
-			s.repo.CreateUser(user)
+			// make sure we don't get fkey errors
 			for i := range test.UserLastMessages {
 				test.UserLastMessages[i].UserID = user.ID
+				for j := range test.UserLastMessages[i].Groups {
+					test.UserLastMessages[i].Groups[j].UserID = user.ID
+				}
 			}
+			for i := range test.Want {
+				test.Want[i].UserID = user.ID
+			}
+
 			if test.UserLastMessages != nil {
 				s.Require().NoError(s.repo.CreateLastMessages(s.ctx, &test.UserLastMessages))
 			}
 
 			got, err := s.repo.FindLastMessagesByUserID(user.ID)
 			s.Require().NoError(err)
-			s.Len(got, len(test.UserLastMessages), "the length of the input userLastMessages and the one we got from the database should match")
+
+			equal := s.Equal
+			for i, message := range test.Want {
+				gotMessage := got[i]
+				equal(message.Title, gotMessage.Title, "titles should match")
+				equal(message.Content, gotMessage.Content, "content should match")
+				equal(message.UserID, gotMessage.UserID, "user IDs should match")
+			}
+		})
+	}
+}
+
+func (s *DBTestSuite) TestCreateLastMessages() {
+	userID, err := createTestUser(s.ctx, s.db)
+	s.Require().NoError(err, "creating test user shouldn't fail")
+	table := map[string]struct {
+		// the last messages to be created
+		LastMessages []models.LastMessage
+		Want         []models.LastMessage
+	}{
+		"contains lastmessages": {
+			LastMessages: []models.LastMessage{
+				{Title: "testtitle", UserID: userID}, {UserID: userID, Title: "testtitle2"},
+			}, Want: []models.LastMessage{
+				{Title: "testtitle", UserID: userID}, {UserID: userID, Title: "testtitle2"},
+			},
+		},
+	}
+
+	for name, test := range table {
+		s.Run(name, func() {
+			lastMessages := test.LastMessages
+			s.Require().NoError(s.repo.CreateLastMessages(s.ctx, &lastMessages), "creating last messages shouldn't fail")
+			got, err := s.repo.FindLastMessagesByUserID(userID)
+			s.Require().NoError(err, "finding last messages by user ID shouldn't fail")
+
+			for i, want := range test.Want {
+				got := got[i]
+				assertLastMessageEquality(s, want, got)
+			}
+		})
+	}
+}
+
+func assertLastMessageEquality(s *DBTestSuite, expected models.LastMessage, actual models.LastMessage) {
+	s.Equal(expected.Title, actual.Title, "titles should match")
+	s.Equal(expected.Content, actual.Content, "contents should match")
+	s.Equal(expected.UserID, actual.UserID, "user IDs should match")
+}
+
+func (s *DBTestSuite) TestUpdateLastMessage() {
+	userID, err := createTestUser(s.ctx, s.db)
+	s.Require().NoError(err, "creating test user shouldn't fail")
+	table := map[string]struct {
+		OldMessage models.LastMessage
+		NewMessage models.LastMessage
+	}{
+		"has last message": {
+			OldMessage: models.LastMessage{
+				Title: "old testtitle", Content: lo.ToPtr("old content"), UserID: userID,
+			},
+			NewMessage: models.LastMessage{
+				Title: "new title", Content: lo.ToPtr("new content"), UserID: userID,
+			},
+		},
+	}
+	for name, test := range table {
+		s.Run(name, func() {
+			require := s.Require()
+			// first, we create the old last message which will then be updated
+			require.NoError(s.repo.CreateLastMessage(s.ctx, &test.OldMessage))
+			test.NewMessage.ID = test.OldMessage.ID
+			s.repo.UpdateLastMessage(s.ctx, test.NewMessage)
+
+			got, err := s.repo.GetLastMessageByID(s.ctx, test.NewMessage.ID)
+			require.NoError(err)
+
+			assertLastMessageEquality(s, test.NewMessage, got)
 		})
 	}
 }

@@ -106,7 +106,7 @@ type EditMessageInput struct {
 func EditLastMessage(db interface {
 	CheckUserAuthorizationForLastMessage(messageID uint, userID uint) (bool, error)
 	CheckUserAuthorizationForGroup(groupIDs []uint, userID uint) (bool, error)
-	UpdateLastMessage(newMessage *models.LastMessage) error
+	UpdateLastMessage(ctx context.Context, newMessage models.LastMessage) error
 }) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		user, err := GetUserFromContext(c)
@@ -156,7 +156,7 @@ func EditLastMessage(db interface {
 			Content: &input.Content,
 			Groups:  groups,
 		}
-		err = db.UpdateLastMessage(&editedMessage)
+		err = db.UpdateLastMessage(c, editedMessage)
 		if err != nil {
 			c.AbortWithError(http.StatusInternalServerError, fmt.Errorf("failed to update last message: %w", err))
 			return
