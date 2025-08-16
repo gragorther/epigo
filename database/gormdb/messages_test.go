@@ -159,3 +159,26 @@ func (s *DBTestSuite) TestUpdateLastMessage() {
 		})
 	}
 }
+
+func (s *DBTestSuite) TestDeleteLastMessageByID() {
+	userID, err := createTestUser(s.ctx, s.db)
+	s.Require().NoError(err)
+	table := map[string]struct {
+		Message models.LastMessage
+	}{
+		"has last message": {
+			Message: models.LastMessage{Title: "test title", Content: lo.ToPtr("test content"), UserID: userID},
+		},
+	}
+
+	for name, test := range table {
+		s.Run(name, func() {
+			s.Require().NoError(s.repo.CreateLastMessage(s.ctx, &test.Message))
+			s.Require().NoError(s.repo.DeleteLastMessageByID(test.Message.ID))
+
+			exists, err := s.repo.CheckIfLastMessageExists(s.ctx, test.Message.ID)
+			s.Require().NoError(err, "checking if last message exists shouldn't fail")
+			s.False(exists, "last message shouldn't exist")
+		})
+	}
+}

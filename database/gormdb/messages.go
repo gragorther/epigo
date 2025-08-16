@@ -28,15 +28,15 @@ func (g *GormDB) CreateLastMessages(ctx context.Context, lastMessages *[]models.
 }
 
 func (g *GormDB) UpdateLastMessage(ctx context.Context, newMessage models.LastMessage) error {
-	err := g.db.Transaction(func(tx *gorm.DB) error {
-		res := tx.Model(&models.LastMessage{ID: newMessage.ID}).Updates(newMessage)
-		if res.Error != nil {
-			return res.Error
-		}
-		err := tx.Model(&newMessage).Association("Groups").Replace(newMessage.Groups)
+
+	rows, err := gorm.G[models.LastMessage](g.db).Where("id = ?", newMessage.ID).Updates(ctx, newMessage)
+	if err != nil {
 		return err
-	})
-	return err
+	}
+	if rows != 1 {
+		return ErrNoRowsAffected
+	}
+	return nil
 }
 func (g *GormDB) DeleteLastMessageByID(lastMessageID uint) error {
 	err := g.db.Transaction(func(tx *gorm.DB) error {
@@ -44,6 +44,12 @@ func (g *GormDB) DeleteLastMessageByID(lastMessageID uint) error {
 		return res.Error
 	})
 	return err
+}
+
+func (g *GormDB) CheckIfLastMessageExists(ctx context.Context, ID uint) (exists bool, err error) {
+	count, err := gorm.G[models.LastMessage](g.db).Where("id = ?", ID).Count(ctx, "id")
+	return count > 0, err
+
 }
 
 func (g *GormDB) GetLastMessageByID(ctx context.Context, id uint) (models.LastMessage, error) {
