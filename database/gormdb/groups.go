@@ -23,13 +23,11 @@ func (g *GormDB) DeleteGroupByID(ctx context.Context, id uint) error {
 }
 
 func (g *GormDB) FindGroupsAndRecipientsByUserID(ctx context.Context, userID uint) ([]models.Group, error) {
-	var groups []models.Group
-	res := g.db.Select("id", "name", "description", "recipients").Where("user_id = ?", userID).Preload("Recipients").Find(&groups)
-	if res.Error != nil {
-		return nil, res.Error
-	}
+	// the preload needs a builder function, we don't need any additional arguments so I just made it return nil
+	return gorm.G[models.Group](g.db).Where("user_id = ?", userID).Preload("Recipients", func(db gorm.PreloadBuilder) error {
+		return nil
+	}).Find(ctx)
 
-	return groups, nil
 }
 
 func (g *GormDB) CreateGroup(group *models.Group) error {
@@ -39,6 +37,10 @@ func (g *GormDB) CreateGroup(group *models.Group) error {
 		return err
 	})
 	return err
+}
+
+func (g *GormDB) CreateGroups(ctx context.Context, groups *[]models.Group) error {
+	return gorm.G[models.Group](g.db).CreateInBatches(ctx, groups, 500)
 }
 
 func (g *GormDB) UpdateGroup(group *models.Group) error {

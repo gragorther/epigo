@@ -41,3 +41,55 @@ func (s *DBTestSuite) TestDeleteGroupByID() {
 	s.Require().NoError(err)
 	s.False(recipientExists, "recipient should not exist because their group was deleted")
 }
+
+func assertRecipientArrayEquality(s *DBTestSuite, expected, got []models.Recipient) {
+	for i := range expected {
+		expected := expected[i]
+		got := got[i]
+		s.Equal(expected.Email, got.Email, "recipient emails should match")
+		s.Equal(expected.GroupID, got.GroupID, "group IDs should match")
+	}
+}
+
+func assertGroupArrayEquality(s *DBTestSuite, expected, got []models.Group) {
+
+	for i := range expected {
+		expected := expected[i]
+		got := got[i]
+		s.Equal(expected.Name, got.Name, "names should match")
+		s.Equal(expected.Description, got.Description, "descriptions should match")
+		s.Equal(expected.UserID, got.UserID, "userIDs should match")
+		assertRecipientArrayEquality(s, expected.Recipients, got.Recipients)
+	}
+}
+
+func (s *DBTestSuite) TestFindGroupsAndRecipientsByUserID() {
+	table := map[string]struct {
+		Groups []models.Group
+	}{
+		"group exists and has recipients": {
+			Groups: []models.Group{
+				{Name: "test name", Description: lo.ToPtr("test description"), Recipients: []models.Recipient{{APIRecipient: models.APIRecipient{Email: "testemail@email.com"}}, {APIRecipient: models.APIRecipient{Email: "testemail@email2.com"}}}},
+				{Name: "test name", Description: lo.ToPtr("test description"), Recipients: []models.Recipient{{APIRecipient: models.APIRecipient{Email: "testemail@email.com"}}, {APIRecipient: models.APIRecipient{Email: "testemail@email2.com"}}}},
+			},
+		},
+	}
+	for name, test := range table {
+		s.Run(name, func() {
+			user := models.User{
+				Email: "testemail@emails.com", Username: "test username",
+			}
+			s.Require().NoError(s.repo.CreateUser(&user))
+
+			for i := range test.Groups {
+				test.Groups[i].UserID = user.ID
+			}
+			s.Require().NoError(s.repo.CreateGroups(s.ctx, &test.Groups))
+
+			got, err := s.repo.FindGroupsAndRecipientsByUserID(s.ctx, user.ID)
+			s.Require().NoError(err)
+			assertGroupArrayEquality(s, test.Groups, got)
+
+		})
+	}
+}
