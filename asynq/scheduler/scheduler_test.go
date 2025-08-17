@@ -8,6 +8,7 @@ import (
 	"github.com/gragorther/epigo/database/gormdb"
 	"github.com/hibiken/asynq"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 type getIntervalsStub struct {
@@ -23,6 +24,7 @@ func TestGetConfigs(t *testing.T) {
 
 	assert := assert.New(t)
 	t.Run("with users", func(t *testing.T) {
+		require := require.New(t)
 		getIntervals := getIntervalsStub{err: nil, userIntervals: []gormdb.UserInterval{
 			{ID: 1, Email: "gregor@gregtech.eu", EmailCron: "5 4 * * *"},
 			{ID: 2, Email: "test@gregtech.eu", EmailCron: "5 4 * * *"},
@@ -30,6 +32,7 @@ func TestGetConfigs(t *testing.T) {
 		task1, err := tasks.NewRecurringEmailTask(1)
 		assert.Nil(err, "expected no error when creating new recurring email task")
 		task2, err := tasks.NewRecurringEmailTask(2)
+		require.NoError(err)
 
 		configprovider := scheduler.ConfigProvider{DB: getIntervals}
 		got, err := configprovider.GetConfigs()

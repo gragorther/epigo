@@ -38,7 +38,7 @@ func AddGroup(db interface {
 
 		var input GroupInput
 		if err := c.ShouldBindJSON(&input); err != nil {
-			c.AbortWithError(http.StatusUnprocessableEntity, fmt.Errorf("Failed to bind add group JSON: %w", err))
+			c.AbortWithError(http.StatusUnprocessableEntity, fmt.Errorf("failed to bind add group JSON: %w", err))
 			return
 		}
 		sendToGroup := models.Group{
@@ -119,7 +119,7 @@ func ListGroups(db interface {
 
 		groups, err := db.FindGroupsAndRecipientsByUserID(user.ID) // gets the list of groups a user has via the association "Groups" on the User model
 		if err != nil {
-			c.AbortWithError(http.StatusInternalServerError, fmt.Errorf("Failed to find groups and recipients by user ID during ListGroups: %w", err))
+			c.AbortWithError(http.StatusInternalServerError, fmt.Errorf("failed to find groups and recipients by user ID during ListGroups: %w", err))
 			return
 		}
 

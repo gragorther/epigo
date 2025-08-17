@@ -1,0 +1,7 @@
+version: "2"
+linters:
+  settings:
+    errcheck:
+      exclude-functions:
+        - (*github.com/gin-gonic/gin.Context).AbortWithError
+        - (*github.com/gin-gonic/gin.Context).Error

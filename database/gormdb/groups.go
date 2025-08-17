@@ -3,7 +3,6 @@ package gormdb
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/gragorther/epigo/models"
 	"gorm.io/gorm"
@@ -17,19 +16,6 @@ func (g *GormDB) DeleteGroupByID(id uint) error {
 		return res.Error
 	})
 	return err
-}
-
-type recipient struct {
-	Email string `json:"email"`
-}
-
-type listGroupsDTO struct {
-	ID          uint        `gorm:"primarykey"`
-	CreatedAt   time.Time   `json:"createdAt"`
-	UpdatedAt   time.Time   `json:"updatedAt"`
-	Name        string      `json:"name"`
-	Description string      `json:"description"`
-	Recipients  []recipient `json:"recipients" gorm:"foreignKey:GroupID"`
 }
 
 func (g *GormDB) FindGroupsAndRecipientsByUserID(userID uint) ([]models.Group, error) {

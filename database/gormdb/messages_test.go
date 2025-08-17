@@ -150,7 +150,7 @@ func (s *DBTestSuite) TestUpdateLastMessage() {
 			// first, we create the old last message which will then be updated
 			require.NoError(s.repo.CreateLastMessage(s.ctx, &test.OldMessage))
 			test.NewMessage.ID = test.OldMessage.ID
-			s.repo.UpdateLastMessage(s.ctx, test.NewMessage)
+			s.Require().NoError(s.repo.UpdateLastMessage(s.ctx, test.NewMessage), "updating last message shouldn't fail")
 
 			got, err := s.repo.GetLastMessageByID(s.ctx, test.NewMessage.ID)
 			require.NoError(err)
@@ -176,9 +176,50 @@ func (s *DBTestSuite) TestDeleteLastMessageByID() {
 			s.Require().NoError(s.repo.CreateLastMessage(s.ctx, &test.Message))
 			s.Require().NoError(s.repo.DeleteLastMessageByID(test.Message.ID))
 
-			exists, err := s.repo.CheckIfLastMessageExists(s.ctx, test.Message.ID)
+			exists, err := s.repo.CheckIfLastMessageExistsByID(s.ctx, test.Message.ID)
 			s.Require().NoError(err, "checking if last message exists shouldn't fail")
 			s.False(exists, "last message shouldn't exist")
 		})
 	}
+}
+
+func (s *DBTestSuite) TestCheckIfLastMessageExists() {
+	userID, err := createTestUser(s.ctx, s.db)
+	s.Require().NoError(err)
+
+	s.Run("exists", func() {
+		lastMessage := models.LastMessage{
+			Title: "test title", UserID: userID, Content: lo.ToPtr("testcontent"),
+		}
+		s.Require().NoError(s.repo.CreateLastMessage(s.ctx, &lastMessage))
+
+		exists, err := s.repo.CheckIfLastMessageExistsByID(s.ctx, lastMessage.ID)
+		s.Require().NoError(err)
+		s.True(exists, "last message should exist")
+	})
+	s.Run("doesn't exist", func() {
+		exists, err := s.repo.CheckIfLastMessageExistsByID(s.ctx, 999990)
+		s.Require().NoError(err)
+		s.False(exists, "last message shouldn't exist")
+	})
+}
+
+func (s *DBTestSuite) TestGetLastMessageByID() {
+	userID, err := createTestUser(s.ctx, s.db)
+	s.Require().NoError(err)
+	s.Run("exists", func() {
+		lastMessage := models.LastMessage{
+			Title: "testtitle", Content: lo.ToPtr("test content"), UserID: userID,
+		}
+		s.Require().NoError(s.repo.CreateLastMessage(s.ctx, &lastMessage))
+
+		got, err := s.repo.GetLastMessageByID(s.ctx, lastMessage.ID)
+		s.Require().NoError(err)
+		assertLastMessageEquality(s, lastMessage, got)
+	})
+	s.Run("doesn't exist", func() {
+		got, err := s.repo.GetLastMessageByID(s.ctx, 12341234)
+		s.Error(err, "getting last message should fail because it doesn't exist")
+		assertLastMessageEquality(s, models.LastMessage{}, got)
+	})
 }

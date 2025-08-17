@@ -116,7 +116,7 @@ func TestAddGroup(t *testing.T) {
 		assert.Equal(jsonInput.Name, mock.Groups[0].Name)
 		assert.Equal(*jsonInput.Description, *mock.Groups[0].Description)
 		assert.Equal(fakeUser.ID, mock.Groups[0].UserID)
-		for i, _ := range jsonInput.Recipients {
+		for i := range jsonInput.Recipients {
 			assert.Equal(jsonInput.Recipients[i].Email, mock.Groups[0].Recipients[i].Email)
 		}
 	})
@@ -269,10 +269,10 @@ func TestEditGroup(t *testing.T) {
 		// the constants to be used in the group.
 		const groupID uint = 0
 		const unchangedGroupName string = "not yet changed"
-		var unchangedGroupDesc string = "unchanged group desc"
+		unchangedGroupDesc := "unchanged group desc"
 
 		// this can't be const for some reason
-		var unchangedGroupRecipients []models.Recipient = []models.Recipient{
+		unchangedGroupRecipients := []models.Recipient{
 			{GroupID: groupID, APIRecipient: models.APIRecipient{Email: "gregor@gregtech.eu"}},
 			{GroupID: groupID, APIRecipient: models.APIRecipient{Email: "gregor@gregtech.eu"}},
 		}
@@ -283,7 +283,7 @@ func TestEditGroup(t *testing.T) {
 
 		// the new names of fields in the group which will be then asserted against to see if handler actually changed anything
 		const newGroupName string = "new name :3"
-		var newGroupDesc string = "new desc"
+		newGroupDesc := "new desc"
 		newRecipients := []models.APIRecipient{
 			{Email: "test@thing.com"},
 		}

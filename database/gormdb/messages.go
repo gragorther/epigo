@@ -11,10 +11,6 @@ func (g *GormDB) CreateLastMessage(ctx context.Context, lastMessage *models.Last
 	return gorm.G[models.LastMessage](g.db).Create(ctx, lastMessage)
 }
 
-type group struct {
-	ID uint `gorm:"primarykey"`
-}
-
 func (g *GormDB) FindLastMessagesByUserID(userID uint) ([]models.LastMessage, error) {
 	var lastMessages []models.LastMessage
 	res := g.db.Model(&models.LastMessage{}).Preload("Groups").Where("user_id = ?", userID).Find(&lastMessages)
@@ -46,7 +42,7 @@ func (g *GormDB) DeleteLastMessageByID(lastMessageID uint) error {
 	return err
 }
 
-func (g *GormDB) CheckIfLastMessageExists(ctx context.Context, ID uint) (exists bool, err error) {
+func (g *GormDB) CheckIfLastMessageExistsByID(ctx context.Context, ID uint) (exists bool, err error) {
 	count, err := gorm.G[models.LastMessage](g.db).Where("id = ?", ID).Count(ctx, "id")
 	return count > 0, err
 

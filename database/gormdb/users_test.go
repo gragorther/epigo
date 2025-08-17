@@ -41,11 +41,12 @@ func (suite *DBTestSuite) SetupSuite() {
 	suite.Require().NoError(initializers.Migrate(conn))
 	sqldb, err := conn.DB()
 	suite.Require().NoError(err)
-	sqldb.Close()
+	suite.Require().NoError(sqldb.Close())
 
 	suite.Require().NoError(suite.pgContainer.Snapshot(suite.ctx))
 
 	conn, err = initializers.ConnectDB(suite.ctx, pgContainer.ConnectionString)
+	suite.Require().NoError(err)
 	suite.db, err = conn.DB()
 	suite.Require().NoError(err)
 	// check Migrator for the table
@@ -80,7 +81,8 @@ func (suite *DBTestSuite) BeforeTest(suiteName, testName string) {
 }
 
 func (suite *DBTestSuite) TestCreateProfile() {
-	suite.db.ExecContext(suite.ctx, "INSERT INTO users (username) VALUES ('femboy')")
+	_, err := suite.db.ExecContext(suite.ctx, "INSERT INTO users (username) VALUES ('femboy')")
+	suite.Require().NoError(err)
 
 	name := "uwu"
 	newProfile := models.Profile{
@@ -88,10 +90,10 @@ func (suite *DBTestSuite) TestCreateProfile() {
 		UserID: 1,
 	}
 
-	suite.repo.CreateProfile(suite.ctx, &newProfile)
+	suite.Require().NoError(suite.repo.CreateProfile(suite.ctx, &newProfile))
 
 	var got models.Profile
-	suite.db.QueryRow("SELECT name FROM profiles WHERE id = 1").Scan(&got.Name)
+	suite.Require().NoError(suite.db.QueryRow("SELECT name FROM profiles WHERE id = 1").Scan(&got.Name))
 
 	suite.Equal(newProfile.Name, got.Name)
 }
@@ -99,24 +101,25 @@ func (suite *DBTestSuite) TestCreateProfile() {
 func (suite *DBTestSuite) TestUpdateProfile() {
 	name := "uwu"
 	userID, err := createTestUser(suite.ctx, suite.db)
+	suite.Require().NoError(err)
 
 	oldProfile := models.Profile{
 		Name:   &name,
 		UserID: uint(userID),
 	}
 	err = suite.repo.CreateProfile(suite.ctx, &oldProfile)
-	suite.NoError(err)
+	suite.Require().NoError(err)
 
 	newName := "owo"
 	newProfile := models.Profile{
 		Name: &newName,
 		ID:   1,
 	}
-	suite.repo.UpdateProfile(suite.ctx, newProfile)
-	suite.NoError(err)
+	err = suite.repo.UpdateProfile(suite.ctx, newProfile)
+	suite.Require().NoError(err)
 
 	var got models.Profile
-	suite.db.QueryRow("SELECT name FROM profiles WHERE id = 1").Scan(&got.Name)
+	suite.Require().NoError(suite.db.QueryRow("SELECT name FROM profiles WHERE id = 1").Scan(&got.Name))
 
 	suite.Equal(*newProfile.Name, *got.Name)
 }
@@ -225,7 +228,9 @@ func (s *DBTestSuite) TestCheckIfUserExistsByID() {
 	s.Run("user exists", func() {
 		userID, err := createTestUser(s.ctx, s.db)
 		s.Require().NoError(err, "creation of test user shouldn't fail")
-		s.repo.CheckIfUserExistsByID(s.ctx, userID)
+		exists, err := s.repo.CheckIfUserExistsByID(s.ctx, userID)
+		s.Require().NoError(err)
+		s.True(exists, "user should exist")
 	})
 }
 
@@ -234,8 +239,8 @@ func (s *DBTestSuite) TestGetUserByID() {
 		Email:    "test@gregtech.eu",
 		Username: "username",
 	}
-	s.db.QueryRowContext(s.ctx, "INSERT INTO users (email, username) VALUES ($1, $2) RETURNING id", newUser.Email, newUser.Username).Scan(&newUser.ID)
-
+	err := s.db.QueryRowContext(s.ctx, "INSERT INTO users (email, username) VALUES ($1, $2) RETURNING id", newUser.Email, newUser.Username).Scan(&newUser.ID)
+	s.Require().NoError(err)
 	got, err := s.repo.GetUserByID(newUser.ID)
 	s.Require().NoError(err, "getting user by id should not fail")
 	s.Equal(newUser.Email, got.Email)
@@ -259,14 +264,16 @@ func (s *DBTestSuite) TestEditUser() {
 	user := models.User{
 		Email: "gregor@gregtech.eu", Username: "gregor",
 	}
-	s.db.QueryRowContext(s.ctx, "INSERT INTO users (email, username) VALUES ($1, $2) RETURNING id", user.Email, user.Username).Scan(&user.ID)
+	err := s.db.QueryRowContext(s.ctx, "INSERT INTO users (email, username) VALUES ($1, $2) RETURNING id", user.Email, user.Username).Scan(&user.ID)
+	s.Require().NoError(err)
 
 	user.Email = "newemail@newemail.email"
 	user.Username = "newusername"
-	s.repo.EditUser(s.ctx, user)
+	s.Require().NoError(s.repo.EditUser(s.ctx, user))
 
 	var got models.User
-	s.db.QueryRowContext(s.ctx, "SELECT email, username FROM users WHERE id = $1", user.ID).Scan(&got.Email, &got.Username)
+	err = s.db.QueryRowContext(s.ctx, "SELECT email, username FROM users WHERE id = $1", user.ID).Scan(&got.Email, &got.Username)
+	s.Require().NoError(err)
 
 	s.Equal(user.Email, got.Email)
 	s.Equal(user.Username, got.Username)

@@ -82,13 +82,13 @@ func LoginUser(db interface {
 	return func(c *gin.Context) {
 		var authInput LoginInput
 		if err := c.ShouldBindJSON(&authInput); err != nil {
-			c.AbortWithError(http.StatusUnprocessableEntity, fmt.Errorf("Failed to parse login input: %w", err))
+			c.AbortWithError(http.StatusUnprocessableEntity, fmt.Errorf("failed to parse login input: %w", err))
 			return
 		}
 
 		userExists, err := db.CheckIfUserExistsByUsername(authInput.Username)
 		if err != nil {
-			c.AbortWithError(http.StatusInternalServerError, fmt.Errorf("Failed to check if users exists by username: %w", err))
+			c.AbortWithError(http.StatusInternalServerError, fmt.Errorf("failed to check if users exists by username: %w", err))
 			return
 		}
 		if !userExists {
@@ -97,12 +97,12 @@ func LoginUser(db interface {
 		}
 		userFound, err := db.GetUserByUsername(authInput.Username)
 		if err != nil {
-			c.AbortWithError(http.StatusInternalServerError, fmt.Errorf("Failed to get user by username: %w", err))
+			c.AbortWithError(http.StatusInternalServerError, fmt.Errorf("failed to get user by username: %w", err))
 			return
 		}
 		match, err := comparePasswordAndHash(authInput.Password, userFound.PasswordHash) //check hash
 		if err != nil {
-			c.AbortWithError(http.StatusInternalServerError, fmt.Errorf("Failed to compare password and hash: %w", err))
+			c.AbortWithError(http.StatusInternalServerError, fmt.Errorf("failed to compare password and hash: %w", err))
 			return
 		}
 
@@ -118,13 +118,13 @@ func LoginUser(db interface {
 
 		token, err := generateToken.SignedString([]byte(jwtSecret))
 		if err != nil {
-			c.AbortWithError(http.StatusInternalServerError, fmt.Errorf("Failed to generate JWT token: %w", err))
+			c.AbortWithError(http.StatusInternalServerError, fmt.Errorf("failed to generate JWT token: %w", err))
 			return
 		}
 		currentTime := time.Now()
 		userFound.LastLogin = &currentTime
 		if err := db.EditUser(c, *userFound); err != nil {
-			c.Error(fmt.Errorf("Failed to store user last login: %w", err))
+			c.Error(fmt.Errorf("failed to store user last login: %w", err))
 		}
 		c.JSON(http.StatusOK, gin.H{
 			"token": token,
@@ -136,7 +136,7 @@ func GetUserData() gin.HandlerFunc {
 		// Retrieve the user object from the context
 		user, err := GetUserFromContext(c)
 		if err != nil {
-			c.AbortWithError(http.StatusInternalServerError, fmt.Errorf("Failed to get user profile: %w", err))
+			c.AbortWithError(http.StatusInternalServerError, fmt.Errorf("failed to get user profile: %w", err))
 			return
 		}
 
@@ -164,12 +164,12 @@ func SetEmailInterval(db interface {
 		var input setEmailIntervalInput
 		err = c.ShouldBindJSON(&input)
 		if err != nil {
-			c.AbortWithError(http.StatusUnprocessableEntity, fmt.Errorf("Failed to bind json while setting user email interval: %w", err))
+			c.AbortWithError(http.StatusUnprocessableEntity, fmt.Errorf("failed to bind json while setting user email interval: %w", err))
 			return
 		}
 		err = db.UpdateUserInterval(user.ID, input.Cron)
 		if err != nil {
-			c.AbortWithError(http.StatusInternalServerError, fmt.Errorf("Failed to update user interval: %w", err))
+			c.AbortWithError(http.StatusInternalServerError, fmt.Errorf("failed to update user interval: %w", err))
 			return
 		}
 	}
@@ -194,10 +194,12 @@ func CreateProfile(db interface {
 			return
 		}
 
-		db.CreateProfile(c, &models.Profile{
+		if err := db.CreateProfile(c, &models.Profile{
 			UserID: user.ID,
 			Name:   &input.Name,
-		})
+		}); err != nil {
+			c.AbortWithError(http.StatusInternalServerError, err)
+		}
 		c.Status(http.StatusCreated)
 	}
 }
@@ -217,10 +219,13 @@ func UpdateProfile(db interface {
 			c.AbortWithStatus(http.StatusUnprocessableEntity)
 			return
 		}
-		db.UpdateProfile(c, models.Profile{
+		//check for error
+		if err := db.UpdateProfile(c, models.Profile{
 			UserID: user.ID,
 			Name:   &input.Name,
-		})
+		}); err != nil {
+			c.AbortWithError(http.StatusInternalServerError, fmt.Errorf("failed to update profile: %w", err))
+		}
 		c.Status(http.StatusNoContent)
 	}
 }

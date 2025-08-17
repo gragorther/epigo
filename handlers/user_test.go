@@ -62,10 +62,14 @@ func (m *mockDB) EditUser(ctx context.Context, newUser models.User) error {
 	}
 	return nil
 }
+
+//nolint:errcheck
 func (m *mockDB) CreateUser(newUser *models.User) error {
 	m.Users = append(m.Users, *newUser)
 	return nil
 }
+
+//nolint:errcheck
 func (m *mockDB) UpdateProfile(_ context.Context, newProfile models.Profile) error {
 	for i, profile := range m.Profiles {
 		if profile.UserID == newProfile.UserID {
@@ -75,6 +79,8 @@ func (m *mockDB) UpdateProfile(_ context.Context, newProfile models.Profile) err
 	}
 	return nil
 }
+
+//nolint:errcheck
 func (m *mockDB) CreateProfile(ctx context.Context, newProfile *models.Profile) error {
 	m.Profiles = append(m.Profiles, *newProfile)
 	return nil
@@ -275,7 +281,9 @@ func TestGetUserData(t *testing.T) {
 	}
 	assertHTTPStatus(t, c, http.StatusOK, w, "http status should indicate success")
 
-	sonic.Unmarshal(w.Body.Bytes(), &output)
+	if err := sonic.Unmarshal(w.Body.Bytes(), &output); err != nil {
+		t.Fatalf("failed to unmarshal json: %v", err)
+	}
 	assert.Equal(userName, output.Name)
 	assert.Equal(user.Username, output.Username)
 	assert.Equal(lastLoginTime, output.LastLogin)
@@ -318,10 +326,12 @@ func TestUpdateProfile(t *testing.T) {
 		}
 
 		oldName := "oldn naem"
-		mock.CreateProfile(ctx, &models.Profile{
+		if err := mock.CreateProfile(ctx, &models.Profile{
 			Name:   &oldName,
 			UserID: 1,
-		})
+		}); err != nil {
+			t.Fatalf("failed to create profile: %v", err)
+		}
 		currentUser := models.User{
 			Username: "bob", ID: 1,
 		}
