@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -26,7 +27,7 @@ func parseAPIRecipients(recipients []models.APIRecipient) []models.Recipient {
 }
 
 func AddGroup(db interface {
-	CreateGroupAndRecipientEmails(group *models.Group) error
+	CreateGroup(group *models.Group) error
 }) gin.HandlerFunc {
 	return func(c *gin.Context) {
 
@@ -59,7 +60,7 @@ func AddGroup(db interface {
 		}
 
 		sendToGroup.Recipients = parseAPIRecipients(input.Recipients)
-		err = db.CreateGroupAndRecipientEmails(&sendToGroup)
+		err = db.CreateGroup(&sendToGroup)
 		if err != nil {
 			slog.Error("failed to create group and recipient emails",
 				slog.Uint64("user_id", uint64(user.ID)),
@@ -71,7 +72,7 @@ func AddGroup(db interface {
 }
 
 func DeleteGroup(db interface {
-	DeleteGroupByID(id uint) error
+	DeleteGroupByID(ctx context.Context, id uint) error
 	CheckUserAuthorizationForGroup(groupIDs []uint, userID uint) (bool, error)
 }) gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -97,7 +98,7 @@ func DeleteGroup(db interface {
 			return
 		}
 
-		err = db.DeleteGroupByID(uint(id))
+		err = db.DeleteGroupByID(c, uint(id))
 		if err != nil {
 			c.AbortWithError(http.StatusInternalServerError, err)
 			return
@@ -108,7 +109,7 @@ func DeleteGroup(db interface {
 }
 
 func ListGroups(db interface {
-	FindGroupsAndRecipientsByUserID(userID uint) ([]models.Group, error)
+	FindGroupsAndRecipientsByUserID(ctx context.Context, userID uint) ([]models.Group, error)
 }) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		user, err := GetUserFromContext(c)
@@ -117,7 +118,7 @@ func ListGroups(db interface {
 			return
 		}
 
-		groups, err := db.FindGroupsAndRecipientsByUserID(user.ID) // gets the list of groups a user has via the association "Groups" on the User model
+		groups, err := db.FindGroupsAndRecipientsByUserID(c, user.ID) // gets the list of groups a user has via the association "Groups" on the User model
 		if err != nil {
 			c.AbortWithError(http.StatusInternalServerError, fmt.Errorf("failed to find groups and recipients by user ID during ListGroups: %w", err))
 			return

@@ -2,6 +2,7 @@ package handlers_test
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -35,7 +36,7 @@ func newMockDB() *mockDB {
 	return &m
 }
 
-func (m *mockDB) CreateGroupAndRecipientEmails(group *models.Group) error {
+func (m *mockDB) CreateGroup(group *models.Group) error {
 
 	// this gets the current length of the Groups map and sets the input group to the index at the uint of the length
 	m.Groups = append(m.Groups, *group)
@@ -45,12 +46,12 @@ func (m *mockDB) CheckUserAuthorizationForGroup(groupIDs []uint, userID uint) (b
 
 	return m.IsAuthorized, m.Err
 }
-func (m *mockDB) DeleteGroupByID(id uint) error {
+func (m *mockDB) DeleteGroupByID(ctx context.Context, id uint) error {
 	m.DeleteGroupCalls += 1
 	return m.Err
 }
 
-func (m *mockDB) FindGroupsAndRecipientsByUserID(userID uint) ([]models.Group, error) {
+func (m *mockDB) FindGroupsAndRecipientsByUserID(ctx context.Context, userID uint) ([]models.Group, error) {
 	m.FindGroupCalls += 1
 	return m.Groups, m.Err
 }

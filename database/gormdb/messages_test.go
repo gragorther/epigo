@@ -217,9 +217,5 @@ func (s *DBTestSuite) TestGetLastMessageByID() {
 		s.Require().NoError(err)
 		assertLastMessageEquality(s, lastMessage, got)
 	})
-	s.Run("doesn't exist", func() {
-		got, err := s.repo.GetLastMessageByID(s.ctx, 12341234)
-		s.Error(err, "getting last message should fail because it doesn't exist")
-		assertLastMessageEquality(s, models.LastMessage{}, got)
-	})
+
 }

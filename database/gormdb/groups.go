@@ -8,17 +8,21 @@ import (
 	"gorm.io/gorm"
 )
 
-func (g *GormDB) DeleteGroupByID(id uint) error {
-	err := g.db.Transaction(func(tx *gorm.DB) error {
-		//res := tx.Delete(&models.Group{}, id)
-		group := models.Group{ID: id}
-		res := tx.Select("RecipientEmails").Delete(&group)
-		return res.Error
+func (g *GormDB) DeleteGroupByID(ctx context.Context, id uint) error {
+	return g.db.Transaction(func(tx *gorm.DB) error {
+
+		err := gorm.G[models.Recipient](tx).Exec(ctx, "DELETE FROM recipients WHERE group_id = ?", id)
+		if err != nil {
+			return err
+		}
+		err = gorm.G[models.Group](tx).Exec(ctx, "DELETE FROM groups WHERE id = ?", id)
+
+		return err
 	})
-	return err
+
 }
 
-func (g *GormDB) FindGroupsAndRecipientsByUserID(userID uint) ([]models.Group, error) {
+func (g *GormDB) FindGroupsAndRecipientsByUserID(ctx context.Context, userID uint) ([]models.Group, error) {
 	var groups []models.Group
 	res := g.db.Select("id", "name", "description", "recipients").Where("user_id = ?", userID).Preload("Recipients").Find(&groups)
 	if res.Error != nil {
@@ -28,7 +32,7 @@ func (g *GormDB) FindGroupsAndRecipientsByUserID(userID uint) ([]models.Group, e
 	return groups, nil
 }
 
-func (g *GormDB) CreateGroupAndRecipientEmails(group *models.Group) error {
+func (g *GormDB) CreateGroup(group *models.Group) error {
 
 	err := g.db.Transaction(func(tx *gorm.DB) error {
 		err := tx.Create(group).Error
