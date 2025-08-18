@@ -73,7 +73,7 @@ func AddGroup(db interface {
 
 func DeleteGroup(db interface {
 	DeleteGroupByID(ctx context.Context, id uint) error
-	CheckUserAuthorizationForGroup(groupIDs []uint, userID uint) (bool, error)
+	CheckUserAuthorizationForGroups(ctx context.Context, groupIDs []uint, userID uint) (bool, error)
 }) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		user, err := GetUserFromContext(c)
@@ -88,7 +88,7 @@ func DeleteGroup(db interface {
 			return
 		}
 
-		authorized, err := db.CheckUserAuthorizationForGroup([]uint{uint(id)}, user.ID)
+		authorized, err := db.CheckUserAuthorizationForGroups(c, []uint{uint(id)}, user.ID)
 		if err != nil {
 			c.AbortWithError(http.StatusUnauthorized, fmt.Errorf("failed to check user authorization for group: %w", err))
 			return
@@ -104,7 +104,7 @@ func DeleteGroup(db interface {
 			return
 		}
 
-		c.JSON(http.StatusOK, gin.H{"message": "group deleted"})
+		c.Status(http.StatusOK)
 	}
 }
 
@@ -134,8 +134,8 @@ func ListGroups(db interface {
 }
 
 func EditGroup(db interface {
-	CheckUserAuthorizationForGroup(groupIDs []uint, userID uint) (bool, error)
-	UpdateGroup(group *models.Group) error
+	CheckUserAuthorizationForGroups(ctx context.Context, groupIDs []uint, userID uint) (bool, error)
+	UpdateGroup(ctx context.Context, group models.Group) error
 }) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		user, err := GetUserFromContext(c)
@@ -154,7 +154,7 @@ func EditGroup(db interface {
 			c.AbortWithError(http.StatusInternalServerError, fmt.Errorf("failed to get ID from context while editing group: %w", err))
 			return
 		}
-		authorized, err := db.CheckUserAuthorizationForGroup([]uint{uint(id)}, user.ID)
+		authorized, err := db.CheckUserAuthorizationForGroups(c, []uint{uint(id)}, user.ID)
 		if err != nil {
 			c.AbortWithError(http.StatusInternalServerError, fmt.Errorf("failed to check user authorization for group: %w", err))
 			return
@@ -164,14 +164,14 @@ func EditGroup(db interface {
 			return
 		}
 
-		groupToUpdate := &models.Group{
+		groupToUpdate := models.Group{
 			ID:          uint(id),
 			Name:        input.Name,
 			Description: input.Description,
 			Recipients:  parseAPIRecipients(input.Recipients),
 		}
 
-		err = db.UpdateGroup(groupToUpdate)
+		err = db.UpdateGroup(c, groupToUpdate)
 		if err != nil {
 			c.AbortWithStatus(http.StatusNotFound)
 			return

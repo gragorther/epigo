@@ -2,7 +2,6 @@ package gormdb
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/gragorther/epigo/models"
 	"gorm.io/gorm"
@@ -29,7 +28,15 @@ func (g *GormDB) FindGroupsAndRecipientsByUserID(ctx context.Context, userID uin
 	}).Find(ctx)
 
 }
-
+func (g *GormDB) FindGroupsAndLastMessagesByUserID(ctx context.Context, userID uint) ([]models.Group, error) {
+	return gorm.G[models.Group](g.db).Where("user_id = ?", userID).Preload("LastMessages", func(db gorm.PreloadBuilder) error {
+		return nil
+	}).Find(ctx)
+}
+func (g *GormDB) FindGroupsAndLastMessagesAndRecipientsByUserID(ctx context.Context, userID uint) ([]models.Group, error) {
+	return gorm.G[models.Group](g.db).Where("user_id = ?", userID).Preload("Recipients", func(db gorm.PreloadBuilder) error { return nil }).
+		Preload("LastMessages", func(db gorm.PreloadBuilder) error { return nil }).Find(ctx)
+}
 func (g *GormDB) CreateGroup(group *models.Group) error {
 
 	err := g.db.Transaction(func(tx *gorm.DB) error {
@@ -38,25 +45,29 @@ func (g *GormDB) CreateGroup(group *models.Group) error {
 	})
 	return err
 }
-
 func (g *GormDB) CreateGroups(ctx context.Context, groups *[]models.Group) error {
 	return gorm.G[models.Group](g.db).CreateInBatches(ctx, groups, 500)
 }
 
-func (g *GormDB) UpdateGroup(group *models.Group) error {
-	err := g.db.Transaction(func(tx *gorm.DB) error {
-		output := tx.Updates(group)
-		if output.Error != nil {
-			return output.Error
-		}
-		if output.RowsAffected < 1 {
-			return fmt.Errorf("failed to update group: less than 1 rows affected")
-		}
-		err := tx.Model(group).Association("Recipients").Replace(group.Recipients)
+func (g *GormDB) UpdateGroup(ctx context.Context, group models.Group) error {
+	// make sure gorm doesn't create additional recipients instead of replacing them
+	groupWithoutRecipients := group
+	groupWithoutRecipients.Recipients = nil
+	groupWithoutRecipients.LastMessages = nil
 
+	return g.db.Transaction(func(tx *gorm.DB) error {
+		_, err := gorm.G[models.Group](tx).Where("id = ?", group.ID).Updates(ctx, groupWithoutRecipients)
+		if err != nil {
+			return err
+		}
+
+		err = tx.WithContext(ctx).Model(&group).Association("Recipients").Replace(group.Recipients)
+		if err != nil {
+			return err
+		}
+		err = tx.WithContext(ctx).Model(&group).Association("LastMessages").Replace(group.LastMessages)
 		return err
 	})
-	return err
 
 }
 

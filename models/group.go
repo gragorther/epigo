@@ -14,7 +14,7 @@ type Group struct {
 	DeletedAt    gorm.DeletedAt `json:"-" gorm:"index"`
 	Name         string         `json:"name"`
 	Description  *string        `json:"description"`
-	Recipients   []Recipient    `json:"recipients"`
+	Recipients   []Recipient    `json:"recipients" gorm:"foreignKey:GroupID"`
 	LastMessages []LastMessage  `json:"lastMessages" gorm:"many2many:group_last_messages;"`
 }
 

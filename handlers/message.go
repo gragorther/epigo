@@ -28,7 +28,7 @@ func parseGroups(groupIDs []uint) ([]models.Group, error) {
 }
 
 func AddLastMessage(db interface {
-	CheckUserAuthorizationForGroup(groupIDs []uint, userID uint) (bool, error)
+	CheckUserAuthorizationForGroups(ctx context.Context, groupIDs []uint, userID uint) (bool, error)
 	CreateLastMessage(ctx context.Context, lastMessage *models.LastMessage) error
 }) gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -44,7 +44,7 @@ func AddLastMessage(db interface {
 			c.AbortWithError(http.StatusUnprocessableEntity, fmt.Errorf("failed to bind json while creating last message: %w", err))
 			return
 		}
-		authorized, err := db.CheckUserAuthorizationForGroup(input.GroupIDs, user.ID)
+		authorized, err := db.CheckUserAuthorizationForGroups(c, input.GroupIDs, user.ID)
 		if err != nil {
 			c.AbortWithError(http.StatusUnauthorized, err)
 			return
@@ -104,8 +104,8 @@ type EditMessageInput struct {
 }
 
 func EditLastMessage(db interface {
-	CheckUserAuthorizationForLastMessage(messageID uint, userID uint) (bool, error)
-	CheckUserAuthorizationForGroup(groupIDs []uint, userID uint) (bool, error)
+	CheckUserAuthorizationForLastMessage(ctx context.Context, messageID uint, userID uint) (bool, error)
+	CheckUserAuthorizationForGroups(ctx context.Context, groupIDs []uint, userID uint) (bool, error)
 	UpdateLastMessage(ctx context.Context, newMessage models.LastMessage) error
 }) gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -126,7 +126,7 @@ func EditLastMessage(db interface {
 			c.AbortWithError(http.StatusUnprocessableEntity, fmt.Errorf("failed to bind edit last message json: %w", err))
 			return
 		}
-		authorized, autherr := db.CheckUserAuthorizationForLastMessage(uint(id), user.ID)
+		authorized, autherr := db.CheckUserAuthorizationForLastMessage(c, uint(id), user.ID)
 		if autherr != nil {
 			c.AbortWithError(http.StatusInternalServerError, fmt.Errorf("failed to check user authorization for last message: %w", err))
 			return
@@ -135,7 +135,7 @@ func EditLastMessage(db interface {
 			c.AbortWithStatus(http.StatusUnauthorized)
 			return
 		}
-		authorizedToAddGroups, groupsAuthErr := db.CheckUserAuthorizationForGroup(input.GroupIDs, user.ID)
+		authorizedToAddGroups, groupsAuthErr := db.CheckUserAuthorizationForGroups(c, input.GroupIDs, user.ID)
 		if groupsAuthErr != nil {
 			c.AbortWithError(http.StatusUnauthorized, fmt.Errorf("failed to check user auth for group during edit last message: %w", groupsAuthErr))
 			return
@@ -168,7 +168,7 @@ func EditLastMessage(db interface {
 }
 
 func DeleteLastMessage(db interface {
-	CheckUserAuthorizationForLastMessage(messageID uint, userID uint) (bool, error)
+	CheckUserAuthorizationForLastMessage(ctx context.Context, messageID uint, userID uint) (bool, error)
 	DeleteLastMessageByID(lastMessageID uint) error
 }) gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -183,7 +183,7 @@ func DeleteLastMessage(db interface {
 			return
 		}
 
-		authorized, authErr := db.CheckUserAuthorizationForLastMessage(uint(lastMessageID), user.ID)
+		authorized, authErr := db.CheckUserAuthorizationForLastMessage(c, uint(lastMessageID), user.ID)
 		if authErr != nil {
 			c.AbortWithError(http.StatusUnauthorized, fmt.Errorf("failed to check auth for last message: %w", err))
 			return

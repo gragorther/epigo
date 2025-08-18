@@ -43,7 +43,7 @@ func (m *mockDB) UpdateLastMessage(ctx context.Context, newMessage models.LastMe
 	return m.Err
 }
 
-func (m *mockDB) CheckUserAuthorizationForLastMessage(messageID uint, userID uint) (bool, error) {
+func (m *mockDB) CheckUserAuthorizationForLastMessage(ctx context.Context, messageID uint, userID uint) (bool, error) {
 	for _, message := range m.LastMessages {
 		if message.ID == messageID {
 			if message.UserID == userID {

@@ -20,6 +20,7 @@ type User struct {
 	IsAdmin      bool           `json:"isAdmin"`
 	IsVerified   bool           `json:"isVerified"`
 	Profile      *Profile       `json:"profile"`
+	LastMessages []LastMessage
 }
 type Profile struct {
 	ID        uint `gorm:"primarykey"`

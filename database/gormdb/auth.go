@@ -1,27 +1,18 @@
 package gormdb
 
 import (
+	"context"
+
 	"github.com/gragorther/epigo/models"
+	"gorm.io/gorm"
 )
 
-func (a *GormDB) CheckUserAuthorizationForGroup(groupIDs []uint, userID uint) (bool, error) {
-	var authorizedGroups int64
-	if err := a.db.Model(&models.Group{}).Where("user_id = ?", userID).
-		Where("id IN ?", groupIDs).
-		Count(&authorizedGroups).Error; err != nil {
+func (g *GormDB) CheckUserAuthorizationForGroups(ctx context.Context, groupIDs []uint, userID uint) (bool, error) {
 
-		return false, err
-	}
-	if int(authorizedGroups) != len(groupIDs) {
-		return false, nil
-	}
-	return true, nil
+	count, err := gorm.G[models.Group](g.db).Where("user_id = ? AND id IN ?", userID, groupIDs).Count(ctx, "id")
+	return int(count) == len(groupIDs), err
 }
-func (a *GormDB) CheckUserAuthorizationForLastMessage(messageID uint, userID uint) (bool, error) {
-	var authorizedCount int64
-	res := a.db.Model(&models.LastMessage{}).Where("id = ?", messageID).Where("user_id = ?", userID).Count(&authorizedCount)
-	if authorizedCount != 1 {
-		return false, res.Error
-	}
-	return true, res.Error
+func (g *GormDB) CheckUserAuthorizationForLastMessage(ctx context.Context, messageID uint, userID uint) (bool, error) {
+	count, err := gorm.G[models.LastMessage](g.db).Where("id = ? AND user_id = ?", messageID, userID).Count(ctx, "id")
+	return count == 1, err
 }

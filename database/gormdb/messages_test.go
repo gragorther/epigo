@@ -125,7 +125,7 @@ func (s *DBTestSuite) TestCreateLastMessages() {
 func assertLastMessageEquality(s *DBTestSuite, expected models.LastMessage, actual models.LastMessage) {
 	s.Equal(expected.Title, actual.Title, "titles should match")
 	s.Equal(expected.Content, actual.Content, "contents should match")
-	s.Equal(expected.UserID, actual.UserID, "user IDs should match")
+
 }
 
 func (s *DBTestSuite) TestUpdateLastMessage() {

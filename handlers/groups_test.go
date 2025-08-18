@@ -42,7 +42,7 @@ func (m *mockDB) CreateGroup(group *models.Group) error {
 	m.Groups = append(m.Groups, *group)
 	return m.Err
 }
-func (m *mockDB) CheckUserAuthorizationForGroup(groupIDs []uint, userID uint) (bool, error) {
+func (m *mockDB) CheckUserAuthorizationForGroups(ctx context.Context, groupIDs []uint, userID uint) (bool, error) {
 
 	return m.IsAuthorized, m.Err
 }
@@ -55,10 +55,10 @@ func (m *mockDB) FindGroupsAndRecipientsByUserID(ctx context.Context, userID uin
 	m.FindGroupCalls += 1
 	return m.Groups, m.Err
 }
-func (m *mockDB) UpdateGroup(group *models.Group) error {
+func (m *mockDB) UpdateGroup(ctx context.Context, group models.Group) error {
 	for i := range m.Groups {
 		if m.Groups[i].ID == group.ID {
-			m.Groups[i] = *group
+			m.Groups[i] = group
 			break
 		}
 	}

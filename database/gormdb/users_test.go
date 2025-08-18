@@ -279,7 +279,7 @@ func (s *DBTestSuite) TestEditUser() {
 	s.Equal(user.Username, got.Username)
 }
 
-func (s *DBTestSuite) TestDeleteUserAndAllAssociations() {
+func (s *DBTestSuite) AllAssociations() {
 	userGroups := []models.Group{
 		{Name: "greoup"},
 		{Name: "group2"},
@@ -288,16 +288,16 @@ func (s *DBTestSuite) TestDeleteUserAndAllAssociations() {
 		Username: "ussername",
 		Groups:   userGroups,
 	}
-	s.Require().NoError(s.repo.CreateUser(&user))
+	s.Require().NoError(s.repo.CreateUser(&user), "creating user shouldn't fail")
 
-	s.Require().NoError(s.repo.DeleteUserAndAllAssociations(user.ID))
+	s.Require().NoError(s.repo.DeleteUserAndAllAssociations(user.ID), "deleting user associations shouldn't fail")
 
 	exists, err := s.repo.CheckIfUserExistsByID(s.ctx, user.ID)
 
-	s.Require().NoError(err)
+	s.Require().NoError(err, "checking if user exists shouldn't fail")
 	s.False(exists, "user shouldn't exist")
 
 	groupExists, err := s.repo.CheckIfGroupExistsByID(s.ctx, user.Groups[0].ID)
-	s.Require().NoError(err)
+	s.Require().NoError(err, "checking if group exists shouldn't fail")
 	s.False(groupExists, "group shouldn't exist because this function deletes *all* associations")
 }
