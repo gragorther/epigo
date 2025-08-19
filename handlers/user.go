@@ -7,10 +7,10 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/golang-jwt/jwt/v5"
 	"github.com/gragorther/epigo/email"
 	argon2id "github.com/gragorther/epigo/hash"
 	"github.com/gragorther/epigo/models"
+	"github.com/gragorther/epigo/tokens"
 )
 
 type RegistrationInput struct {
@@ -75,8 +75,8 @@ func RegisterUser(db interface {
 }
 
 func LoginUser(db interface {
-	CheckIfUserExistsByUsername(username string) (bool, error)
-	GetUserByUsername(username string) (*models.User, error)
+	CheckIfUserExistsByUsername(ctx context.Context, username string) (bool, error)
+	GetUserByUsername(ctx context.Context, username string) (models.User, error)
 	EditUser(context.Context, models.User) error
 }, comparePasswordAndHash func(password string, hash string) (match bool, err error), jwtSecret string) gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -86,7 +86,7 @@ func LoginUser(db interface {
 			return
 		}
 
-		userExists, err := db.CheckIfUserExistsByUsername(authInput.Username)
+		userExists, err := db.CheckIfUserExistsByUsername(c, authInput.Username)
 		if err != nil {
 			c.AbortWithError(http.StatusInternalServerError, fmt.Errorf("failed to check if users exists by username: %w", err))
 			return
@@ -95,7 +95,7 @@ func LoginUser(db interface {
 			c.AbortWithStatus(http.StatusNotFound)
 			return
 		}
-		userFound, err := db.GetUserByUsername(authInput.Username)
+		userFound, err := db.GetUserByUsername(c, authInput.Username)
 		if err != nil {
 			c.AbortWithError(http.StatusInternalServerError, fmt.Errorf("failed to get user by username: %w", err))
 			return
@@ -111,19 +111,14 @@ func LoginUser(db interface {
 			return
 		}
 
-		generateToken := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-			"id":  userFound.ID,
-			"exp": time.Now().Add(time.Hour * 24).Unix(),
-		})
-
-		token, err := generateToken.SignedString([]byte(jwtSecret))
+		token, err := tokens.CreateUserAuth(jwtSecret, userFound.ID)
 		if err != nil {
 			c.AbortWithError(http.StatusInternalServerError, fmt.Errorf("failed to generate JWT token: %w", err))
 			return
 		}
 		currentTime := time.Now()
 		userFound.LastLogin = &currentTime
-		if err := db.EditUser(c, *userFound); err != nil {
+		if err := db.EditUser(c, userFound); err != nil {
 			c.Error(fmt.Errorf("failed to store user last login: %w", err))
 		}
 		c.JSON(http.StatusOK, gin.H{

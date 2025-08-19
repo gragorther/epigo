@@ -1,6 +1,7 @@
 package scheduler
 
 import (
+	"context"
 	"log"
 	"time"
 
@@ -10,7 +11,7 @@ import (
 )
 
 type intervalGetter interface {
-	GetUserIntervals() ([]gormdb.UserInterval, error)
+	GetUserIntervals(ctx context.Context) ([]gormdb.UserInterval, error)
 }
 
 type ConfigProvider struct {
@@ -45,7 +46,7 @@ func Run(db intervalGetter, redisAddress string) {
 }
 
 func (p *ConfigProvider) GetConfigs() ([]*asynq.PeriodicTaskConfig, error) {
-	users, err := p.DB.GetUserIntervals()
+	users, err := p.DB.GetUserIntervals(context.TODO())
 	if err != nil {
 		return nil, err
 	}
@@ -57,18 +58,16 @@ func (p *ConfigProvider) GetConfigs() ([]*asynq.PeriodicTaskConfig, error) {
 	for _, user := range users {
 
 		// if the user has no cron, skip them so asynq doesn't get mad at me
-		if user.EmailCron == "" {
+		if user.Cron == "" {
 			continue
 		}
 		task, err := tasks.NewRecurringEmailTask(user.ID)
 		if err != nil {
-			log.Print(err)
-
 			return nil, err
 		}
 
 		output = append(output, &asynq.PeriodicTaskConfig{
-			Cronspec: user.EmailCron,
+			Cronspec: user.Cron,
 			Task:     task,
 		})
 	}

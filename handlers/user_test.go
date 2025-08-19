@@ -36,7 +36,7 @@ func (m *mockDB) CheckIfUserExistsByUsernameAndEmail(username string, email stri
 	}
 	return false, nil
 }
-func (m *mockDB) CheckIfUserExistsByUsername(username string) (bool, error) {
+func (m *mockDB) CheckIfUserExistsByUsername(ctx context.Context, username string) (bool, error) {
 	for _, user := range m.Users {
 		if user.Username == username {
 			return true, nil
@@ -45,13 +45,13 @@ func (m *mockDB) CheckIfUserExistsByUsername(username string) (bool, error) {
 	return false, nil
 }
 
-func (m *mockDB) GetUserByUsername(username string) (*models.User, error) {
+func (m *mockDB) GetUserByUsername(ctx context.Context, username string) (models.User, error) {
 	for _, user := range m.Users {
 		if user.Username == username {
-			return &user, nil
+			return user, nil
 		}
 	}
-	return nil, nil
+	return models.User{}, nil
 }
 func (m *mockDB) EditUser(ctx context.Context, newUser models.User) error {
 	for i, user := range m.Users {
@@ -264,7 +264,7 @@ func TestGetUserData(t *testing.T) {
 	c, w, assert := setupHandlerTest(t)
 	userName := "myname"
 	lastLoginTime := time.Date(2025, time.January, 1, 12, 12, 12, 12, time.UTC)
-	user := &models.User{
+	user := models.User{
 		Profile:   &models.Profile{Name: &userName},
 		Username:  "myusername",
 		LastLogin: &lastLoginTime,
@@ -293,7 +293,7 @@ func TestCreateProfile(t *testing.T) {
 	t.Run("valid input", func(t *testing.T) {
 		c, w, assert := setupHandlerTest(t)
 		mock := newMockDB()
-		handlers.SetUser(c, &models.User{
+		handlers.SetUser(c, models.User{
 			ID:       1,
 			Username: "username",
 		})
@@ -335,7 +335,7 @@ func TestUpdateProfile(t *testing.T) {
 		currentUser := models.User{
 			Username: "bob", ID: 1,
 		}
-		handlers.SetUser(c, &currentUser)
+		handlers.SetUser(c, currentUser)
 
 		setGinHttpBody(c, input)
 		handlers.UpdateProfile(mock)(c)

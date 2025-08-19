@@ -10,6 +10,7 @@ import (
 )
 
 var ErrNoSuchParam error = errors.New("no such param in the context")
+var ErrInvalidType = errors.New("invalid type")
 
 const CurrentUser string = "currentUser"
 
@@ -21,12 +22,15 @@ func GetFromContext[T any](key string, c *gin.Context) (T, error) {
 	if !exists {
 		return t, ErrNoSuchParam
 	}
-	typedValue := value.(T)
+	typedValue, ok := value.(T)
+	if !ok {
+		return t, ErrInvalidType
+	}
 	return typedValue, nil
 }
 
-func GetUserFromContext(c *gin.Context) (*models.User, error) {
-	currentUser, err := GetFromContext[*models.User](CurrentUser, c)
+func GetUserFromContext(c *gin.Context) (models.User, error) {
+	currentUser, err := GetFromContext[models.User](CurrentUser, c)
 	return currentUser, err
 }
 
@@ -42,6 +46,6 @@ func GetIDFromContext(c *gin.Context) (uint, error) {
 
 }
 
-func SetUser(c *gin.Context, value *models.User) {
+func SetUser(c *gin.Context, value models.User) {
 	c.Set(CurrentUser, value)
 }

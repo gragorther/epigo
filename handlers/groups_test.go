@@ -92,7 +92,7 @@ func TestAddGroup(t *testing.T) {
 	t.Run("with valid json input", func(t *testing.T) {
 		c, w, assert := setupHandlerTest(t)
 		username := "test"
-		fakeUser := &models.User{ID: 1, Profile: &models.Profile{Name: &username}}
+		fakeUser := models.User{ID: 1, Profile: &models.Profile{Name: &username}}
 		c.Set("currentUser", fakeUser)
 
 		mock := newMockDB()
@@ -110,7 +110,6 @@ func TestAddGroup(t *testing.T) {
 		c.Request = &http.Request{
 			Body: io.NopCloser(bytes.NewBuffer(jsonString)),
 		}
-
 		handler := handlers.AddGroup(mock)
 		handler(c)
 		assert.Equal(http.StatusOK, w.Code, "status code should indicate success")
@@ -120,12 +119,13 @@ func TestAddGroup(t *testing.T) {
 		for i := range jsonInput.Recipients {
 			assert.Equal(jsonInput.Recipients[i].Email, mock.Groups[0].Recipients[i].Email)
 		}
+		t.Log(c.Errors)
 	})
 	t.Run("with invalid json input", func(t *testing.T) {
 		c, w, assert := setupHandlerTest(t)
 		mock := newMockDB()
 		username := "test"
-		fakeUser := &models.User{ID: 1, Profile: &models.Profile{Name: &username}}
+		fakeUser := models.User{ID: 1, Profile: &models.Profile{Name: &username}}
 		c.Set("currentUser", fakeUser)
 		jsonInput, _ := sonic.Marshal(invalidGroupInput{
 			Recipients: []models.APIRecipient{
@@ -144,7 +144,7 @@ func TestAddGroup(t *testing.T) {
 	})
 	t.Run("with invalid emails", func(t *testing.T) {
 		c, w, assert := setupHandlerTest(t)
-		fakeUser := &models.User{ID: 1, Username: "test"}
+		fakeUser := models.User{ID: 1, Username: "test"}
 		c.Set("currentUser", fakeUser)
 		mock := newMockDB()
 		handler := handlers.AddGroup(mock)
@@ -170,7 +170,7 @@ func TestAddGroup(t *testing.T) {
 func TestDeleteGroup(t *testing.T) {
 	t.Run("with valid input", func(t *testing.T) {
 		c, w, assert := setupHandlerTest(t)
-		fakeUser := &models.User{ID: 1, Username: "test"}
+		fakeUser := models.User{ID: 1, Username: "test"}
 		c.Set("currentUser", fakeUser)
 		mock := newMockDB()
 		mock.IsAuthorized = true
@@ -189,7 +189,7 @@ func TestDeleteGroup(t *testing.T) {
 	})
 	t.Run("missing param", func(t *testing.T) {
 		c, w, assert := setupHandlerTest(t)
-		fakeUser := &models.User{ID: 1, Username: "test"}
+		fakeUser := models.User{ID: 1, Username: "test"}
 		c.Set("currentUser", fakeUser)
 		mock := newMockDB()
 		mock.IsAuthorized = true
@@ -201,7 +201,7 @@ func TestDeleteGroup(t *testing.T) {
 	})
 	t.Run("user does not own group", func(t *testing.T) {
 		c, w, assert := setupHandlerTest(t)
-		fakeUser := &models.User{ID: 1, Username: "test"}
+		fakeUser := models.User{ID: 1, Username: "test"}
 		c.Set("currentUser", fakeUser)
 		mock := newMockDB()
 		mock.IsAuthorized = false
@@ -219,7 +219,7 @@ func TestDeleteGroup(t *testing.T) {
 func TestListGroups(t *testing.T) {
 
 	c, w, assert := setupHandlerTest(t)
-	fakeUser := &models.User{ID: 1, Username: "test"}
+	fakeUser := models.User{ID: 1, Username: "test"}
 	c.Set("currentUser", fakeUser)
 	c.AddParam("id", "1")
 	mock := newMockDB()
@@ -262,7 +262,7 @@ func TestListGroups(t *testing.T) {
 func TestEditGroup(t *testing.T) {
 	t.Run("valid input", func(t *testing.T) {
 		c, w, assert := setupHandlerTest(t)
-		fakeUser := &models.User{ID: 1, Username: "test"}
+		fakeUser := models.User{ID: 1, Username: "test"}
 		c.Set("currentUser", fakeUser)
 		c.AddParam("id", "0")
 		mock := newMockDB()

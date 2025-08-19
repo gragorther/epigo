@@ -64,7 +64,7 @@ func TestAddLastMessage(t *testing.T) {
 	t.Run("valid input", func(t *testing.T) {
 		c, w, assert := setupHandlerTest(t)
 		userName := "testname"
-		currentUser := &models.User{ID: 1, Profile: &models.Profile{Name: &userName}}
+		currentUser := models.User{ID: 1, Profile: &models.Profile{Name: &userName}}
 		c.Set("currentUser", currentUser)
 		mock := newMockDB()
 		mock.IsAuthorized = true
@@ -94,7 +94,7 @@ func TestAddLastMessage(t *testing.T) {
 	t.Run("invalid input", func(t *testing.T) {
 		c, w, assert := setupHandlerTest(t)
 		userName := "testname"
-		currentUser := &models.User{ID: 1, Profile: &models.Profile{Name: &userName}}
+		currentUser := models.User{ID: 1, Profile: &models.Profile{Name: &userName}}
 		c.Set("currentUser", currentUser)
 		mock := newMockDB()
 		mock.IsAuthorized = true
@@ -120,7 +120,7 @@ func TestAddLastMessage(t *testing.T) {
 	t.Run("user does not own group to which the last message is being added", func(t *testing.T) {
 		c, w, assert := setupHandlerTest(t)
 		userName := "testname"
-		currentUser := &models.User{ID: 1, Profile: &models.Profile{Name: &userName}}
+		currentUser := models.User{ID: 1, Profile: &models.Profile{Name: &userName}}
 		c.Set("currentUser", currentUser)
 		mock := newMockDB()
 		mock.IsAuthorized = false // not authorized
@@ -145,7 +145,7 @@ func TestListLastMessages(t *testing.T) {
 	t.Run("valid input", func(t *testing.T) {
 		c, w, assert := setupHandlerTest(t)
 		userName := "testname"
-		currentUser := &models.User{ID: 1, Profile: &models.Profile{Name: &userName}}
+		currentUser := models.User{ID: 1, Profile: &models.Profile{Name: &userName}}
 		mock := newMockDB()
 		mock.IsAuthorized = true
 
@@ -164,7 +164,7 @@ func TestEditLastMessage(t *testing.T) {
 		c, w, assert := setupHandlerTest(t)
 		userName := "testname"
 		userID := uint(1)
-		currentUser := &models.User{ID: userID, Profile: &models.Profile{Name: &userName}}
+		currentUser := models.User{ID: userID, Profile: &models.Profile{Name: &userName}}
 		handlers.SetUser(c, currentUser)
 		mock := newMockDB()
 		mock.IsAuthorized = true
@@ -199,7 +199,7 @@ func TestEditLastMessage(t *testing.T) {
 		c, w, assert := setupHandlerTest(t)
 		userName := "testname"
 		userID := uint(1)
-		currentUser := &models.User{ID: userID, Profile: &models.Profile{Name: &userName}}
+		currentUser := models.User{ID: userID, Profile: &models.Profile{Name: &userName}}
 		handlers.SetUser(c, currentUser)
 		mock := newMockDB()
 		mock.IsAuthorized = true
@@ -234,7 +234,7 @@ func TestEditLastMessage(t *testing.T) {
 		c, w, assert := setupHandlerTest(t)
 		userName := "testname"
 		userID := uint(1)
-		currentUser := &models.User{ID: userID, Profile: &models.Profile{Name: &userName}}
+		currentUser := models.User{ID: userID, Profile: &models.Profile{Name: &userName}}
 		handlers.SetUser(c, currentUser)
 		mock := newMockDB()
 		//mock.IsAuthorized = true

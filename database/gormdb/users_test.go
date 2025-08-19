@@ -171,14 +171,14 @@ func (s *DBTestSuite) TestCheckIfUserExistsByUsername() {
 		err := s.db.QueryRowContext(s.ctx, "INSERT INTO users (username) VALUES ($1) RETURNING id", username).Scan(&userID)
 		s.Require().NoError(err)
 
-		exists, err := s.repo.CheckIfUserExistsByUsername(username)
+		exists, err := s.repo.CheckIfUserExistsByUsername(s.ctx, username)
 		s.Require().NoError(err)
 
 		s.True(exists, "should be true because the user does exist")
 	})
 	s.Run("user doesn't exist", func() {
 
-		exists, err := s.repo.CheckIfUserExistsByUsername("idontexist")
+		exists, err := s.repo.CheckIfUserExistsByUsername(s.ctx, "idontexist")
 		s.Require().NoError(err)
 
 		s.False(exists, "should be true because the user does exist")
@@ -212,7 +212,7 @@ func (s *DBTestSuite) TestGetUserByUsername() {
 	email := "email@email.com"
 	s.db.QueryRowContext(s.ctx, "INSERT INTO users (username, email) VALUES ($1, $2)", username, email)
 
-	user, err := s.repo.GetUserByUsername(username)
+	user, err := s.repo.GetUserByUsername(s.ctx, username)
 	s.Require().NoError(err)
 
 	s.Equal(username, user.Username)
@@ -241,7 +241,7 @@ func (s *DBTestSuite) TestGetUserByID() {
 	}
 	err := s.db.QueryRowContext(s.ctx, "INSERT INTO users (email, username) VALUES ($1, $2) RETURNING id", newUser.Email, newUser.Username).Scan(&newUser.ID)
 	s.Require().NoError(err)
-	got, err := s.repo.GetUserByID(newUser.ID)
+	got, err := s.repo.GetUserByID(s.ctx, newUser.ID)
 	s.Require().NoError(err, "getting user by id should not fail")
 	s.Equal(newUser.Email, got.Email)
 	s.Equal(newUser.Username, got.Username)

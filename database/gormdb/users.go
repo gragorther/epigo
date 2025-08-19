@@ -4,9 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
 
 	"github.com/gragorther/epigo/models"
+	"github.com/samber/lo"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
@@ -17,15 +17,28 @@ func (g *GormDB) UpdateUserInterval(userID uint, cron string) error {
 }
 
 type UserInterval struct {
-	ID        uint   `gorm:"primarykey"`
-	Email     string `json:"email" gorm:"unique"`
-	EmailCron string `json:"emailCron"`
+	ID    uint   `gorm:"primarykey"`
+	Email string `json:"email" gorm:"unique"`
+	Cron  string `json:"cron"`
 }
 
-func (g *GormDB) GetUserIntervals() ([]UserInterval, error) {
-	var intervals []UserInterval
-	res := g.db.Model(&models.User{}).Find(&intervals)
-	return intervals, res.Error
+func (g *GormDB) GetUserIntervals(ctx context.Context) ([]UserInterval, error) {
+	got, err := gorm.G[models.User](g.db).Select("email", "id", "cron").Find(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	return lo.Map(got, func(item models.User, index int) UserInterval {
+		var cron string
+		if item.Cron == nil {
+			cron = ""
+		} else {
+			cron = *item.Cron
+		}
+		return UserInterval{
+			ID: item.ID, Email: item.Email, Cron: cron,
+		}
+	}), nil
 }
 
 // true if user exists, false if they don't exist
@@ -35,38 +48,39 @@ func (g *GormDB) CheckIfUserExistsByUsernameAndEmail(username string, email stri
 		Where("username = ? OR email = ?", username, email).Count(&foundUsers)
 
 	if res.Error != nil {
-		log.Printf("Couldn't check if user exists: %v", res.Error)
 		return true, res.Error
 	}
 
 	if foundUsers > 0 {
-		log.Printf("User %v already exists", username)
 		return true, nil
 	}
 	return false, nil
 }
-func (g *GormDB) CheckIfUserExistsByUsername(username string) (bool, error) {
-	var userFound int64
+func (g *GormDB) CheckIfUserExistsByUsername(ctx context.Context, username string) (bool, error) {
+	/*
+		var userFound int64
 
-	res := g.db.Model(&models.User{}).Where("username=?", username).Count(&userFound)
-	if res.Error != nil {
-		return false, res.Error
-	}
+		res := g.db.Model(&models.User{}).Where("username=?", username).Count(&userFound)
+		if res.Error != nil {
+			return false, res.Error
+		}
 
-	if userFound == 0 {
-		return false, nil
-	}
-	return true, nil
+		if userFound == 0 {
+			return false, nil
+		}
+		return true, nil
+	*/
+
+	count, err := gorm.G[models.User](g.db).Where("username = ?", username).Count(ctx, "id")
+	return count == 1, err
 }
 
 func (g *GormDB) CreateUser(user *models.User) error {
 	res := g.db.Create(user)
 	return res.Error
 }
-func (g *GormDB) GetUserByUsername(username string) (*models.User, error) {
-	var userFound models.User
-	res := g.db.Model(&models.User{}).Where("username = ?", username).Find(&userFound)
-	return &userFound, res.Error
+func (g *GormDB) GetUserByUsername(ctx context.Context, username string) (models.User, error) {
+	return gorm.G[models.User](g.db).Where("username = ?", username).First(ctx)
 }
 
 func (g *GormDB) CheckIfUserExistsByID(ctx context.Context, ID uint) (bool, error) {
@@ -82,10 +96,8 @@ func (g *GormDB) CheckIfUserExistsByID(ctx context.Context, ID uint) (bool, erro
 	}
 	return true, nil
 }
-func (g *GormDB) GetUserByID(ID uint) (*models.User, error) {
-	var user models.User
-	res := g.db.Model(&models.User{ID: ID}).Find(&user)
-	return &user, res.Error
+func (g *GormDB) GetUserByID(ctx context.Context, ID uint) (models.User, error) {
+	return gorm.G[models.User](g.db).Where("id = ?", ID).First(ctx)
 }
 
 func (g *GormDB) DeleteUser(ctx context.Context, ID uint) error {
