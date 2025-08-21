@@ -12,6 +12,8 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+const CurrentUser = "currentUser"
+
 func CheckAuth(db interface {
 	GetUserByID(ctx context.Context, ID uint) (models.User, error)
 }, jwtSecret string) gin.HandlerFunc {
@@ -50,7 +52,7 @@ func CheckAuth(db interface {
 			c.AbortWithError(http.StatusInternalServerError, err)
 		}
 
-		c.Set("currentUser", user)
+		c.Set(CurrentUser, user)
 
 		c.Next()
 	}

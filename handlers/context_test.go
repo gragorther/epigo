@@ -12,7 +12,7 @@ import (
 func TestGetKeyFromContext(t *testing.T) {
 	assert := assert.New(t)
 	t.Run("key exists", func(t *testing.T) {
-		c, _ := setupGin()
+		c, _ := SetupGin()
 		testName := "test"
 		expected := &models.User{
 			ID:      1,
@@ -25,7 +25,7 @@ func TestGetKeyFromContext(t *testing.T) {
 	})
 
 	t.Run("key doesn't exist", func(t *testing.T) {
-		c, _ := setupGin()
+		c, _ := SetupGin()
 
 		respUser, err := handlers.GetFromContext[*models.User]("currentUser", c)
 		assert.Equal(handlers.ErrNoSuchParam, err, "there should be no error")
@@ -36,7 +36,7 @@ func TestGetKeyFromContext(t *testing.T) {
 func TestGetIDFromContext(t *testing.T) {
 	assert := assert.New(t)
 	t.Run("ID exists", func(t *testing.T) {
-		c, _ := setupGin()
+		c, _ := SetupGin()
 		id := "121"
 		c.AddParam("id", id)
 

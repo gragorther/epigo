@@ -67,7 +67,7 @@ func (m *mockDB) UpdateGroup(ctx context.Context, group models.Group) error {
 }
 
 // sets up gin and returns a gin Context and an http response recorder
-func setupGin() (*gin.Context, *httptest.ResponseRecorder) {
+func SetupGin() (*gin.Context, *httptest.ResponseRecorder) {
 
 	gin.SetMode(gin.TestMode)
 
@@ -77,7 +77,7 @@ func setupGin() (*gin.Context, *httptest.ResponseRecorder) {
 }
 
 func setupHandlerTest(t *testing.T) (*gin.Context, *httptest.ResponseRecorder, *assert.Assertions) {
-	c, w := setupGin()
+	c, w := SetupGin()
 	assert := assert.New(t)
 	return c, w, assert
 }
