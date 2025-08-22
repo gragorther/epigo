@@ -1,12 +1,10 @@
 package middlewares
 
 import (
-	"context"
 	"fmt"
 	"net/http"
 	"strings"
 
-	"github.com/gragorther/epigo/models"
 	"github.com/gragorther/epigo/tokens"
 
 	"github.com/gin-gonic/gin"
@@ -14,9 +12,7 @@ import (
 
 const CurrentUser = "currentUser"
 
-func CheckAuth(db interface {
-	GetUserByID(ctx context.Context, ID uint) (models.User, error)
-}, jwtSecret string) gin.HandlerFunc {
+func CheckAuth(jwtSecret string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 
 		authHeader := c.GetHeader("Authorization")
@@ -47,12 +43,7 @@ func CheckAuth(db interface {
 			return
 		}
 
-		user, err := db.GetUserByID(c, userID)
-		if err != nil {
-			c.AbortWithError(http.StatusInternalServerError, err)
-		}
-
-		c.Set(CurrentUser, user)
+		c.Set(CurrentUser, userID)
 
 		c.Next()
 	}

@@ -126,20 +126,43 @@ func LoginUser(db interface {
 		})
 	}
 }
-func GetUserData() gin.HandlerFunc {
+
+type GetUserDataOutput struct {
+	Username  string    `json:"username,omitzero"`
+	LastLogin time.Time `json:"lastLogin,omitzero"`
+	Name      string    `json:"name,omitzero"`
+	Email     string    `json:"email,omitzero"`
+}
+
+func GetUserData(db interface {
+	GetUserByID(ctx context.Context, ID uint) (models.User, error)
+}) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Retrieve the user object from the context
-		user, err := GetUserFromContext(c)
+		userID, err := GetUserIDFromContext(c)
 		if err != nil {
 			c.AbortWithError(http.StatusInternalServerError, fmt.Errorf("failed to get user profile: %w", err))
 			return
 		}
+		user, err := db.GetUserByID(c, userID)
+		if err != nil {
+			c.AbortWithError(http.StatusInternalServerError, fmt.Errorf("failed to get user from ID: %w", err))
+			return
+		}
+		var lastLogin time.Time
+		if user.LastLogin != nil {
+			lastLogin = *user.LastLogin
+		}
+		var name string
+		if user.Profile != nil && user.Profile.Name != nil {
+			name = *user.Profile.Name
+		}
 
-		c.JSON(http.StatusOK, gin.H{
-			"username":  user.Username,
-			"lastLogin": user.LastLogin,
-			"name":      user.Profile.Name,
-			"email":     user.Email,
+		c.JSON(http.StatusOK, GetUserDataOutput{
+			Username:  user.Username,
+			LastLogin: lastLogin,
+			Name:      name,
+			Email:     user.Email,
 		})
 	}
 }
@@ -152,7 +175,7 @@ func SetEmailInterval(db interface {
 	UpdateUserInterval(userID uint, cron string) error
 }) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		user, err := GetUserFromContext(c)
+		userID, err := GetUserIDFromContext(c)
 		if err != nil {
 			c.AbortWithError(http.StatusInternalServerError, err)
 		}
@@ -162,7 +185,7 @@ func SetEmailInterval(db interface {
 			c.AbortWithError(http.StatusUnprocessableEntity, fmt.Errorf("failed to bind json while setting user email interval: %w", err))
 			return
 		}
-		err = db.UpdateUserInterval(user.ID, input.Cron)
+		err = db.UpdateUserInterval(userID, input.Cron)
 		if err != nil {
 			c.AbortWithError(http.StatusInternalServerError, fmt.Errorf("failed to update user interval: %w", err))
 			return
@@ -178,7 +201,7 @@ func CreateProfile(db interface {
 	CreateProfile(context.Context, *models.Profile) error
 }) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		user, err := GetUserFromContext(c)
+		userID, err := GetUserIDFromContext(c)
 		if err != nil {
 			c.AbortWithError(http.StatusUnauthorized, fmt.Errorf("failed to get user from context: %w", err))
 			return
@@ -190,7 +213,7 @@ func CreateProfile(db interface {
 		}
 
 		if err := db.CreateProfile(c, &models.Profile{
-			UserID: user.ID,
+			UserID: userID,
 			Name:   &input.Name,
 		}); err != nil {
 			c.AbortWithError(http.StatusInternalServerError, err)
@@ -203,7 +226,7 @@ func UpdateProfile(db interface {
 	UpdateProfile(context.Context, models.Profile) error
 }) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		user, err := GetUserFromContext(c)
+		userID, err := GetUserIDFromContext(c)
 		if err != nil {
 			c.AbortWithError(http.StatusInternalServerError, fmt.Errorf("failed to get user from context: %v", err))
 			return
@@ -216,7 +239,7 @@ func UpdateProfile(db interface {
 		}
 		//check for error
 		if err := db.UpdateProfile(c, models.Profile{
-			UserID: user.ID,
+			UserID: userID,
 			Name:   &input.Name,
 		}); err != nil {
 			c.AbortWithError(http.StatusInternalServerError, fmt.Errorf("failed to update profile: %w", err))

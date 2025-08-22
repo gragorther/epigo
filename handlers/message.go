@@ -32,7 +32,7 @@ func AddLastMessage(db interface {
 	CreateLastMessage(ctx context.Context, lastMessage *models.LastMessage) error
 }) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		user, err := GetUserFromContext(c)
+		userID, err := GetUserIDFromContext(c)
 		if err != nil {
 			c.AbortWithError(http.StatusInternalServerError, err)
 			return
@@ -44,7 +44,7 @@ func AddLastMessage(db interface {
 			c.AbortWithError(http.StatusUnprocessableEntity, fmt.Errorf("failed to bind json while creating last message: %w", err))
 			return
 		}
-		authorized, err := db.CheckUserAuthorizationForGroups(c, input.GroupIDs, user.ID)
+		authorized, err := db.CheckUserAuthorizationForGroups(c, input.GroupIDs, userID)
 		if err != nil {
 			c.AbortWithError(http.StatusUnauthorized, err)
 			return
@@ -64,7 +64,7 @@ func AddLastMessage(db interface {
 			Title:   input.Title,
 			Content: &input.Content,
 			Groups:  groups,
-			UserID:  user.ID,
+			UserID:  userID,
 		}
 
 		err = db.CreateLastMessage(c, &newLastMessage)
@@ -81,13 +81,13 @@ func ListLastMessages(db interface {
 	FindLastMessagesByUserID(userID uint) ([]models.LastMessage, error)
 }) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		user, err := GetUserFromContext(c)
+		userID, err := GetUserIDFromContext(c)
 		if err != nil {
 			c.AbortWithError(http.StatusInternalServerError, err)
 			return
 		}
 
-		lastMessages, err := db.FindLastMessagesByUserID(user.ID)
+		lastMessages, err := db.FindLastMessagesByUserID(userID)
 		if err != nil {
 			c.AbortWithError(http.StatusInternalServerError, fmt.Errorf("failed to find last message: %w", err))
 			return
@@ -109,7 +109,7 @@ func EditLastMessage(db interface {
 	UpdateLastMessage(ctx context.Context, newMessage models.LastMessage) error
 }) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		user, err := GetUserFromContext(c)
+		userID, err := GetUserIDFromContext(c)
 		if err != nil {
 			c.AbortWithError(http.StatusInternalServerError, err)
 			return
@@ -126,7 +126,7 @@ func EditLastMessage(db interface {
 			c.AbortWithError(http.StatusUnprocessableEntity, fmt.Errorf("failed to bind edit last message json: %w", err))
 			return
 		}
-		authorized, autherr := db.CheckUserAuthorizationForLastMessage(c, uint(id), user.ID)
+		authorized, autherr := db.CheckUserAuthorizationForLastMessage(c, uint(id), userID)
 		if autherr != nil {
 			c.AbortWithError(http.StatusInternalServerError, fmt.Errorf("failed to check user authorization for last message: %w", err))
 			return
@@ -135,7 +135,7 @@ func EditLastMessage(db interface {
 			c.AbortWithStatus(http.StatusUnauthorized)
 			return
 		}
-		authorizedToAddGroups, groupsAuthErr := db.CheckUserAuthorizationForGroups(c, input.GroupIDs, user.ID)
+		authorizedToAddGroups, groupsAuthErr := db.CheckUserAuthorizationForGroups(c, input.GroupIDs, userID)
 		if groupsAuthErr != nil {
 			c.AbortWithError(http.StatusUnauthorized, fmt.Errorf("failed to check user auth for group during edit last message: %w", groupsAuthErr))
 			return
@@ -172,7 +172,7 @@ func DeleteLastMessage(db interface {
 	DeleteLastMessageByID(lastMessageID uint) error
 }) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		user, err := GetUserFromContext(c)
+		userID, err := GetUserIDFromContext(c)
 		if err != nil {
 			c.AbortWithError(http.StatusInternalServerError, fmt.Errorf("failed to get user from context when deleting last message: %w", err))
 			return
@@ -183,7 +183,7 @@ func DeleteLastMessage(db interface {
 			return
 		}
 
-		authorized, authErr := db.CheckUserAuthorizationForLastMessage(c, uint(lastMessageID), user.ID)
+		authorized, authErr := db.CheckUserAuthorizationForLastMessage(c, uint(lastMessageID), userID)
 		if authErr != nil {
 			c.AbortWithError(http.StatusUnauthorized, fmt.Errorf("failed to check auth for last message: %w", err))
 			return

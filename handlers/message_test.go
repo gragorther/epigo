@@ -63,9 +63,7 @@ type invalidMessageInput struct {
 func TestAddLastMessage(t *testing.T) {
 	t.Run("valid input", func(t *testing.T) {
 		c, w, assert := setupHandlerTest(t)
-		userName := "testname"
-		currentUser := models.User{ID: 1, Profile: &models.Profile{Name: &userName}}
-		c.Set("currentUser", currentUser)
+		handlers.SetUserID(c, testUserID)
 		mock := newMockDB()
 		mock.IsAuthorized = true
 
@@ -93,9 +91,7 @@ func TestAddLastMessage(t *testing.T) {
 	})
 	t.Run("invalid input", func(t *testing.T) {
 		c, w, assert := setupHandlerTest(t)
-		userName := "testname"
-		currentUser := models.User{ID: 1, Profile: &models.Profile{Name: &userName}}
-		c.Set("currentUser", currentUser)
+		handlers.SetUserID(c, testUserID)
 		mock := newMockDB()
 		mock.IsAuthorized = true
 
@@ -119,9 +115,7 @@ func TestAddLastMessage(t *testing.T) {
 	})
 	t.Run("user does not own group to which the last message is being added", func(t *testing.T) {
 		c, w, assert := setupHandlerTest(t)
-		userName := "testname"
-		currentUser := models.User{ID: 1, Profile: &models.Profile{Name: &userName}}
-		c.Set("currentUser", currentUser)
+		handlers.SetUserID(c, testUserID)
 		mock := newMockDB()
 		mock.IsAuthorized = false // not authorized
 		messageInput, err := sonic.Marshal(handlers.AddMessageInput{
@@ -144,12 +138,10 @@ func TestAddLastMessage(t *testing.T) {
 func TestListLastMessages(t *testing.T) {
 	t.Run("valid input", func(t *testing.T) {
 		c, w, assert := setupHandlerTest(t)
-		userName := "testname"
-		currentUser := models.User{ID: 1, Profile: &models.Profile{Name: &userName}}
 		mock := newMockDB()
 		mock.IsAuthorized = true
 
-		handlers.SetUser(c, currentUser)
+		handlers.SetUserID(c, testUserID)
 
 		handler := handlers.ListLastMessages(mock)
 		handler(c)
@@ -162,16 +154,13 @@ func TestEditLastMessage(t *testing.T) {
 
 	t.Run("valid input", func(t *testing.T) {
 		c, w, assert := setupHandlerTest(t)
-		userName := "testname"
-		userID := uint(1)
-		currentUser := models.User{ID: userID, Profile: &models.Profile{Name: &userName}}
-		handlers.SetUser(c, currentUser)
+		handlers.SetUserID(c, testUserID)
 		mock := newMockDB()
 		mock.IsAuthorized = true
 		c.AddParam("id", "1")
 
 		mock.LastMessages = []models.LastMessage{
-			{ID: 1, Title: "stuff", UserID: userID},
+			{ID: 1, Title: "stuff", UserID: testUserID},
 		}
 		input := handlers.EditMessageInput{
 			Title:    "test title",
@@ -197,10 +186,7 @@ func TestEditLastMessage(t *testing.T) {
 	})
 	t.Run("user does not own the groups the message is being assigned to", func(t *testing.T) {
 		c, w, assert := setupHandlerTest(t)
-		userName := "testname"
-		userID := uint(1)
-		currentUser := models.User{ID: userID, Profile: &models.Profile{Name: &userName}}
-		handlers.SetUser(c, currentUser)
+		handlers.SetUserID(c, testUserID)
 		mock := newMockDB()
 		mock.IsAuthorized = true
 		c.AddParam("id", "1")
@@ -216,8 +202,8 @@ func TestEditLastMessage(t *testing.T) {
 
 		//the user we're testing doesn't own 3
 		oldGroups := []models.Group{
-			{UserID: userID, ID: 1},
-			{UserID: userID, ID: 2},
+			{UserID: testUserID, ID: 1},
+			{UserID: testUserID, ID: 2},
 			{UserID: 2, ID: 3},
 		}
 		mock.Groups = oldGroups
@@ -232,10 +218,8 @@ func TestEditLastMessage(t *testing.T) {
 
 	t.Run("user is unauthorized to edit the message", func(t *testing.T) {
 		c, w, assert := setupHandlerTest(t)
-		userName := "testname"
-		userID := uint(1)
-		currentUser := models.User{ID: userID, Profile: &models.Profile{Name: &userName}}
-		handlers.SetUser(c, currentUser)
+
+		handlers.SetUserID(c, testUserID)
 		mock := newMockDB()
 		//mock.IsAuthorized = true
 		c.AddParam("id", "1")

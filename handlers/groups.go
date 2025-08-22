@@ -31,7 +31,7 @@ func AddGroup(db interface {
 }) gin.HandlerFunc {
 	return func(c *gin.Context) {
 
-		user, err := GetUserFromContext(c)
+		userID, err := GetUserIDFromContext(c)
 		if err != nil {
 			c.AbortWithError(http.StatusInternalServerError, err)
 			return
@@ -43,7 +43,7 @@ func AddGroup(db interface {
 			return
 		}
 		sendToGroup := models.Group{
-			UserID:      user.ID,
+			UserID:      userID,
 			Name:        input.Name,
 			Description: input.Description,
 		}
@@ -63,7 +63,7 @@ func AddGroup(db interface {
 		err = db.CreateGroup(&sendToGroup)
 		if err != nil {
 			slog.Error("failed to create group and recipient emails",
-				slog.Uint64("user_id", uint64(user.ID)),
+				slog.Uint64("user_id", uint64(userID)),
 			)
 			c.AbortWithError(http.StatusInternalServerError, err)
 			return
@@ -76,7 +76,7 @@ func DeleteGroup(db interface {
 	CheckUserAuthorizationForGroups(ctx context.Context, groupIDs []uint, userID uint) (bool, error)
 }) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		user, err := GetUserFromContext(c)
+		userID, err := GetUserIDFromContext(c)
 		if err != nil {
 			c.AbortWithError(http.StatusInternalServerError, err)
 			return
@@ -88,7 +88,7 @@ func DeleteGroup(db interface {
 			return
 		}
 
-		authorized, err := db.CheckUserAuthorizationForGroups(c, []uint{uint(id)}, user.ID)
+		authorized, err := db.CheckUserAuthorizationForGroups(c, []uint{uint(id)}, userID)
 		if err != nil {
 			c.AbortWithError(http.StatusUnauthorized, fmt.Errorf("failed to check user authorization for group: %w", err))
 			return
@@ -112,13 +112,13 @@ func ListGroups(db interface {
 	FindGroupsAndRecipientsByUserID(ctx context.Context, userID uint) ([]models.Group, error)
 }) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		user, err := GetUserFromContext(c)
+		userID, err := GetUserIDFromContext(c)
 		if err != nil {
 			c.AbortWithError(http.StatusInternalServerError, err)
 			return
 		}
 
-		groups, err := db.FindGroupsAndRecipientsByUserID(c, user.ID) // gets the list of groups a user has via the association "Groups" on the User model
+		groups, err := db.FindGroupsAndRecipientsByUserID(c, userID) // gets the list of groups a user has via the association "Groups" on the User model
 		if err != nil {
 			c.AbortWithError(http.StatusInternalServerError, fmt.Errorf("failed to find groups and recipients by user ID during ListGroups: %w", err))
 			return
@@ -138,7 +138,7 @@ func EditGroup(db interface {
 	UpdateGroup(ctx context.Context, group models.Group) error
 }) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		user, err := GetUserFromContext(c)
+		userID, err := GetUserIDFromContext(c)
 		if err != nil {
 			c.AbortWithError(http.StatusInternalServerError, err)
 			return
@@ -154,7 +154,7 @@ func EditGroup(db interface {
 			c.AbortWithError(http.StatusInternalServerError, fmt.Errorf("failed to get ID from context while editing group: %w", err))
 			return
 		}
-		authorized, err := db.CheckUserAuthorizationForGroups(c, []uint{uint(id)}, user.ID)
+		authorized, err := db.CheckUserAuthorizationForGroups(c, []uint{uint(id)}, userID)
 		if err != nil {
 			c.AbortWithError(http.StatusInternalServerError, fmt.Errorf("failed to check user authorization for group: %w", err))
 			return

@@ -16,6 +16,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+const testUserID = 1
+
 type mockDB struct {
 	Err              error // the error mockDB methods will return
 	IsAuthorized     bool
@@ -93,7 +95,7 @@ func TestAddGroup(t *testing.T) {
 		c, w, assert := setupHandlerTest(t)
 		username := "test"
 		fakeUser := models.User{ID: 1, Profile: &models.Profile{Name: &username}}
-		c.Set("currentUser", fakeUser)
+		handlers.SetUserID(c, fakeUser.ID)
 
 		mock := newMockDB()
 
@@ -126,7 +128,7 @@ func TestAddGroup(t *testing.T) {
 		mock := newMockDB()
 		username := "test"
 		fakeUser := models.User{ID: 1, Profile: &models.Profile{Name: &username}}
-		c.Set("currentUser", fakeUser)
+		handlers.SetUserID(c, fakeUser.ID)
 		jsonInput, _ := sonic.Marshal(invalidGroupInput{
 			Recipients: []models.APIRecipient{
 				{Email: "uwu@gregtech.eu"},
@@ -144,8 +146,8 @@ func TestAddGroup(t *testing.T) {
 	})
 	t.Run("with invalid emails", func(t *testing.T) {
 		c, w, assert := setupHandlerTest(t)
-		fakeUser := models.User{ID: 1, Username: "test"}
-		c.Set("currentUser", fakeUser)
+
+		handlers.SetUserID(c, testUserID)
 		mock := newMockDB()
 		handler := handlers.AddGroup(mock)
 
@@ -170,8 +172,7 @@ func TestAddGroup(t *testing.T) {
 func TestDeleteGroup(t *testing.T) {
 	t.Run("with valid input", func(t *testing.T) {
 		c, w, assert := setupHandlerTest(t)
-		fakeUser := models.User{ID: 1, Username: "test"}
-		c.Set("currentUser", fakeUser)
+		handlers.SetUserID(c, testUserID)
 		mock := newMockDB()
 		mock.IsAuthorized = true
 		handler := handlers.DeleteGroup(mock)
@@ -189,8 +190,7 @@ func TestDeleteGroup(t *testing.T) {
 	})
 	t.Run("missing param", func(t *testing.T) {
 		c, w, assert := setupHandlerTest(t)
-		fakeUser := models.User{ID: 1, Username: "test"}
-		c.Set("currentUser", fakeUser)
+		handlers.SetUserID(c, testUserID)
 		mock := newMockDB()
 		mock.IsAuthorized = true
 		handler := handlers.DeleteGroup(mock)
@@ -201,8 +201,7 @@ func TestDeleteGroup(t *testing.T) {
 	})
 	t.Run("user does not own group", func(t *testing.T) {
 		c, w, assert := setupHandlerTest(t)
-		fakeUser := models.User{ID: 1, Username: "test"}
-		c.Set("currentUser", fakeUser)
+		handlers.SetUserID(c, testUserID)
 		mock := newMockDB()
 		mock.IsAuthorized = false
 
@@ -219,8 +218,8 @@ func TestDeleteGroup(t *testing.T) {
 func TestListGroups(t *testing.T) {
 
 	c, w, assert := setupHandlerTest(t)
-	fakeUser := models.User{ID: 1, Username: "test"}
-	c.Set("currentUser", fakeUser)
+	//fakeUser := models.User{ID: 1, Username: "test"}
+	handlers.SetUserID(c, testUserID)
 	c.AddParam("id", "1")
 	mock := newMockDB()
 	desc := "test desc"
@@ -262,8 +261,7 @@ func TestListGroups(t *testing.T) {
 func TestEditGroup(t *testing.T) {
 	t.Run("valid input", func(t *testing.T) {
 		c, w, assert := setupHandlerTest(t)
-		fakeUser := models.User{ID: 1, Username: "test"}
-		c.Set("currentUser", fakeUser)
+		handlers.SetUserID(c, testUserID)
 		c.AddParam("id", "0")
 		mock := newMockDB()
 		mock.IsAuthorized = true

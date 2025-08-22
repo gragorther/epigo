@@ -44,16 +44,13 @@ func TestCheckAuth(t *testing.T) {
 		c.Request = httptest.NewRequest(http.MethodGet, "/", nil)
 		//c.Header("Authorization", fmt.Sprint("Bearer ", token))
 		c.Request.Header.Set("Authorization", fmt.Sprint("Bearer ", token))
-		mock := new(Mock)
-		mock.Users = []models.User{
-			{ID: userID, Username: "bob", Email: "bob@bob.bob"},
-		}
 
-		middlewares.CheckAuth(mock, JWT_SECRET)(c)
+		middlewares.CheckAuth(JWT_SECRET)(c)
 
 		assert.Equal(http.StatusOK, w.Code, "http status code should indicate success")
-		gotUser, err := handlers.GetUserFromContext(c)
+		gotID, err := handlers.GetUserIDFromContext(c)
 		require.NoError(err, "getting user from context shouldn't fail")
-		assert.Equal(mock.Users[0], gotUser, "user in database should match the user the middleware put inside currentUser in the context")
+		assert.Equal(uint(userID), gotID, "userID should match the userID check auth stored into the context")
 	})
+
 }

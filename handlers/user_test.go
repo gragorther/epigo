@@ -53,6 +53,16 @@ func (m *mockDB) GetUserByUsername(ctx context.Context, username string) (models
 	}
 	return models.User{}, nil
 }
+
+func (m *mockDB) GetUserByID(ctx context.Context, userID uint) (models.User, error) {
+	for _, user := range m.Users {
+		if user.ID == userID {
+			return user, nil
+		}
+	}
+	return models.User{}, nil
+}
+
 func (m *mockDB) EditUser(ctx context.Context, newUser models.User) error {
 	for i, user := range m.Users {
 		if user.ID == newUser.ID {
@@ -63,7 +73,6 @@ func (m *mockDB) EditUser(ctx context.Context, newUser models.User) error {
 	return nil
 }
 
-//nolint:errcheck
 func (m *mockDB) CreateUser(newUser *models.User) error {
 	m.Users = append(m.Users, *newUser)
 	return nil
@@ -269,16 +278,16 @@ func TestGetUserData(t *testing.T) {
 		Username:  "myusername",
 		LastLogin: &lastLoginTime,
 		Email:     "eeemail@gregtech.eu",
+		ID:        testUserID,
 	}
-	handlers.SetUser(c, user)
-	handlers.GetUserData()(c)
+	handlers.SetUserID(c, testUserID)
+	mock := newMockDB()
+	mock.Users = []models.User{
+		user,
+	}
+	handlers.GetUserData(mock)(c)
 
-	var output struct {
-		Username  string    `json:"username"`
-		LastLogin time.Time `json:"lastLogin"`
-		Name      string    `json:"name"`
-		Email     string    `json:"email"`
-	}
+	var output handlers.GetUserDataOutput
 	assertHTTPStatus(t, c, http.StatusOK, w, "http status should indicate success")
 
 	if err := sonic.Unmarshal(w.Body.Bytes(), &output); err != nil {
@@ -293,10 +302,7 @@ func TestCreateProfile(t *testing.T) {
 	t.Run("valid input", func(t *testing.T) {
 		c, w, assert := setupHandlerTest(t)
 		mock := newMockDB()
-		handlers.SetUser(c, models.User{
-			ID:       1,
-			Username: "username",
-		})
+		handlers.SetUserID(c, testUserID)
 		profileInput := handlers.ProfileInput{
 			Name: "newname",
 		}
@@ -332,10 +338,8 @@ func TestUpdateProfile(t *testing.T) {
 		}); err != nil {
 			t.Fatalf("failed to create profile: %v", err)
 		}
-		currentUser := models.User{
-			Username: "bob", ID: 1,
-		}
-		handlers.SetUser(c, currentUser)
+
+		handlers.SetUserID(c, testUserID)
 
 		setGinHttpBody(c, input)
 		handlers.UpdateProfile(mock)(c)

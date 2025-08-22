@@ -6,13 +6,11 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
-	"github.com/gragorther/epigo/models"
+	"github.com/gragorther/epigo/middlewares"
 )
 
 var ErrNoSuchParam error = errors.New("no such param in the context")
 var ErrInvalidType = errors.New("invalid type")
-
-const CurrentUser string = "currentUser"
 
 func GetFromContext[T any](key string, c *gin.Context) (T, error) {
 	// empty var
@@ -29,8 +27,8 @@ func GetFromContext[T any](key string, c *gin.Context) (T, error) {
 	return typedValue, nil
 }
 
-func GetUserFromContext(c *gin.Context) (models.User, error) {
-	currentUser, err := GetFromContext[models.User](CurrentUser, c)
+func GetUserIDFromContext(c *gin.Context) (uint, error) {
+	currentUser, err := GetFromContext[uint](middlewares.CurrentUser, c)
 	return currentUser, err
 }
 
@@ -46,6 +44,6 @@ func GetIDFromContext(c *gin.Context) (uint, error) {
 
 }
 
-func SetUser(c *gin.Context, value models.User) {
-	c.Set(CurrentUser, value)
+func SetUserID(c *gin.Context, id uint) {
+	c.Set(middlewares.CurrentUser, id)
 }
