@@ -2,13 +2,11 @@ package middlewares_test
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
 	"github.com/gin-gonic/gin"
-	"github.com/gragorther/epigo/handlers"
 	"github.com/gragorther/epigo/middlewares"
 	"github.com/gragorther/epigo/models"
 	"github.com/gragorther/epigo/tokens"
@@ -31,26 +29,60 @@ func (m *Mock) GetUserByID(ctx context.Context, ID uint) (models.User, error) {
 	return models.User{}, nil
 }
 
+const testUserID = 1
+
 func TestCheckAuth(t *testing.T) {
-	t.Run("valid input", func(t *testing.T) {
-		const userID = 1
-		assert := assert.New(t)
+
+	type want struct {
+		Status int
+		User   uint
+	}
+	table := []struct {
+		Name   string
+		Header http.Header
+		Want   want
+	}{
+		{Name: "valid", Header: http.Header{}, Want: want{
+			User:   testUserID,
+			Status: http.StatusOK,
+		}},
+		{Name: "invalid token", Header: http.Header{}, Want: want{
+			Status: http.StatusUnauthorized,
+		}},
+	}
+
+	{
 		require := require.New(t)
-		gin.SetMode(gin.TestMode)
-		w := httptest.NewRecorder()
-		c, _ := gin.CreateTestContext(w)
-		token, err := tokens.CreateUserAuth(JWT_SECRET, userID)
+		token, err := tokens.CreateUserAuth(JWT_SECRET, testUserID)
 		require.NoError(err, "creating user auth token shouldn't fail")
-		c.Request = httptest.NewRequest(http.MethodGet, "/", nil)
-		//c.Header("Authorization", fmt.Sprint("Bearer ", token))
-		c.Request.Header.Set("Authorization", fmt.Sprint("Bearer ", token))
+		middlewares.SetHttpAuthHeaderToken(&table[0].Header, token)
+	}
+	{
+		table[1].Header.Set("Authorization", "Bearer asekfjasiefjhasjeflčaisjefčalsdjf")
+	}
 
-		middlewares.CheckAuth(JWT_SECRET)(c)
+	for _, test := range table {
+		t.Run(test.Name, func(t *testing.T) {
+			assert := assert.New(t)
+			gin.SetMode(gin.TestMode)
 
-		assert.Equal(http.StatusOK, w.Code, "http status code should indicate success")
-		gotID, err := handlers.GetUserIDFromContext(c)
-		require.NoError(err, "getting user from context shouldn't fail")
-		assert.Equal(uint(userID), gotID, "userID should match the userID check auth stored into the context")
-	})
+			r := gin.New()
+			r.Use(middlewares.CheckAuth(JWT_SECRET))
+
+			r.GET("/", func(c *gin.Context) {
+
+				c.Status(http.StatusOK)
+			})
+
+			req := httptest.NewRequest(http.MethodGet, "/", nil)
+			req.Header = test.Header
+			w := httptest.NewRecorder()
+
+			r.ServeHTTP(w, req)
+
+			assert.Equal(test.Want.Status, w.Code)
+
+		})
+	}
 
 }
