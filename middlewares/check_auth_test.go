@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/gin-gonic/gin"
+	"github.com/gragorther/epigo/handlers"
 	"github.com/gragorther/epigo/middlewares"
 	"github.com/gragorther/epigo/models"
 	"github.com/gragorther/epigo/tokens"
@@ -42,11 +43,11 @@ func TestCheckAuth(t *testing.T) {
 		Header http.Header
 		Want   want
 	}{
-		{Name: "valid", Header: http.Header{}, Want: want{
+		{Name: "valid", Want: want{
 			User:   testUserID,
 			Status: http.StatusOK,
 		}},
-		{Name: "invalid token", Header: http.Header{}, Want: want{
+		{Name: "invalid token", Want: want{
 			Status: http.StatusUnauthorized,
 		}},
 	}
@@ -55,9 +56,11 @@ func TestCheckAuth(t *testing.T) {
 		require := require.New(t)
 		token, err := tokens.CreateUserAuth(JWT_SECRET, testUserID)
 		require.NoError(err, "creating user auth token shouldn't fail")
+
 		middlewares.SetHttpAuthHeaderToken(&table[0].Header, token)
 	}
 	{
+		table[1].Header = make(http.Header)
 		table[1].Header.Set("Authorization", "Bearer asekfjasiefjhasjeflčaisjefčalsdjf")
 	}
 
@@ -69,7 +72,20 @@ func TestCheckAuth(t *testing.T) {
 			r := gin.New()
 			r.Use(middlewares.CheckAuth(JWT_SECRET))
 
+			userIDs := make(chan uint, 1)
+
 			r.GET("/", func(c *gin.Context) {
+				userID, err := handlers.GetUserIDFromContext(c)
+				if err != nil {
+					userIDs <- 0
+					c.AbortWithError(http.StatusInternalServerError, err)
+					return
+				}
+				/*
+				 sends the user ID we got from the context into the channel,
+				 because otherwise the test can't access the userID and check if it's the correct one
+				*/
+				userIDs <- userID
 
 				c.Status(http.StatusOK)
 			})
@@ -80,7 +96,11 @@ func TestCheckAuth(t *testing.T) {
 
 			r.ServeHTTP(w, req)
 
-			assert.Equal(test.Want.Status, w.Code)
+			if test.Want.User != 0 {
+				userID := <-userIDs
+				assert.Equal(test.Want.User, userID, "user IDs should match")
+			}
+			assert.Equal(test.Want.Status, w.Code, "status codes should match")
 
 		})
 	}
