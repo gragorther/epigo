@@ -3,6 +3,7 @@ package gormdb_test
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"log"
 	"testing"
 
@@ -279,7 +280,7 @@ func (s *DBTestSuite) TestEditUser() {
 	s.Equal(user.Username, got.Username)
 }
 
-func (s *DBTestSuite) AllAssociations() {
+func (s *DBTestSuite) TestDeleteUserAndAllAssociations() {
 	userGroups := []models.Group{
 		{Name: "greoup"},
 		{Name: "group2"},
@@ -300,4 +301,18 @@ func (s *DBTestSuite) AllAssociations() {
 	groupExists, err := s.repo.CheckIfGroupExistsByID(s.ctx, user.Groups[0].ID)
 	s.Require().NoError(err, "checking if group exists shouldn't fail")
 	s.False(groupExists, "group shouldn't exist because this function deletes *all* associations")
+}
+
+func (s *DBTestSuite) TestSetUserEmailVerification() {
+	userID, err := createTestUser(s.ctx, s.db)
+	s.Require().NoError(err, "creating test user shouldn't fail")
+	for _, verified := range []bool{true, false} {
+		s.Run(fmt.Sprint("verified: ", verified), func() {
+
+			s.Require().NoError(s.repo.SetUserEmailVerification(s.ctx, userID, verified), "setting user email verification shouldn't fail")
+			got, err := s.repo.CheckUserEmailVerificationByID(s.ctx, userID)
+			s.Require().NoError(err)
+			s.Equal(verified, got, "user verification should match the data put in SetUserEmailVerification")
+		})
+	}
 }

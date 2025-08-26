@@ -29,15 +29,12 @@ func CheckAuth(jwtSecret string) gin.HandlerFunc {
 		}
 
 		tokenString := authToken[1]
-		valid, userID, err := tokens.ParseUserAuth(jwtSecret, tokenString)
+		userID, err := tokens.ParseUserAuth(jwtSecret, tokenString)
 		if err != nil {
 			c.AbortWithError(http.StatusUnauthorized, fmt.Errorf("failed to parse user auth token: %w", err))
 			return
 		}
-		if !valid {
-			c.AbortWithStatus(http.StatusUnprocessableEntity)
-			return
-		}
+
 		if userID == 0 {
 			c.AbortWithStatus(http.StatusUnauthorized)
 			return

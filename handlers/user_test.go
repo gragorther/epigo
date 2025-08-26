@@ -14,7 +14,9 @@ import (
 	"github.com/gragorther/epigo/handlers"
 	argon2id "github.com/gragorther/epigo/hash"
 	"github.com/gragorther/epigo/models"
+	"github.com/gragorther/epigo/tokens"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func assertHTTPStatus(t *testing.T, c *gin.Context, expected int, w *httptest.ResponseRecorder, message string) {
@@ -27,6 +29,14 @@ func assertHTTPStatus(t *testing.T, c *gin.Context, expected int, w *httptest.Re
 	assert.Equal(expected, w.Code, message)
 }
 
+func (m *mockDB) SetUserEmailVerification(ctx context.Context, userID uint, verified bool) error {
+	for i := range m.Users {
+		if m.Users[i].ID == userID {
+			m.Users[i].IsVerified = verified
+		}
+	}
+	return nil
+}
 func (m *mockDB) CheckIfUserExistsByUsernameAndEmail(username string, email string) (bool, error) {
 
 	for _, user := range m.Users {
@@ -347,4 +357,25 @@ func TestUpdateProfile(t *testing.T) {
 		assertHTTPStatus(t, c, http.StatusNoContent, w, "http status code should indicate that the profile was updated")
 		assert.Equal(profileInput.Name, *mock.Profiles[0].Name)
 	})
+}
+
+const JWT_SECRET = "testsecret"
+
+func TestVerifyEmail(t *testing.T) {
+	const userID = 1
+	gin.SetMode(gin.TestMode)
+	require := require.New(t)
+	assert := assert.New(t)
+	r := gin.New()
+	mock := newMockDB()
+	mock.Users = append(mock.Users, models.User{Username: "testusername", IsVerified: false, ID: userID})
+	r.GET("/", handlers.VerifyEmail(mock, JWT_SECRET))
+	token, err := tokens.CreateEmailVerification(JWT_SECRET, userID)
+	require.NoError(err, "creating test email verification JWT shouldn't fail")
+
+	request := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/?token=%s", token), nil)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, request)
+	assert.Equal(http.StatusOK, w.Code)
+	assert.True(mock.Users[0].IsVerified, "user should be verified")
 }

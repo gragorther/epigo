@@ -14,6 +14,8 @@ type Config struct {
 	JWTSecret     string     `env:"JWT_SECRET"`
 	RedisAddress  string     `env:"REDIS_ADDRESS"`
 	DatabaseURL   string     `env:"DATABASE_URL"`
+	Email         EmailConfig
+	BASE_URL      string `env:"BASE_URL" env-description:"the base url of the app, e.g. https://afterwill.life"`
 }
 
 func Get() (Config, error) {
@@ -21,4 +23,8 @@ func Get() (Config, error) {
 	err := cleanenv.ReadEnv(&conf)
 
 	return conf, err
+}
+
+type EmailConfig struct {
+	From string `env:"EMAIL_FROM"`
 }

@@ -145,3 +145,20 @@ func (g *GormDB) UpdateProfile(ctx context.Context, profile models.Profile) erro
 	}
 	return nil
 }
+
+// marks the user's email address as verified or not verified
+func (g *GormDB) SetUserEmailVerification(ctx context.Context, userID uint, verified bool) error {
+	rowsAffected, err := gorm.G[models.User](g.db).Where("id = ?", userID).Update(ctx, "is_verified", verified)
+	if err != nil {
+		return err
+	}
+	if rowsAffected < 1 {
+		return ErrNoRowsAffected
+	}
+	return nil
+}
+
+func (g *GormDB) CheckUserEmailVerificationByID(ctx context.Context, userID uint) (verified bool, err error) {
+	user, err := gorm.G[models.User](g.db).Where("id = ?", userID).Select("is_verified").First(ctx)
+	return user.IsVerified, err
+}

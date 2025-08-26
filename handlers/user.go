@@ -61,7 +61,7 @@ func RegisterUser(db interface {
 
 		user := models.User{
 			Username:     authInput.Username,
-			PasswordHash: string(passwordHash),
+			PasswordHash: passwordHash,
 			Email:        authInput.Email,
 			Profile:      &models.Profile{Name: authInput.Name},
 		}
@@ -245,5 +245,29 @@ func UpdateProfile(db interface {
 			c.AbortWithError(http.StatusInternalServerError, fmt.Errorf("failed to update profile: %w", err))
 		}
 		c.Status(http.StatusNoContent)
+	}
+}
+
+// handles the link the user gets on their email after attempting to verify it
+func VerifyEmail(db interface {
+	SetUserEmailVerification(ctx context.Context, userID uint, verified bool) error
+}, jwtSecret string) gin.HandlerFunc {
+	return func(c *gin.Context) {
+
+		token := c.Query("token")
+		userID, err := tokens.ParseEmailVerification(jwtSecret, token)
+		if err != nil {
+			c.AbortWithError(http.StatusUnprocessableEntity, err)
+			return
+		}
+		if userID == 0 {
+			c.AbortWithStatus(http.StatusUnprocessableEntity)
+			return
+		}
+		if err := db.SetUserEmailVerification(c, userID, true); err != nil {
+			c.AbortWithError(http.StatusInternalServerError, err)
+		}
+		c.Status(http.StatusOK)
+
 	}
 }

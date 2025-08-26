@@ -23,7 +23,7 @@ type PeriodicTaskConfigContainer struct {
 }
 type Config struct {
 	Cronspec string `json:"cronspec"`
-	TaskType string `json:"task_type"`
+	TaskType string `json:"taskType"`
 }
 
 func Run(db intervalGetter, redisAddress string) {
