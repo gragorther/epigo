@@ -18,7 +18,6 @@ type User struct {
 	Groups       []Group        `json:"groups"`
 	Cron         *string        `json:"cron"`
 	IsAdmin      bool           `json:"isAdmin"`
-	IsVerified   bool           `json:"isVerified"`
 	Profile      *Profile       `json:"profile"`
 	LastMessages []LastMessage
 }

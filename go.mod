@@ -8,6 +8,7 @@ require (
 	github.com/golang-jwt/jwt/v5 v5.3.0
 	github.com/hibiken/asynq v0.25.1
 	github.com/ilyakaznacheev/cleanenv v1.5.0
+	github.com/mocktools/go-smtp-mock/v2 v2.5.1
 	github.com/samber/lo v1.51.0
 	github.com/stretchr/testify v1.10.0
 	github.com/testcontainers/testcontainers-go/modules/postgres v0.38.0

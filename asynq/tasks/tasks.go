@@ -2,7 +2,6 @@ package tasks
 
 import (
 	"context"
-	"log"
 
 	"github.com/bytedance/sonic"
 	"github.com/hibiken/asynq"
@@ -29,9 +28,8 @@ func NewRecurringEmailTask(id uint) (*asynq.Task, error) {
 
 func HandleRecurringEmailTask(ctx context.Context, t *asynq.Task) error {
 	var p emailTaskPayload
-	if err := sonic.UnmarshalString(string(t.Payload()), &p); err != nil {
+	if err := sonic.Unmarshal(t.Payload(), &p); err != nil {
 		return err
 	}
-	log.Printf("Sent Email to User %d", p.UserID)
 	return nil
 }

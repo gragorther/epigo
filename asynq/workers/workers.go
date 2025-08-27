@@ -4,13 +4,14 @@ import (
 	"log"
 
 	"github.com/gragorther/epigo/asynq/tasks"
+	"github.com/gragorther/epigo/email"
 	"github.com/hibiken/asynq"
 )
 
 // starts the workers
-func Run(redisAddr string) {
+func Run(redisClientOpt asynq.RedisClientOpt, jwtSecret string, emailService *email.EmailService, registrationRoute string) {
 	srv := asynq.NewServer(
-		asynq.RedisClientOpt{Addr: redisAddr},
+		redisClientOpt,
 		asynq.Config{
 			// Specify how many concurrent workers to use
 			Concurrency: 5,
@@ -27,6 +28,7 @@ func Run(redisAddr string) {
 	// mux maps a type to a handler
 	mux := asynq.NewServeMux()
 	mux.HandleFunc(tasks.TypeRecurringEmail, tasks.HandleRecurringEmailTask)
+	mux.HandleFunc(tasks.TypeVerificationEmail, tasks.HandleVerificationEmailTask(jwtSecret, emailService, registrationRoute))
 	if err := srv.Run(mux); err != nil {
 		log.Fatalf("could not run asynq workers: %v", err.Error())
 	}

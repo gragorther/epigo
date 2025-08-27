@@ -7,16 +7,16 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/gragorther/epigo/email"
+	"github.com/gragorther/epigo/asynq/tasks"
 	argon2id "github.com/gragorther/epigo/hash"
 	"github.com/gragorther/epigo/models"
 	"github.com/gragorther/epigo/tokens"
+	"github.com/hibiken/asynq"
 )
 
 type RegistrationInput struct {
 	Username string  `json:"username" binding:"required"`
 	Name     *string `json:"name"`
-	Email    string  `json:"email"    binding:"required,email"`
 	Password string  `json:"password" binding:"required"`
 }
 type LoginInput struct {
@@ -24,35 +24,42 @@ type LoginInput struct {
 	Password string `json:"password" binding:"required"`
 }
 
+// emailVerificationRoute is the route with a token query parameter that is used for verifying the user email
+//
+// this also takes a `token` query parameter, which is the email JWT token
 func RegisterUser(db interface {
 	CheckIfUserExistsByUsernameAndEmail(username string, email string) (bool, error)
 	CreateUser(*models.User) error
-}, createHash func(string, *argon2id.Params) (string, error)) gin.HandlerFunc {
+}, createHash func(string, *argon2id.Params) (string, error), jwtSecret string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 
 		var authInput RegistrationInput
+		token := c.Query("token")
+
+		if token == "" {
+			c.AbortWithStatus(http.StatusUnauthorized)
+			return
+		}
+		userEmail, err := tokens.ParseEmailVerification(jwtSecret, token)
+		if err != nil {
+			c.AbortWithError(http.StatusUnauthorized, fmt.Errorf("failed to parse user email verification token, which was acquired from the `token` query param: %w", err))
+		}
 
 		if err := c.ShouldBindJSON(&authInput); err != nil {
 			c.AbortWithError(http.StatusUnprocessableEntity, fmt.Errorf("failed to bind register user JSON: %w", err))
 			return
 		}
-		validEmail := email.Validate(authInput.Email)
-		if !validEmail {
-			c.AbortWithStatus(http.StatusUnprocessableEntity)
-			return
-		}
 
-		userExists, err := db.CheckIfUserExistsByUsernameAndEmail(authInput.Username, authInput.Email)
+		userExists, err := db.CheckIfUserExistsByUsernameAndEmail(authInput.Username, userEmail)
 
 		if err != nil {
-			c.AbortWithError(http.StatusInternalServerError, fmt.Errorf("failed to register user: %w", err))
+			c.AbortWithError(http.StatusInternalServerError, fmt.Errorf("failed to check if user exists by username and email: %w", err))
 			return
 		}
 		if userExists {
 			c.AbortWithStatus(http.StatusConflict)
 			return
 		}
-
 		passwordHash, err := createHash(authInput.Password, argon2id.DefaultParams)
 		if err != nil {
 			c.AbortWithError(http.StatusInternalServerError, fmt.Errorf("failed to register user: %w", err))
@@ -62,7 +69,7 @@ func RegisterUser(db interface {
 		user := models.User{
 			Username:     authInput.Username,
 			PasswordHash: passwordHash,
-			Email:        authInput.Email,
+			Email:        userEmail,
 			Profile:      &models.Profile{Name: authInput.Name},
 		}
 
@@ -70,6 +77,18 @@ func RegisterUser(db interface {
 			c.AbortWithError(http.StatusInternalServerError, fmt.Errorf("failed to create user: %w", err))
 			return
 		}
+		/*
+			token, err := tokens.CreateEmailVerification(jwtSecret, user.ID)
+			if err != nil {
+				c.AbortWithError(http.StatusInternalServerError, err)
+				return
+			}
+
+			if err := emailService.SendVerificationEmail(c, email.User{Name: authInput.Username, Email: authInput.Email}, fmt.Sprintf("%v/?token=%v", emailVerificationRoute, token)); err != nil {
+				c.AbortWithError(http.StatusInternalServerError, fmt.Errorf("failed to send verification email: %w", err))
+				return
+			}
+		*/
 		c.Status(http.StatusCreated)
 	}
 }
@@ -248,26 +267,33 @@ func UpdateProfile(db interface {
 	}
 }
 
-// handles the link the user gets on their email after attempting to verify it
-func VerifyEmail(db interface {
-	SetUserEmailVerification(ctx context.Context, userID uint, verified bool) error
-}, jwtSecret string) gin.HandlerFunc {
-	return func(c *gin.Context) {
+type EmailVerificationInput struct {
+	Email string `json:"email" binding:"required,email"`
+}
 
-		token := c.Query("token")
-		userID, err := tokens.ParseEmailVerification(jwtSecret, token)
-		if err != nil {
+// here, the user enters their email, gets sent a registration link to their email, and continues registration from there
+func VerifyEmail(asynqClient *asynq.Client, db interface {
+	CheckIfUserExistsByEmail(ctx context.Context, email string) (bool, error)
+}) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		var input EmailVerificationInput
+		if err := c.ShouldBindJSON(&input); err != nil {
 			c.AbortWithError(http.StatusUnprocessableEntity, err)
 			return
 		}
-		if userID == 0 {
-			c.AbortWithStatus(http.StatusUnprocessableEntity)
+		exists, err := db.CheckIfUserExistsByEmail(c, input.Email)
+		if exists {
+			c.AbortWithStatus(http.StatusConflict)
 			return
 		}
-		if err := db.SetUserEmailVerification(c, userID, true); err != nil {
+		task, err := tasks.NewVerificationEmailTask(input.Email)
+		if err != nil {
 			c.AbortWithError(http.StatusInternalServerError, err)
 		}
-		c.Status(http.StatusOK)
+		_, err = asynqClient.EnqueueContext(c, task)
+		if err != nil {
+			c.AbortWithError(http.StatusInternalServerError, err)
+		}
 
 	}
 }

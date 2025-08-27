@@ -8,10 +8,12 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
+var ErrInvalidID error = errors.New("invalid user ID")
+
 func getID(claims jwt.MapClaims) (uint, error) {
 	id, ok := claims["id"].(float64)
 	if !ok {
-		return 0, errors.New("invalid id")
+		return 0, ErrInvalidID
 	}
 	return uint(id), nil
 }

@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -15,8 +16,11 @@ import (
 	"github.com/gragorther/epigo/config"
 	"github.com/gragorther/epigo/database/gormdb"
 	"github.com/gragorther/epigo/database/initializers"
+	"github.com/gragorther/epigo/email"
 	"github.com/gragorther/epigo/logger"
 	"github.com/gragorther/epigo/router"
+	"github.com/hibiken/asynq"
+	"github.com/wneessen/go-mail"
 )
 
 func main() {
@@ -46,11 +50,20 @@ func main() {
 	}
 
 	dbHandler := gormdb.NewGormDB(dbconn)
+	emailClient, err := mail.NewClient(config.Email.Host,
+		mail.WithPort(config.Email.Port),
+		mail.WithPassword(config.Email.Password),
+		mail.WithUsername(config.Email.Username), mail.WithTLSPortPolicy(mail.TLSOpportunistic), mail.WithSMTPAuth(mail.SMTPAuthAutoDiscover))
+	if err != nil {
+		log.Fatalf("failed to run email client: %v", err)
+	}
+	emailService := email.NewEmailService(emailClient, config.Email.From)
+	redisClientOpt := asynq.RedisClientOpt{Addr: config.Redis.Address, Username: config.Redis.Address, Password: config.Redis.Password, DB: config.Redis.DB}
+	go workers.Run(redisClientOpt, config.JWTSecret, emailService, fmt.Sprintf("%v/user/register", config.BaseURL))
+	go scheduler.Run(dbHandler, redisClientOpt)
+	asynqClient := asynq.NewClient(redisClientOpt)
 
-	go workers.Run(config.RedisAddress)
-	go scheduler.Run(dbHandler, config.RedisAddress)
-
-	r := router.Setup(dbHandler, config.JWTSecret)
+	r := router.Setup(dbHandler, config.JWTSecret, asynqClient)
 
 	srv := &http.Server{
 		Addr:    ":8080",

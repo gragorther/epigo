@@ -14,9 +14,7 @@ import (
 	"github.com/gragorther/epigo/handlers"
 	argon2id "github.com/gragorther/epigo/hash"
 	"github.com/gragorther/epigo/models"
-	"github.com/gragorther/epigo/tokens"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func assertHTTPStatus(t *testing.T, c *gin.Context, expected int, w *httptest.ResponseRecorder, message string) {
@@ -29,14 +27,6 @@ func assertHTTPStatus(t *testing.T, c *gin.Context, expected int, w *httptest.Re
 	assert.Equal(expected, w.Code, message)
 }
 
-func (m *mockDB) SetUserEmailVerification(ctx context.Context, userID uint, verified bool) error {
-	for i := range m.Users {
-		if m.Users[i].ID == userID {
-			m.Users[i].IsVerified = verified
-		}
-	}
-	return nil
-}
 func (m *mockDB) CheckIfUserExistsByUsernameAndEmail(username string, email string) (bool, error) {
 
 	for _, user := range m.Users {
@@ -88,7 +78,6 @@ func (m *mockDB) CreateUser(newUser *models.User) error {
 	return nil
 }
 
-//nolint:errcheck
 func (m *mockDB) UpdateProfile(_ context.Context, newProfile models.Profile) error {
 	for i, profile := range m.Profiles {
 		if profile.UserID == newProfile.UserID {
@@ -99,7 +88,6 @@ func (m *mockDB) UpdateProfile(_ context.Context, newProfile models.Profile) err
 	return nil
 }
 
-//nolint:errcheck
 func (m *mockDB) CreateProfile(ctx context.Context, newProfile *models.Profile) error {
 	m.Profiles = append(m.Profiles, *newProfile)
 	return nil
@@ -111,60 +99,6 @@ const hashSuffix string = "this is hashed"
 // a mock of argon2id.CreateHash
 func createHash(password string, params *argon2id.Params) (string, error) {
 	return password + hashSuffix, nil
-}
-
-func TestRegisterUser(t *testing.T) {
-	t.Run("valid input", func(t *testing.T) {
-		c, w, assert := setupHandlerTest(t)
-		mock := newMockDB()
-		username := "mark"
-		name := "Down"
-		email := "test@google.com"
-		password := "5UP3RS3CR37"
-		input, err := sonic.Marshal(handlers.RegistrationInput{
-			Username: username,
-			Name:     &name,
-			Email:    email,
-			Password: password,
-		})
-		if err != nil {
-			t.Fatalf("sonic failed to bind json, %v", err)
-		}
-		setGinHttpBody(c, input)
-
-		handlers.RegisterUser(mock, createHash)(c)
-
-		assertHTTPStatus(t, c, http.StatusCreated, w, "http status code should indicate that the user was created")
-		field := mock.Users[0]
-
-		hash, _ := createHash(password, argon2id.DefaultParams)
-		assert.Equal(hash, field.PasswordHash)
-		assert.Equal(username, field.Username)
-		assert.Equal(name, *field.Profile.Name)
-		assert.Equal(email, field.Email)
-	})
-	t.Run("user already exists", func(t *testing.T) {
-		c, w, assert := setupHandlerTest(t)
-		mock := newMockDB()
-		alreadyExistingUserName := "asdfasdf"
-		alreadyExistinguser := models.User{
-			ID: 1, Profile: &models.Profile{Name: &alreadyExistingUserName}, Username: "testuseralreadyexists", Email: "gregor@gregtech.eu",
-		}
-		mock.Users = append(mock.Users, alreadyExistinguser)
-
-		input, err := sonic.Marshal(handlers.RegistrationInput{
-			Username: alreadyExistinguser.Username, Email: alreadyExistinguser.Email, Password: "vverysecurepassword", Name: alreadyExistinguser.Profile.Name,
-		})
-		if err != nil {
-			t.Fatalf("sonic failed to bind json: %v", err)
-		}
-		setGinHttpBody(c, input)
-
-		handlers.RegisterUser(mock, createHash)(c)
-
-		assertHTTPStatus(t, c, http.StatusConflict, w, "http status code should indicate that a user already exists")
-		assert.Equal([]models.User{alreadyExistinguser}, mock.Users, "there should be just one user created")
-	})
 }
 
 func comparePasswordAndHash(password string, hash string) (bool, error) {
@@ -360,22 +294,3 @@ func TestUpdateProfile(t *testing.T) {
 }
 
 const JWT_SECRET = "testsecret"
-
-func TestVerifyEmail(t *testing.T) {
-	const userID = 1
-	gin.SetMode(gin.TestMode)
-	require := require.New(t)
-	assert := assert.New(t)
-	r := gin.New()
-	mock := newMockDB()
-	mock.Users = append(mock.Users, models.User{Username: "testusername", IsVerified: false, ID: userID})
-	r.GET("/", handlers.VerifyEmail(mock, JWT_SECRET))
-	token, err := tokens.CreateEmailVerification(JWT_SECRET, userID)
-	require.NoError(err, "creating test email verification JWT shouldn't fail")
-
-	request := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/?token=%s", token), nil)
-	w := httptest.NewRecorder()
-	r.ServeHTTP(w, request)
-	assert.Equal(http.StatusOK, w.Code)
-	assert.True(mock.Users[0].IsVerified, "user should be verified")
-}

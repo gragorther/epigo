@@ -6,9 +6,10 @@ import (
 	"github.com/gragorther/epigo/handlers"
 	argon2id "github.com/gragorther/epigo/hash"
 	"github.com/gragorther/epigo/middlewares"
+	"github.com/hibiken/asynq"
 )
 
-func Setup(db *gormdb.GormDB, jwtSecret string) *gin.Engine {
+func Setup(db *gormdb.GormDB, jwtSecret string, asynqClient *asynq.Client) *gin.Engine {
 	r := gin.Default()
 	r.Use(middlewares.ErrorHandler())
 
@@ -17,10 +18,11 @@ func Setup(db *gormdb.GormDB, jwtSecret string) *gin.Engine {
 	// user stuff
 	{
 		user := r.Group("/user")
-		user.POST("/register", handlers.RegisterUser(db, argon2id.CreateHash))
+		user.POST("/register", handlers.RegisterUser(db, argon2id.CreateHash, jwtSecret))
+		user.POST("/verify-email", handlers.VerifyEmail(asynqClient, db))
 		user.POST("/login", handlers.LoginUser(db, argon2id.ComparePasswordAndHash, jwtSecret))
 		user.GET("/profile", checkAuth, handlers.GetUserData(db))
-		user.PUT("/setEmailInterval", checkAuth, handlers.SetEmailInterval(db))
+		user.PUT("/set-email-interval", checkAuth, handlers.SetEmailInterval(db))
 		{
 			profile := user.Group("/profile")
 			profile.POST("/create", checkAuth, handlers.CreateProfile(db))
@@ -33,10 +35,10 @@ func Setup(db *gormdb.GormDB, jwtSecret string) *gin.Engine {
 		user.PATCH("/groups/edit/:id", checkAuth, handlers.EditGroup(db))
 
 		// lastMessages
-		user.POST("/lastMessages/add", checkAuth, handlers.AddLastMessage(db))
-		user.GET("/lastMessages", checkAuth, handlers.ListLastMessages(db))
-		user.PATCH("/lastMessages/edit/:id", checkAuth, handlers.EditLastMessage(db))
-		user.DELETE("/lastMessages/delete/:id", checkAuth, handlers.DeleteLastMessage(db))
+		user.POST("/last-messages/add", checkAuth, handlers.AddLastMessage(db))
+		user.GET("/last-messages", checkAuth, handlers.ListLastMessages(db))
+		user.PATCH("/last-messages/edit/:id", checkAuth, handlers.EditLastMessage(db))
+		user.DELETE("/last-messages/delete/:id", checkAuth, handlers.DeleteLastMessage(db))
 	}
 	return r
 }

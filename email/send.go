@@ -13,11 +13,11 @@ import (
 var verificationTemplate string
 
 type User struct {
-	Name  string
 	Email string
 }
 
-func (e *EmailService) SendVerificationEmail(ctx context.Context, user User, verificationLink string) error {
+// sends the user a verification email with a link from which they can continue registration
+func (e *EmailService) SendVerificationEmail(ctx context.Context, user User, registrationLink string) error {
 	message := mail.NewMsg()
 	if err := message.From(e.from); err != nil {
 		return fmt.Errorf("failed to set from address: %w", err)
@@ -38,10 +38,10 @@ func (e *EmailService) SendVerificationEmail(ctx context.Context, user User, ver
 		return fmt.Errorf("failed to parse verification email text template: %w", err)
 	}
 	type templateData struct {
-		Name             string
-		VerificationLink string
+		Email            string
+		RegistrationLink string
 	}
-	if err := message.SetBodyTextTemplate(tpl, templateData{Name: user.Name, VerificationLink: verificationLink}); err != nil {
+	if err := message.SetBodyTextTemplate(tpl, templateData{Email: user.Email, RegistrationLink: registrationLink}); err != nil {
 		return fmt.Errorf("failed to set body text template: %w", err)
 	}
 	return e.client.DialAndSendWithContext(ctx, message)

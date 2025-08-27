@@ -26,12 +26,12 @@ type Config struct {
 	TaskType string `json:"taskType"`
 }
 
-func Run(db intervalGetter, redisAddress string) {
+func Run(db intervalGetter, redisClientOpt asynq.RedisClientOpt) {
 	provider := &ConfigProvider{DB: db}
 
 	mgr, err := asynq.NewPeriodicTaskManager(
 		asynq.PeriodicTaskManagerOpts{
-			RedisConnOpt:               asynq.RedisClientOpt{Addr: redisAddress},
+			RedisConnOpt:               redisClientOpt,
 			PeriodicTaskConfigProvider: provider,    // this provider object is the interface to your config source
 			SyncInterval:               time.Second, // this field specifies how often sync should happen
 		})
