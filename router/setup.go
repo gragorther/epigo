@@ -2,6 +2,7 @@ package router
 
 import (
 	"github.com/gin-gonic/gin"
+	"github.com/gragorther/epigo/asynq/tasks"
 	"github.com/gragorther/epigo/database/gormdb"
 	"github.com/gragorther/epigo/handlers"
 	argon2id "github.com/gragorther/epigo/hash"
@@ -19,7 +20,7 @@ func Setup(db *gormdb.GormDB, jwtSecret string, asynqClient *asynq.Client) *gin.
 	{
 		user := r.Group("/user")
 		user.POST("/register", handlers.RegisterUser(db, argon2id.CreateHash, jwtSecret))
-		user.POST("/verify-email", handlers.VerifyEmail(asynqClient, db))
+		user.POST("/verify-email", handlers.VerifyEmail(tasks.EnqueueTask(asynqClient), db))
 		user.POST("/login", handlers.LoginUser(db, argon2id.ComparePasswordAndHash, jwtSecret))
 		user.GET("/profile", checkAuth, handlers.GetUserData(db))
 		user.PUT("/set-email-interval", checkAuth, handlers.SetEmailInterval(db))

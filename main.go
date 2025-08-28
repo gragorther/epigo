@@ -54,6 +54,11 @@ func main() {
 		mail.WithPort(config.Email.Port),
 		mail.WithPassword(config.Email.Password),
 		mail.WithUsername(config.Email.Username), mail.WithTLSPortPolicy(mail.TLSOpportunistic), mail.WithSMTPAuth(mail.SMTPAuthAutoDiscover))
+	defer func() {
+		if err := emailClient.Close(); err != nil {
+			log.Fatalf("failed to close email client: %v", err)
+		}
+	}()
 	if err != nil {
 		log.Fatalf("failed to run email client: %v", err)
 	}

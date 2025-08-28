@@ -12,6 +12,14 @@ const (
 	TypeRecurringEmail = "email:recurring"
 )
 
+type TaskEnqueuer func(ctx context.Context, task *asynq.Task, opts ...asynq.Option) (*asynq.TaskInfo, error)
+
+func EnqueueTask(client *asynq.Client) TaskEnqueuer {
+	return func(ctx context.Context, task *asynq.Task, opts ...asynq.Option) (*asynq.TaskInfo, error) {
+		return client.Enqueue(task, opts...)
+	}
+}
+
 // Task payload for any email related tasks.
 type emailTaskPayload struct {
 	// ID for the email recipient.

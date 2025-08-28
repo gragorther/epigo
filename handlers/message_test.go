@@ -2,13 +2,13 @@ package handlers_test
 
 import (
 	"bytes"
-	"context"
 	"io"
 	"net/http"
 	"testing"
 
 	"github.com/bytedance/sonic"
 	"github.com/gin-gonic/gin"
+	"github.com/gragorther/epigo/database/mock"
 	"github.com/gragorther/epigo/handlers"
 	"github.com/gragorther/epigo/models"
 )
@@ -17,41 +17,6 @@ func setGinHttpBody(c *gin.Context, buf []byte) {
 	c.Request = &http.Request{
 		Body: io.NopCloser(bytes.NewBuffer(buf)),
 	}
-}
-
-func (m *mockDB) CreateLastMessage(ctx context.Context, lastMessage *models.LastMessage) error {
-	m.LastMessages = append(m.LastMessages, *lastMessage)
-	return m.Err
-}
-func (m *mockDB) FindLastMessagesByUserID(userID uint) ([]models.LastMessage, error) {
-	var output []models.LastMessage
-
-	for _, message := range m.LastMessages {
-		if message.UserID == userID {
-			output = append(output, message)
-		}
-	}
-
-	return output, m.Err
-}
-func (m *mockDB) UpdateLastMessage(ctx context.Context, newMessage models.LastMessage) error {
-	for i, message := range m.LastMessages {
-		if message.ID == newMessage.ID {
-			m.LastMessages[i] = newMessage
-		}
-	}
-	return m.Err
-}
-
-func (m *mockDB) CheckUserAuthorizationForLastMessage(ctx context.Context, messageID uint, userID uint) (bool, error) {
-	for _, message := range m.LastMessages {
-		if message.ID == messageID {
-			if message.UserID == userID {
-				return true, m.Err
-			}
-		}
-	}
-	return false, m.Err
 }
 
 type invalidMessageInput struct {
@@ -64,7 +29,7 @@ func TestAddLastMessage(t *testing.T) {
 	t.Run("valid input", func(t *testing.T) {
 		c, w, assert := setupHandlerTest(t)
 		handlers.SetUserID(c, testUserID)
-		mock := newMockDB()
+		mock := mock.NewMockDB()
 		mock.IsAuthorized = true
 
 		// TODO: use struct composition instead of this weird duplication
@@ -92,7 +57,7 @@ func TestAddLastMessage(t *testing.T) {
 	t.Run("invalid input", func(t *testing.T) {
 		c, w, assert := setupHandlerTest(t)
 		handlers.SetUserID(c, testUserID)
-		mock := newMockDB()
+		mock := mock.NewMockDB()
 		mock.IsAuthorized = true
 
 		// TODO: use struct composition instead of this weird duplication
@@ -116,7 +81,7 @@ func TestAddLastMessage(t *testing.T) {
 	t.Run("user does not own group to which the last message is being added", func(t *testing.T) {
 		c, w, assert := setupHandlerTest(t)
 		handlers.SetUserID(c, testUserID)
-		mock := newMockDB()
+		mock := mock.NewMockDB()
 		mock.IsAuthorized = false // not authorized
 		messageInput, err := sonic.Marshal(handlers.AddMessageInput{
 			Title:    "uwu",
@@ -138,7 +103,7 @@ func TestAddLastMessage(t *testing.T) {
 func TestListLastMessages(t *testing.T) {
 	t.Run("valid input", func(t *testing.T) {
 		c, w, assert := setupHandlerTest(t)
-		mock := newMockDB()
+		mock := mock.NewMockDB()
 		mock.IsAuthorized = true
 
 		handlers.SetUserID(c, testUserID)
@@ -155,7 +120,7 @@ func TestEditLastMessage(t *testing.T) {
 	t.Run("valid input", func(t *testing.T) {
 		c, w, assert := setupHandlerTest(t)
 		handlers.SetUserID(c, testUserID)
-		mock := newMockDB()
+		mock := mock.NewMockDB()
 		mock.IsAuthorized = true
 		c.AddParam("id", "1")
 
@@ -187,7 +152,7 @@ func TestEditLastMessage(t *testing.T) {
 	t.Run("user does not own the groups the message is being assigned to", func(t *testing.T) {
 		c, w, assert := setupHandlerTest(t)
 		handlers.SetUserID(c, testUserID)
-		mock := newMockDB()
+		mock := mock.NewMockDB()
 		mock.IsAuthorized = true
 		c.AddParam("id", "1")
 		unmodifiedLastMessages := []models.LastMessage{
@@ -220,7 +185,7 @@ func TestEditLastMessage(t *testing.T) {
 		c, w, assert := setupHandlerTest(t)
 
 		handlers.SetUserID(c, testUserID)
-		mock := newMockDB()
+		mock := mock.NewMockDB()
 		//mock.IsAuthorized = true
 		c.AddParam("id", "1")
 		unchangedLastMessages := []models.LastMessage{

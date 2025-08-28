@@ -11,6 +11,7 @@ import (
 	"github.com/bytedance/sonic"
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/gragorther/epigo/database/mock"
 	"github.com/gragorther/epigo/handlers"
 	argon2id "github.com/gragorther/epigo/hash"
 	"github.com/gragorther/epigo/models"
@@ -25,72 +26,6 @@ func assertHTTPStatus(t *testing.T, c *gin.Context, expected int, w *httptest.Re
 	c.Writer.WriteHeaderNow()
 
 	assert.Equal(expected, w.Code, message)
-}
-
-func (m *mockDB) CheckIfUserExistsByUsernameAndEmail(username string, email string) (bool, error) {
-
-	for _, user := range m.Users {
-		if user.Username == username && user.Email == email {
-			return true, nil
-		}
-	}
-	return false, nil
-}
-func (m *mockDB) CheckIfUserExistsByUsername(ctx context.Context, username string) (bool, error) {
-	for _, user := range m.Users {
-		if user.Username == username {
-			return true, nil
-		}
-	}
-	return false, nil
-}
-
-func (m *mockDB) GetUserByUsername(ctx context.Context, username string) (models.User, error) {
-	for _, user := range m.Users {
-		if user.Username == username {
-			return user, nil
-		}
-	}
-	return models.User{}, nil
-}
-
-func (m *mockDB) GetUserByID(ctx context.Context, userID uint) (models.User, error) {
-	for _, user := range m.Users {
-		if user.ID == userID {
-			return user, nil
-		}
-	}
-	return models.User{}, nil
-}
-
-func (m *mockDB) EditUser(ctx context.Context, newUser models.User) error {
-	for i, user := range m.Users {
-		if user.ID == newUser.ID {
-			m.Users[i] = newUser
-			break
-		}
-	}
-	return nil
-}
-
-func (m *mockDB) CreateUser(newUser *models.User) error {
-	m.Users = append(m.Users, *newUser)
-	return nil
-}
-
-func (m *mockDB) UpdateProfile(_ context.Context, newProfile models.Profile) error {
-	for i, profile := range m.Profiles {
-		if profile.UserID == newProfile.UserID {
-			m.Profiles[i] = newProfile
-			break
-		}
-	}
-	return nil
-}
-
-func (m *mockDB) CreateProfile(ctx context.Context, newProfile *models.Profile) error {
-	m.Profiles = append(m.Profiles, *newProfile)
-	return nil
 }
 
 // a predefined hash so tests are much faster to run because they don't have to *actually* hash the password
@@ -109,7 +44,7 @@ func comparePasswordAndHash(password string, hash string) (bool, error) {
 func TestLoginUser(t *testing.T) {
 	t.Run("valid input", func(t *testing.T) {
 		c, w, assert := setupHandlerTest(t)
-		mock := newMockDB()
+		mock := mock.NewMockDB()
 
 		userPassword := "securepass123"
 		hashedPass, _ := createHash(userPassword, argon2id.DefaultParams)
@@ -168,7 +103,7 @@ func TestLoginUser(t *testing.T) {
 	})
 	t.Run("invalid password", func(t *testing.T) {
 		c, w, assert := setupHandlerTest(t)
-		mock := newMockDB()
+		mock := mock.NewMockDB()
 
 		userPassword := "securepass123"
 		hashedPass, _ := createHash(userPassword, argon2id.DefaultParams)
@@ -197,7 +132,7 @@ func TestLoginUser(t *testing.T) {
 	t.Run("user not found", func(t *testing.T) {
 		c, w, assert := setupHandlerTest(t)
 
-		mock := newMockDB()
+		mock := mock.NewMockDB()
 		input, err := sonic.Marshal(handlers.LoginInput{
 			Username: "iDontExist", Password: "invalid password oopsie",
 		})
@@ -225,7 +160,7 @@ func TestGetUserData(t *testing.T) {
 		ID:        testUserID,
 	}
 	handlers.SetUserID(c, testUserID)
-	mock := newMockDB()
+	mock := mock.NewMockDB()
 	mock.Users = []models.User{
 		user,
 	}
@@ -245,7 +180,7 @@ func TestGetUserData(t *testing.T) {
 func TestCreateProfile(t *testing.T) {
 	t.Run("valid input", func(t *testing.T) {
 		c, w, assert := setupHandlerTest(t)
-		mock := newMockDB()
+		mock := mock.NewMockDB()
 		handlers.SetUserID(c, testUserID)
 		profileInput := handlers.ProfileInput{
 			Name: "newname",
@@ -266,7 +201,7 @@ func TestUpdateProfile(t *testing.T) {
 	t.Run("valid input", func(t *testing.T) {
 		ctx := context.Background()
 		c, w, assert := setupHandlerTest(t)
-		mock := newMockDB()
+		mock := mock.NewMockDB()
 		profileInput := handlers.ProfileInput{
 			Name: "uwu",
 		}

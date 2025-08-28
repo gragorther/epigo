@@ -10,14 +10,6 @@ import (
 
 var ErrInvalidID error = errors.New("invalid user ID")
 
-func getID(claims jwt.MapClaims) (uint, error) {
-	id, ok := claims["id"].(float64)
-	if !ok {
-		return 0, ErrInvalidID
-	}
-	return uint(id), nil
-}
-
 func parseToken(jwtSecret string, tokenString string, expectedType string) (claims jwt.MapClaims, err error) {
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (any, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {

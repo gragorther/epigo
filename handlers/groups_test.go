@@ -2,7 +2,6 @@ package handlers_test
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -11,62 +10,13 @@ import (
 
 	"github.com/bytedance/sonic"
 	"github.com/gin-gonic/gin"
+	"github.com/gragorther/epigo/database/mock"
 	"github.com/gragorther/epigo/handlers"
 	"github.com/gragorther/epigo/models"
 	"github.com/stretchr/testify/assert"
 )
 
 const testUserID = 1
-
-type mockDB struct {
-	Err              error // the error mockDB methods will return
-	IsAuthorized     bool
-	DeleteGroupCalls uint
-	UpdateGroupCalls uint
-	FindGroupCalls   uint
-
-	Groups       []models.Group
-	LastMessages []models.LastMessage
-	Recipients   []models.Recipient
-	Users        []models.User
-	Profiles     []models.Profile
-}
-
-func newMockDB() *mockDB {
-	m := mockDB{}
-
-	return &m
-}
-
-func (m *mockDB) CreateGroup(group *models.Group) error {
-
-	// this gets the current length of the Groups map and sets the input group to the index at the uint of the length
-	m.Groups = append(m.Groups, *group)
-	return m.Err
-}
-func (m *mockDB) CheckUserAuthorizationForGroups(ctx context.Context, groupIDs []uint, userID uint) (bool, error) {
-
-	return m.IsAuthorized, m.Err
-}
-func (m *mockDB) DeleteGroupByID(ctx context.Context, id uint) error {
-	m.DeleteGroupCalls += 1
-	return m.Err
-}
-
-func (m *mockDB) FindGroupsAndRecipientsByUserID(ctx context.Context, userID uint) ([]models.Group, error) {
-	m.FindGroupCalls += 1
-	return m.Groups, m.Err
-}
-func (m *mockDB) UpdateGroup(ctx context.Context, group models.Group) error {
-	for i := range m.Groups {
-		if m.Groups[i].ID == group.ID {
-			m.Groups[i] = group
-			break
-		}
-	}
-
-	return m.Err
-}
 
 // sets up gin and returns a gin Context and an http response recorder
 func SetupGin() (*gin.Context, *httptest.ResponseRecorder) {
@@ -97,7 +47,7 @@ func TestAddGroup(t *testing.T) {
 		fakeUser := models.User{ID: 1, Profile: &models.Profile{Name: &username}}
 		handlers.SetUserID(c, fakeUser.ID)
 
-		mock := newMockDB()
+		mock := mock.NewMockDB()
 
 		description := "test description"
 		jsonInput := handlers.GroupInput{
@@ -125,7 +75,7 @@ func TestAddGroup(t *testing.T) {
 	})
 	t.Run("with invalid json input", func(t *testing.T) {
 		c, w, assert := setupHandlerTest(t)
-		mock := newMockDB()
+		mock := mock.NewMockDB()
 		username := "test"
 		fakeUser := models.User{ID: 1, Profile: &models.Profile{Name: &username}}
 		handlers.SetUserID(c, fakeUser.ID)
@@ -148,7 +98,7 @@ func TestAddGroup(t *testing.T) {
 		c, w, assert := setupHandlerTest(t)
 
 		handlers.SetUserID(c, testUserID)
-		mock := newMockDB()
+		mock := mock.NewMockDB()
 		handler := handlers.AddGroup(mock)
 
 		description := "test description"
@@ -173,7 +123,7 @@ func TestDeleteGroup(t *testing.T) {
 	t.Run("with valid input", func(t *testing.T) {
 		c, w, assert := setupHandlerTest(t)
 		handlers.SetUserID(c, testUserID)
-		mock := newMockDB()
+		mock := mock.NewMockDB()
 		mock.IsAuthorized = true
 		handler := handlers.DeleteGroup(mock)
 		c.AddParam("id", "0")
@@ -191,7 +141,7 @@ func TestDeleteGroup(t *testing.T) {
 	t.Run("missing param", func(t *testing.T) {
 		c, w, assert := setupHandlerTest(t)
 		handlers.SetUserID(c, testUserID)
-		mock := newMockDB()
+		mock := mock.NewMockDB()
 		mock.IsAuthorized = true
 		handler := handlers.DeleteGroup(mock)
 
@@ -202,7 +152,7 @@ func TestDeleteGroup(t *testing.T) {
 	t.Run("user does not own group", func(t *testing.T) {
 		c, w, assert := setupHandlerTest(t)
 		handlers.SetUserID(c, testUserID)
-		mock := newMockDB()
+		mock := mock.NewMockDB()
 		mock.IsAuthorized = false
 
 		handler := handlers.DeleteGroup(mock)
@@ -221,7 +171,7 @@ func TestListGroups(t *testing.T) {
 	//fakeUser := models.User{ID: 1, Username: "test"}
 	handlers.SetUserID(c, testUserID)
 	c.AddParam("id", "1")
-	mock := newMockDB()
+	mock := mock.NewMockDB()
 	desc := "test desc"
 	mock.Groups = []models.Group{
 		{
@@ -263,7 +213,7 @@ func TestEditGroup(t *testing.T) {
 		c, w, assert := setupHandlerTest(t)
 		handlers.SetUserID(c, testUserID)
 		c.AddParam("id", "0")
-		mock := newMockDB()
+		mock := mock.NewMockDB()
 		mock.IsAuthorized = true
 		// the constants to be used in the group.
 		const groupID uint = 0
