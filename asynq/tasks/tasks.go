@@ -21,13 +21,13 @@ func EnqueueTask(client *asynq.Client) TaskEnqueuer {
 }
 
 // Task payload for any email related tasks.
-type emailTaskPayload struct {
+type RecurringEmailTaskPayload struct {
 	// ID for the email recipient.
 	UserID uint
 }
 
 func NewRecurringEmailTask(id uint) (*asynq.Task, error) {
-	payload, err := sonic.Marshal(emailTaskPayload{UserID: id})
+	payload, err := sonic.Marshal(RecurringEmailTaskPayload{UserID: id})
 	if err != nil {
 		return nil, err
 	}
@@ -35,7 +35,7 @@ func NewRecurringEmailTask(id uint) (*asynq.Task, error) {
 }
 
 func HandleRecurringEmailTask(ctx context.Context, t *asynq.Task) error {
-	var p emailTaskPayload
+	var p RecurringEmailTaskPayload
 	if err := sonic.Unmarshal(t.Payload(), &p); err != nil {
 		return err
 	}

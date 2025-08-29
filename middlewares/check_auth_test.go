@@ -15,7 +15,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const JWT_SECRET string = "very sercure"
+var JWT_SECRET []byte = []byte("very sercure")
 
 type Mock struct {
 	Users []models.User

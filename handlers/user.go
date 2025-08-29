@@ -30,7 +30,7 @@ type LoginInput struct {
 func RegisterUser(db interface {
 	CheckIfUserExistsByUsernameAndEmail(username string, email string) (bool, error)
 	CreateUser(*models.User) error
-}, createHash func(string, *argon2id.Params) (string, error), jwtSecret string) gin.HandlerFunc {
+}, createHash func(string, *argon2id.Params) (string, error), jwtSecret []byte) gin.HandlerFunc {
 	return func(c *gin.Context) {
 
 		var authInput RegistrationInput
@@ -80,7 +80,7 @@ func LoginUser(db interface {
 	CheckIfUserExistsByUsername(ctx context.Context, username string) (bool, error)
 	GetUserByUsername(ctx context.Context, username string) (models.User, error)
 	EditUser(context.Context, models.User) error
-}, comparePasswordAndHash func(password string, hash string) (match bool, err error), jwtSecret string) gin.HandlerFunc {
+}, comparePasswordAndHash func(password string, hash string) (match bool, err error), jwtSecret []byte) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var authInput LoginInput
 		if err := c.ShouldBindJSON(&authInput); err != nil {

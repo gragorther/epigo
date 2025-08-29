@@ -62,7 +62,7 @@ func TestLoginUser(t *testing.T) {
 		}
 		setGinHttpBody(c, input)
 
-		jwtSecret := "secure jwt"
+		jwtSecret := []byte("secure jwt")
 		handlers.LoginUser(mock, comparePasswordAndHash, jwtSecret)(c)
 
 		assertHTTPStatus(t, c, http.StatusOK, w, "http status code should indicate success")
@@ -120,7 +120,7 @@ func TestLoginUser(t *testing.T) {
 			t.Fatalf("sonic failed to marshal json: %v", err)
 		}
 		setGinHttpBody(c, input)
-		jwtSecret := "secure jwt !!"
+		jwtSecret := []byte("secure jwt")
 
 		handlers.LoginUser(mock, comparePasswordAndHash, jwtSecret)(c)
 
@@ -140,7 +140,7 @@ func TestLoginUser(t *testing.T) {
 			t.Fatalf("sonic failed to marshal json: %v", err)
 		}
 		setGinHttpBody(c, input)
-		jwtSecret := "secure jwt !!"
+		jwtSecret := []byte("secure jwt")
 
 		handlers.LoginUser(mock, comparePasswordAndHash, jwtSecret)(c)
 		assertHTTPStatus(t, c, http.StatusNotFound, w, "http status code should indicate that the user was not found")
@@ -228,4 +228,4 @@ func TestUpdateProfile(t *testing.T) {
 	})
 }
 
-const JWT_SECRET = "testsecret"
+var JWT_SECRET []byte = []byte("testsecret")

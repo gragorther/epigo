@@ -20,11 +20,11 @@ import (
 	"github.com/gragorther/epigo/logger"
 	"github.com/gragorther/epigo/router"
 	"github.com/hibiken/asynq"
-	"github.com/wneessen/go-mail"
 )
 
 func main() {
 	config, err := config.Get()
+	jwtSecret := []byte(config.JWTSecret)
 	if err != nil {
 		os.Exit(1)
 	}
@@ -50,10 +50,7 @@ func main() {
 	}
 
 	dbHandler := gormdb.NewGormDB(dbconn)
-	emailClient, err := mail.NewClient(config.Email.Host,
-		mail.WithPort(config.Email.Port),
-		mail.WithPassword(config.Email.Password),
-		mail.WithUsername(config.Email.Username), mail.WithTLSPortPolicy(mail.TLSOpportunistic), mail.WithSMTPAuth(mail.SMTPAuthAutoDiscover))
+	emailClient, err := email.NewClient(config.Email.Host, config.Email.Port, config.Email.Password, config.Email.Username)
 	defer func() {
 		if err := emailClient.Close(); err != nil {
 			log.Fatalf("failed to close email client: %v", err)
@@ -64,7 +61,7 @@ func main() {
 	}
 	emailService := email.NewEmailService(emailClient, config.Email.From)
 	redisClientOpt := asynq.RedisClientOpt{Addr: config.Redis.Address, Username: config.Redis.Address, Password: config.Redis.Password, DB: config.Redis.DB}
-	go workers.Run(redisClientOpt, config.JWTSecret, emailService, fmt.Sprintf("%v/user/register", config.BaseURL))
+	go workers.Run(redisClientOpt, jwtSecret, emailService, fmt.Sprintf("%v/user/register", config.BaseURL))
 	go scheduler.Run(dbHandler, redisClientOpt)
 	asynqClient := asynq.NewClient(redisClientOpt)
 

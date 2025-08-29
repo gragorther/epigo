@@ -12,7 +12,7 @@ import (
 
 const CurrentUser = "currentUser"
 
-func CheckAuth(jwtSecret string) gin.HandlerFunc {
+func CheckAuth(jwtSecret []byte) gin.HandlerFunc {
 	return func(c *gin.Context) {
 
 		authHeader := c.GetHeader("Authorization")

@@ -9,7 +9,7 @@ import (
 )
 
 // starts the workers
-func Run(redisClientOpt asynq.RedisClientOpt, jwtSecret string, emailService *email.EmailService, registrationRoute string) {
+func Run(redisClientOpt asynq.RedisClientOpt, jwtSecret []byte, emailService *email.EmailService, registrationRoute string) {
 	srv := asynq.NewServer(
 		redisClientOpt,
 		asynq.Config{

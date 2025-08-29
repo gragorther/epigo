@@ -14,14 +14,15 @@ func Setup(db *gormdb.GormDB, jwtSecret string, asynqClient *asynq.Client) *gin.
 	r := gin.Default()
 	r.Use(middlewares.ErrorHandler())
 
-	checkAuth := middlewares.CheckAuth(jwtSecret)
+	jwtSecretBytes := []byte(jwtSecret)
+	checkAuth := middlewares.CheckAuth(jwtSecretBytes)
 
 	// user stuff
 	{
 		user := r.Group("/user")
-		user.POST("/register", handlers.RegisterUser(db, argon2id.CreateHash, jwtSecret))
+		user.POST("/register", handlers.RegisterUser(db, argon2id.CreateHash, jwtSecretBytes))
 		user.POST("/verify-email", handlers.VerifyEmail(tasks.EnqueueTask(asynqClient), db))
-		user.POST("/login", handlers.LoginUser(db, argon2id.ComparePasswordAndHash, jwtSecret))
+		user.POST("/login", handlers.LoginUser(db, argon2id.ComparePasswordAndHash, jwtSecretBytes))
 		user.GET("/profile", checkAuth, handlers.GetUserData(db))
 		user.PUT("/set-email-interval", checkAuth, handlers.SetEmailInterval(db))
 		{

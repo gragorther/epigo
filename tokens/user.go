@@ -10,12 +10,12 @@ import (
 
 var ErrInvalidID error = errors.New("invalid user ID")
 
-func parseToken(jwtSecret string, tokenString string, expectedType string) (claims jwt.MapClaims, err error) {
+func parseToken(jwtSecret []byte, tokenString string, expectedType string) (claims jwt.MapClaims, err error) {
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (any, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
 		}
-		return []byte(jwtSecret), nil
+		return jwtSecret, nil
 	})
 	if err != nil {
 		return nil, err
@@ -46,20 +46,20 @@ var ErrExpiredToken error = errors.New("expired token")
 
 const typeUserSession = "userSession"
 
-func CreateUserAuth(jwtSecret string, userID uint) (token string, err error) {
+func CreateUserAuth(jwtSecret []byte, userID uint) (token string, err error) {
 	generateToken := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"id":  userID,
 		"exp": time.Now().Add(time.Hour * 24).Unix(),
 		"typ": typeUserSession,
 	})
 
-	token, err = generateToken.SignedString([]byte(jwtSecret))
+	token, err = generateToken.SignedString(jwtSecret)
 	return
 }
 
 var ErrInvalidTokenType error = errors.New("invalid token type")
 
-func ParseUserAuth(jwtSecret string, tokenString string) (userID uint, err error) {
+func ParseUserAuth(jwtSecret []byte, tokenString string) (userID uint, err error) {
 
 	claims, err := parseToken(jwtSecret, tokenString, typeUserSession)
 	if err != nil {

@@ -10,13 +10,13 @@ import (
 const typeEmailVerification = "email_verification"
 const emailClaim = "email"
 
-func CreateEmailVerification(jwtSecret string, userEmail string) (token string, err error) {
+func CreateEmailVerification(jwtSecret []byte, userEmail string) (token string, err error) {
 	generatedToken := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		emailClaim: userEmail,
 		"exp":      time.Now().Add(2 * time.Hour).Unix(),
 		"typ":      typeEmailVerification,
 	})
-	return generatedToken.SignedString([]byte(jwtSecret))
+	return generatedToken.SignedString(jwtSecret)
 }
 
 var ErrInvalidToken error = errors.New("invalid token")
@@ -34,7 +34,7 @@ func getEmail(claims jwt.MapClaims) (email string, err error) {
 	return email, nil
 }
 
-func ParseEmailVerification(jwtSecret string, tokenString string) (userEmail string, err error) {
+func ParseEmailVerification(jwtSecret []byte, tokenString string) (userEmail string, err error) {
 	claims, err := parseToken(jwtSecret, tokenString, typeEmailVerification)
 	if err != nil {
 		return "", err
