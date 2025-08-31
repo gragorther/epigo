@@ -12,18 +12,18 @@ var ErrInvalidID error = errors.New("invalid user ID")
 
 var ErrExpiredToken = errors.New("expired token")
 
-const typeUserAuth = "userAuth"
+const TypeUserAuth = "userAuth"
 
 type userAuthClaims struct {
-	claims
+	Claims
 	UserID uint `json:"id,omitzero"`
 }
 
 func CreateUserAuth(jwtSecret []byte, userID uint, issuer string, audience []string) (token string, err error) {
-	generateToken := jwt.NewWithClaims(jwt.SigningMethodHS256, userAuthClaims{
+	return createToken(jwtSecret, userAuthClaims{
 		UserID: userID,
-		claims: claims{
-			Type: typeUserAuth,
+		Claims: Claims{
+			Type: TypeUserAuth,
 			RegisteredClaims: jwt.RegisteredClaims{
 				Issuer:    issuer,
 				Audience:  audience,
@@ -34,15 +34,13 @@ func CreateUserAuth(jwtSecret []byte, userID uint, issuer string, audience []str
 		},
 	})
 
-	token, err = generateToken.SignedString(jwtSecret)
-	return
 }
 
 var ErrInvalidTokenType error = errors.New("invalid token type")
 
 func ParseUserAuth(jwtSecret []byte, tokenString string, issuer string, audience []string) (userID uint, err error) {
 	var claims userAuthClaims
-	if err := parseToken(jwtSecret, tokenString, typeUserAuth, issuer, audience, "", &claims); err != nil {
+	if err := parseToken(jwtSecret, tokenString, TypeUserAuth, issuer, audience, "", &claims); err != nil {
 		return 0, err
 	}
 

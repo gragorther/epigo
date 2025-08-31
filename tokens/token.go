@@ -14,6 +14,8 @@ type properTypeClaims interface {
 	CheckType(expected string) (match bool)
 }
 
+var signingMethod = jwt.SigningMethodHS256
+
 var ErrInvalidExpirationDate = errors.New("invalid expiration date")
 var ErrTokenIsNil = errors.New("token is nil")
 var ErrTokenClaimsAreNil = errors.New("token claims are nil")
@@ -37,6 +39,9 @@ func parseToken(jwtSecret []byte, tokenString string, expectedType string, issue
 	}
 	token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (any, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+		}
+		if token.Method != signingMethod {
 			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
 		}
 		return jwtSecret, nil
@@ -68,4 +73,9 @@ func parseToken(jwtSecret []byte, tokenString string, expectedType string, issue
 
 	return nil
 
+}
+
+func createToken(jwtSecret []byte, claims jwt.Claims) (tokenString string, err error) {
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	return token.SignedString(jwtSecret)
 }

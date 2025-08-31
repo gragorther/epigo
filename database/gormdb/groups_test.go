@@ -94,7 +94,7 @@ func (s *DBTestSuite) TestFindGroupsAndRecipientsByUserID() {
 			user := models.User{
 				Email: "testemail@emails.com", Username: "test username",
 			}
-			s.Require().NoError(s.repo.CreateUser(&user))
+			s.Require().NoError(s.repo.CreateUser(s.ctx, &user))
 
 			for i := range test.Groups {
 				test.Groups[i].UserID = user.ID
@@ -145,7 +145,7 @@ func (s *DBTestSuite) TestCreateGroup() {
 				Email:    "testemailasdf",
 				Username: "testusernameasdf",
 			}
-			s.Require().NoError(s.repo.CreateUser(&user), "creating user shouldn't fail")
+			s.Require().NoError(s.repo.CreateUser(s.ctx, &user), "creating user shouldn't fail")
 			test.Group.UserID = user.ID
 			for i := range test.Group.LastMessages {
 				test.Group.LastMessages[i].UserID = user.ID

@@ -194,7 +194,7 @@ func (s *DBTestSuite) TestCreateUser() {
 			{Name: "grouponname"},
 		},
 	}
-	s.Require().NoError(s.repo.CreateUser(newUser))
+	s.Require().NoError(s.repo.CreateUser(s.ctx, newUser))
 
 	for _, group := range newUser.Groups {
 		s.Equal(newUser.ID, group.UserID, "user ID in group should be the same as the user ID")
@@ -288,7 +288,7 @@ func (s *DBTestSuite) TestDeleteUserAndAllAssociations() {
 		Username: "ussername",
 		Groups:   userGroups,
 	}
-	s.Require().NoError(s.repo.CreateUser(&user), "creating user shouldn't fail")
+	s.Require().NoError(s.repo.CreateUser(s.ctx, &user), "creating user shouldn't fail")
 
 	s.Require().NoError(s.repo.DeleteUserAndAllAssociations(user.ID), "deleting user associations shouldn't fail")
 

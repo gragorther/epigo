@@ -58,7 +58,7 @@ func (s *DBTestSuite) TestFindLastMessagesByUserID() {
 	user := &models.User{
 		Username: "testusername", Email: "test@testemails.com",
 	}
-	s.Require().NoError(s.repo.CreateUser(user))
+	s.Require().NoError(s.repo.CreateUser(s.ctx, user))
 	for _, test := range table {
 		s.Run(test.Name, func() {
 			// make sure we don't get fkey errors

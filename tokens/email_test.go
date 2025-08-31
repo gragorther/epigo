@@ -2,7 +2,9 @@ package tokens_test
 
 import (
 	"testing"
+	"time"
 
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/gragorther/epigo/tokens"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -35,10 +37,7 @@ func TestCreateEmailVerification(t *testing.T) {
 	}
 }
 
-const testIssuer = "https://isszuer.com"
 const testEmail = "testemail@testing.com"
-
-const testAudience = "https://server.com"
 
 func TestParseEmailVerification(t *testing.T) {
 
@@ -52,20 +51,41 @@ func TestParseEmailVerification(t *testing.T) {
 		Want  want
 	}{
 		{Name: "valid input", Want: want{Error: nil, Email: testEmail}},
+		{Name: "invalid signing method", Want: want{Error: tokens.ErrInvalidToken}},
 	}
 
 	{
 		var err error
-		table[0].Token, err = tokens.CreateEmailVerification(jwtSecret, testEmail, testAudience, testIssuer)
+		table[0].Token, err = tokens.CreateEmailVerification(jwtSecret, testEmail, audience, issuer)
 		if err != nil {
-			panic(err)
+			t.Fatalf("failed to create token: %v", err)
 		}
+	}
+	{
+		token, err := jwt.NewWithClaims(jwt.SigningMethodHS512, tokens.EmailClaims{
+			Email: "testemail@google.com",
+			Claims: tokens.Claims{
+				Type: tokens.TypeEmailVerification,
+				RegisteredClaims: jwt.RegisteredClaims{
+					Issuer:    issuer,
+					Audience:  []string{audience},
+					ExpiresAt: jwt.NewNumericDate(time.Now().Add(2 * time.Hour)),
+					IssuedAt:  jwt.NewNumericDate(time.Now()),
+				},
+			},
+		}).SignedString(jwtSecret)
+		require.NoError(t, err)
+		table[1].Token = token
 	}
 
 	for _, test := range table {
 		t.Run(test.Name, func(t *testing.T) {
-			email, err := tokens.ParseEmailVerification(jwtSecret, test.Token, testAudience, testIssuer)
-			require.NoError(t, err)
+			email, err := tokens.ParseEmailVerification(jwtSecret, test.Token, audience, issuer)
+			if test.Want.Error != nil {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
 			assert.Equal(t, test.Want.Email, email)
 		})
 	}

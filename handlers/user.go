@@ -29,7 +29,7 @@ type LoginInput struct {
 // this also takes a `token` query parameter, which is the email JWT token
 func RegisterUser(db interface {
 	CheckIfUserExistsByUsernameAndEmail(username string, email string) (bool, error)
-	CreateUser(*models.User) error
+	CreateUser(context.Context, *models.User) error
 }, createHash func(string, *argon2id.Params) (string, error), jwtSecret []byte, jwtIssuer string, jwtAudience string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 
@@ -68,7 +68,7 @@ func RegisterUser(db interface {
 			Profile:      &models.Profile{Name: authInput.Name},
 		}
 
-		if err := db.CreateUser(&user); err != nil {
+		if err := db.CreateUser(c, &user); err != nil {
 			c.AbortWithError(http.StatusInternalServerError, fmt.Errorf("failed to create user: %w", err))
 			return
 		}

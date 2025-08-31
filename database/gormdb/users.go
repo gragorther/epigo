@@ -79,9 +79,8 @@ func (g *GormDB) CheckIfUserExistsByEmail(ctx context.Context, email string) (bo
 	return count == 1, err
 }
 
-func (g *GormDB) CreateUser(user *models.User) error {
-	res := g.db.Create(user)
-	return res.Error
+func (g *GormDB) CreateUser(ctx context.Context, user *models.User) error {
+	return gorm.G[models.User](g.db).Create(ctx, user)
 }
 func (g *GormDB) GetUserByUsername(ctx context.Context, username string) (models.User, error) {
 	return gorm.G[models.User](g.db).Where("username = ?", username).First(ctx)

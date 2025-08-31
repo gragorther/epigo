@@ -52,7 +52,7 @@ func (m *mockDB) EditUser(ctx context.Context, newUser models.User) error {
 	return nil
 }
 
-func (m *mockDB) CreateUser(newUser *models.User) error {
+func (m *mockDB) CreateUser(ctx context.Context, newUser *models.User) error {
 	m.Users = append(m.Users, *newUser)
 	return nil
 }

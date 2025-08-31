@@ -6,7 +6,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
-const TypeUserLifeStatus = "user_life_status"
+const TypeUserLifeStatus = "userLifeStatus"
 
 func CreateUserLifeStatus(jwtSecret []byte, userID uint, expiresAfter time.Duration) (token string, err error) {
 	generatedToken := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{

@@ -10,7 +10,7 @@ func (s *DBTestSuite) TestCheckUserAuthorizationForGroups() {
 				{Name: "testgroupnme2"},
 			},
 		}
-		s.Require().NoError(s.repo.CreateUser(&user))
+		s.Require().NoError(s.repo.CreateUser(s.ctx, &user))
 
 		authorized, err := s.repo.CheckUserAuthorizationForGroups(s.ctx, []uint{user.Groups[0].ID, user.Groups[1].ID}, user.ID)
 		s.Require().NoError(err)
@@ -24,7 +24,7 @@ func (s *DBTestSuite) TestCheckUserAuthorizationForGroups() {
 			{Name: "testname"},
 			{Name: "testname2"},
 		}}
-		s.Require().NoError(s.repo.CreateUser(&user))
+		s.Require().NoError(s.repo.CreateUser(s.ctx, &user))
 
 		otherUser := models.User{
 			Username: "myname", Email: "email@email.email", Groups: []models.Group{
@@ -32,7 +32,7 @@ func (s *DBTestSuite) TestCheckUserAuthorizationForGroups() {
 				{Name: "testgroupname2"},
 			},
 		}
-		s.Require().NoError(s.repo.CreateUser(&otherUser))
+		s.Require().NoError(s.repo.CreateUser(s.ctx, &otherUser))
 		authorized, err := s.repo.CheckUserAuthorizationForGroups(s.ctx, []uint{user.Groups[0].ID, user.Groups[1].ID, otherUser.Groups[0].ID, otherUser.Groups[1].ID}, user.ID)
 		s.Require().NoError(err)
 		s.False(authorized, "user shouldn't be authozired because they don't own some of the groups they're trying to access")
@@ -45,7 +45,7 @@ func (s *DBTestSuite) TestCheckUserAuthorizationForLastMessage() {
 			{Title: "test title"},
 			{Title: "test title 2"},
 		}}
-		s.Require().NoError(s.repo.CreateUser(&user))
+		s.Require().NoError(s.repo.CreateUser(s.ctx, &user))
 
 		authorized, err := s.repo.CheckUserAuthorizationForLastMessage(s.ctx, user.LastMessages[0].ID, user.ID)
 		s.Require().NoError(err)
@@ -56,13 +56,13 @@ func (s *DBTestSuite) TestCheckUserAuthorizationForLastMessage() {
 		user := models.User{
 			Username: "testusername", Email: "testemail",
 		}
-		s.Require().NoError(s.repo.CreateUser(&user))
+		s.Require().NoError(s.repo.CreateUser(s.ctx, &user))
 
 		otherUser := models.User{Username: "username2", Email: "testemail2@email.com", LastMessages: []models.LastMessage{
 			{Title: "testtitle212q3"},
 		}}
 
-		s.Require().NoError(s.repo.CreateUser(&otherUser))
+		s.Require().NoError(s.repo.CreateUser(s.ctx, &otherUser))
 
 		authorized, err := s.repo.CheckUserAuthorizationForLastMessage(s.ctx, otherUser.LastMessages[0].ID, user.ID)
 		s.Require().NoError(err)
