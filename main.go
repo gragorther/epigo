@@ -34,7 +34,7 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
-	if os.Getenv("GIN_MODE") == "debug" {
+	if config.GinMode == gin.DebugMode {
 		gin.SetMode(gin.DebugMode)
 	} else {
 		gin.SetMode(gin.ReleaseMode)
@@ -61,11 +61,11 @@ func main() {
 	}
 	emailService := email.NewEmailService(emailClient, config.Email.From)
 	redisClientOpt := asynq.RedisClientOpt{Addr: config.Redis.Address, Username: config.Redis.Address, Password: config.Redis.Password, DB: config.Redis.DB}
-	go workers.Run(redisClientOpt, jwtSecret, emailService, fmt.Sprintf("%v/user/register", config.BaseURL))
+	go workers.Run(redisClientOpt, jwtSecret, emailService, fmt.Sprintf("%v/user/register", config.BaseURL), config.BaseURL)
 	go scheduler.Run(dbHandler, redisClientOpt)
 	asynqClient := asynq.NewClient(redisClientOpt)
 
-	r := router.Setup(dbHandler, config.JWTSecret, asynqClient)
+	r := router.Setup(dbHandler, config.JWTSecret, asynqClient, config.BaseURL)
 
 	srv := &http.Server{
 		Addr:    ":8080",
@@ -96,7 +96,7 @@ func main() {
 
 	// The context is used to inform the server it has 5 seconds to finish
 	// the request it is currently handling
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 	if err := srv.Shutdown(ctx); err != nil {
 		log.Fatal("Server forced to shutdown: ", err)

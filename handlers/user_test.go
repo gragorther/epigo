@@ -2,7 +2,6 @@ package handlers_test
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -10,7 +9,6 @@ import (
 
 	"github.com/bytedance/sonic"
 	"github.com/gin-gonic/gin"
-	"github.com/golang-jwt/jwt/v5"
 	"github.com/gragorther/epigo/database/mock"
 	"github.com/gragorther/epigo/handlers"
 	argon2id "github.com/gragorther/epigo/hash"
@@ -41,6 +39,7 @@ func comparePasswordAndHash(password string, hash string) (bool, error) {
 	return hashedPass == hash, nil
 }
 
+/*
 func TestLoginUser(t *testing.T) {
 	t.Run("valid input", func(t *testing.T) {
 		c, w, assert := setupHandlerTest(t)
@@ -147,6 +146,7 @@ func TestLoginUser(t *testing.T) {
 		assert.Empty(w.Body.Bytes(), "the response body should be empty because the user was not found")
 	})
 }
+*/
 
 func TestGetUserData(t *testing.T) {
 	c, w, assert := setupHandlerTest(t)

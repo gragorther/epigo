@@ -2,7 +2,7 @@ package tokens
 
 import (
 	"errors"
-	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -10,47 +10,28 @@ import (
 
 var ErrInvalidID error = errors.New("invalid user ID")
 
-func parseToken(jwtSecret []byte, tokenString string, expectedType string) (claims jwt.MapClaims, err error) {
-	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (any, error) {
-		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
-		}
-		return jwtSecret, nil
-	})
-	if err != nil {
-		return nil, err
-	}
-	if !token.Valid {
-		return nil, ErrInvalidToken
-	}
-	claims, ok := token.Claims.(jwt.MapClaims)
-	if !ok {
-		return nil, ErrInvalidToken
-	}
-	if float64(time.Now().Unix()) > claims["exp"].(float64) {
+var ErrExpiredToken = errors.New("expired token")
 
-		return nil, ErrExpiredToken
-	}
-	typ, ok := claims["typ"].(string)
-	if !ok {
-		return nil, ErrInvalidTokenType
-	}
-	if typ != expectedType {
-		return nil, ErrInvalidTokenType
-	}
-	return claims, nil
+const typeUserAuth = "userAuth"
 
+type userAuthClaims struct {
+	claims
+	UserID uint `json:"id,omitzero"`
 }
 
-var ErrExpiredToken error = errors.New("expired token")
-
-const typeUserSession = "userSession"
-
-func CreateUserAuth(jwtSecret []byte, userID uint) (token string, err error) {
-	generateToken := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"id":  userID,
-		"exp": time.Now().Add(time.Hour * 24).Unix(),
-		"typ": typeUserSession,
+func CreateUserAuth(jwtSecret []byte, userID uint, issuer string, audience []string) (token string, err error) {
+	generateToken := jwt.NewWithClaims(jwt.SigningMethodHS256, userAuthClaims{
+		UserID: userID,
+		claims: claims{
+			Type: typeUserAuth,
+			RegisteredClaims: jwt.RegisteredClaims{
+				Issuer:    issuer,
+				Audience:  audience,
+				ExpiresAt: jwt.NewNumericDate(time.Now().Add(24 * time.Hour)),
+				Subject:   strconv.FormatUint(uint64(userID), 10),
+				IssuedAt:  jwt.NewNumericDate(time.Now()),
+			},
+		},
 	})
 
 	token, err = generateToken.SignedString(jwtSecret)
@@ -59,16 +40,11 @@ func CreateUserAuth(jwtSecret []byte, userID uint) (token string, err error) {
 
 var ErrInvalidTokenType error = errors.New("invalid token type")
 
-func ParseUserAuth(jwtSecret []byte, tokenString string) (userID uint, err error) {
-
-	claims, err := parseToken(jwtSecret, tokenString, typeUserSession)
-	if err != nil {
+func ParseUserAuth(jwtSecret []byte, tokenString string, issuer string, audience []string) (userID uint, err error) {
+	var claims userAuthClaims
+	if err := parseToken(jwtSecret, tokenString, typeUserAuth, issuer, audience, "", &claims); err != nil {
 		return 0, err
 	}
 
-	id, ok := claims["id"].(float64)
-	if !ok {
-		return 0, ErrInvalidToken
-	}
-	return uint(id), nil
+	return claims.UserID, nil
 }

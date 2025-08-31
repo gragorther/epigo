@@ -31,6 +31,7 @@ func (m *Mock) GetUserByID(ctx context.Context, ID uint) (models.User, error) {
 }
 
 const testUserID = 1
+const testIssuer = "https://issuer.com"
 
 func TestCheckAuth(t *testing.T) {
 
@@ -54,7 +55,7 @@ func TestCheckAuth(t *testing.T) {
 
 	{
 		require := require.New(t)
-		token, err := tokens.CreateUserAuth(JWT_SECRET, testUserID)
+		token, err := tokens.CreateUserAuth(JWT_SECRET, testUserID, testIssuer, []string{testIssuer})
 		require.NoError(err, "creating user auth token shouldn't fail")
 
 		middlewares.SetHttpAuthHeaderToken(&table[0].Header, token)
@@ -70,7 +71,7 @@ func TestCheckAuth(t *testing.T) {
 			gin.SetMode(gin.TestMode)
 
 			r := gin.New()
-			r.Use(middlewares.CheckAuth(JWT_SECRET))
+			r.Use(middlewares.CheckAuth(JWT_SECRET, testIssuer, []string{testIssuer}))
 
 			userIDs := make(chan uint, 1)
 

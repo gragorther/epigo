@@ -21,10 +21,12 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+const testIssuer = "https://server.com"
+
 func TestRegisterUser(t *testing.T) {
 	requi := require.New(t)
-	createToken := func(email string) string {
-		token, err := tokens.CreateEmailVerification(JWT_SECRET, email)
+	createToken := func(email string, audience string, issuer string) string {
+		token, err := tokens.CreateEmailVerification(JWT_SECRET, email, audience, issuer)
 		requi.NoError(err)
 		return token
 	}
@@ -37,7 +39,7 @@ func TestRegisterUser(t *testing.T) {
 		Input handlers.RegistrationInput
 		Want  want
 	}{
-		{Name: "valid input", Want: want{Status: http.StatusCreated, UserCreated: true}, Input: handlers.RegistrationInput{Username: "testusername", Name: lo.ToPtr("testname"), Password: "very secure pass", Token: createToken("user@user.com")}},
+		{Name: "valid input", Want: want{Status: http.StatusCreated, UserCreated: true}, Input: handlers.RegistrationInput{Username: "testusername", Name: lo.ToPtr("testname"), Password: "very secure pass", Token: createToken("user@user.com", testIssuer, testIssuer)}},
 		{Name: "missing token", Want: want{Status: http.StatusUnprocessableEntity, UserCreated: false}, Input: handlers.RegistrationInput{Username: "testusernae2", Password: "securePass"}},
 	}
 
@@ -48,7 +50,7 @@ func TestRegisterUser(t *testing.T) {
 			mock := mock.NewMockDB()
 			gin.SetMode(gin.TestMode)
 			r := gin.New()
-			r.POST("/", handlers.RegisterUser(mock, createHash, JWT_SECRET))
+			r.POST("/", handlers.RegisterUser(mock, createHash, JWT_SECRET, testIssuer, testIssuer))
 			req := httptest.NewRequest(http.MethodPost, "/", nil)
 			input, err := sonic.Marshal(test.Input)
 			require.NoError(err, "marshalling json shouldn't fail")
@@ -66,7 +68,7 @@ func TestRegisterUser(t *testing.T) {
 				assert.Equal(test.Input.Username, user.Username, "usernames should match")
 				hash, _ := createHash(test.Input.Password, argon2id.DefaultParams)
 				assert.Equal(hash, user.PasswordHash, "the hashed password should match the one in the database")
-				email, err := tokens.ParseEmailVerification(JWT_SECRET, test.Input.Token)
+				email, err := tokens.ParseEmailVerification(JWT_SECRET, test.Input.Token, testIssuer, testIssuer)
 				require.NoError(err, "parsing email verification token shouldn't fail")
 				assert.Equal(email, user.Email)
 			}

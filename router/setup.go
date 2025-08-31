@@ -10,19 +10,19 @@ import (
 	"github.com/hibiken/asynq"
 )
 
-func Setup(db *gormdb.GormDB, jwtSecret string, asynqClient *asynq.Client) *gin.Engine {
+func Setup(db *gormdb.GormDB, jwtSecret string, asynqClient *asynq.Client, baseURL string) *gin.Engine {
 	r := gin.Default()
 	r.Use(middlewares.ErrorHandler())
 
 	jwtSecretBytes := []byte(jwtSecret)
-	checkAuth := middlewares.CheckAuth(jwtSecretBytes)
+	checkAuth := middlewares.CheckAuth(jwtSecretBytes, baseURL, []string{baseURL})
 
 	// user stuff
 	{
 		user := r.Group("/user")
-		user.POST("/register", handlers.RegisterUser(db, argon2id.CreateHash, jwtSecretBytes))
+		user.POST("/register", handlers.RegisterUser(db, argon2id.CreateHash, jwtSecretBytes, baseURL, baseURL))
 		user.POST("/verify-email", handlers.VerifyEmail(tasks.EnqueueTask(asynqClient), db))
-		user.POST("/login", handlers.LoginUser(db, argon2id.ComparePasswordAndHash, jwtSecretBytes))
+		user.POST("/login", handlers.LoginUser(db, argon2id.ComparePasswordAndHash, jwtSecretBytes, baseURL, []string{baseURL}))
 		user.GET("/profile", checkAuth, handlers.GetUserData(db))
 		user.PUT("/set-email-interval", checkAuth, handlers.SetEmailInterval(db))
 		{

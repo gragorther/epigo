@@ -9,7 +9,7 @@ import (
 )
 
 // starts the workers
-func Run(redisClientOpt asynq.RedisClientOpt, jwtSecret []byte, emailService *email.EmailService, registrationRoute string) {
+func Run(redisClientOpt asynq.RedisClientOpt, jwtSecret []byte, emailService *email.EmailService, registrationRoute string, baseURL string) {
 	srv := asynq.NewServer(
 		redisClientOpt,
 		asynq.Config{
@@ -28,7 +28,7 @@ func Run(redisClientOpt asynq.RedisClientOpt, jwtSecret []byte, emailService *em
 	// mux maps a type to a handler
 	mux := asynq.NewServeMux()
 	mux.HandleFunc(tasks.TypeRecurringEmail, tasks.HandleRecurringEmailTask)
-	mux.HandleFunc(tasks.TypeVerificationEmail, tasks.HandleVerificationEmailTask(jwtSecret, emailService, registrationRoute))
+	mux.HandleFunc(tasks.TypeVerificationEmail, tasks.HandleVerificationEmailTask(jwtSecret, emailService, registrationRoute, baseURL))
 	if err := srv.Run(mux); err != nil {
 		log.Fatalf("could not run asynq workers: %v", err.Error())
 	}

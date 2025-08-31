@@ -30,7 +30,7 @@ type LoginInput struct {
 func RegisterUser(db interface {
 	CheckIfUserExistsByUsernameAndEmail(username string, email string) (bool, error)
 	CreateUser(*models.User) error
-}, createHash func(string, *argon2id.Params) (string, error), jwtSecret []byte) gin.HandlerFunc {
+}, createHash func(string, *argon2id.Params) (string, error), jwtSecret []byte, jwtIssuer string, jwtAudience string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 
 		var authInput RegistrationInput
@@ -39,7 +39,7 @@ func RegisterUser(db interface {
 			c.AbortWithError(http.StatusUnprocessableEntity, fmt.Errorf("failed to bind register user JSON: %w", err))
 			return
 		}
-		userEmail, err := tokens.ParseEmailVerification(jwtSecret, authInput.Token)
+		userEmail, err := tokens.ParseEmailVerification(jwtSecret, authInput.Token, jwtAudience, jwtIssuer)
 		if err != nil {
 			c.AbortWithError(http.StatusUnauthorized, fmt.Errorf("failed to parse user email verification token, which was acquired from the `token` query param: %w", err))
 			return
@@ -76,11 +76,15 @@ func RegisterUser(db interface {
 	}
 }
 
+type LoginResponse struct {
+	Token string `json:"token"`
+}
+
 func LoginUser(db interface {
 	CheckIfUserExistsByUsername(ctx context.Context, username string) (bool, error)
 	GetUserByUsername(ctx context.Context, username string) (models.User, error)
 	EditUser(context.Context, models.User) error
-}, comparePasswordAndHash func(password string, hash string) (match bool, err error), jwtSecret []byte) gin.HandlerFunc {
+}, comparePasswordAndHash func(password string, hash string) (match bool, err error), jwtSecret []byte, issuer string, audience []string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var authInput LoginInput
 		if err := c.ShouldBindJSON(&authInput); err != nil {
@@ -113,7 +117,7 @@ func LoginUser(db interface {
 			return
 		}
 
-		token, err := tokens.CreateUserAuth(jwtSecret, userFound.ID)
+		token, err := tokens.CreateUserAuth(jwtSecret, userFound.ID, issuer, audience)
 		if err != nil {
 			c.AbortWithError(http.StatusInternalServerError, fmt.Errorf("failed to generate JWT token: %w", err))
 			return
@@ -123,8 +127,8 @@ func LoginUser(db interface {
 		if err := db.EditUser(c, userFound); err != nil {
 			c.Error(fmt.Errorf("failed to store user last login: %w", err))
 		}
-		c.JSON(http.StatusOK, gin.H{
-			"token": token,
+		c.JSON(http.StatusOK, LoginResponse{
+			Token: token,
 		})
 	}
 }

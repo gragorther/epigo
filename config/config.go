@@ -1,21 +1,19 @@
 package config
 
 import (
-	"log/slog"
-
 	"github.com/ilyakaznacheev/cleanenv"
 )
 
 type Config struct {
-	Production    bool       `env:"PROD" env-description:"whether the server is in prod mode"`
-	LogLevel      slog.Level `env:"LOG_LEVEL"`
-	AdminUsername string     `env:"ADMIN_USERNAME"`
-	AdminPassword string     `env:"ADMIN_PASSWORD"`
-	JWTSecret     string     `env:"JWT_SECRET"`
-	DatabaseURL   string     `env:"DATABASE_URL"`
+	Production    bool   `env:"PROD" env-description:"whether the server is in prod mode"`
+	AdminUsername string `env:"ADMIN_USERNAME"`
+	AdminPassword string `env:"ADMIN_PASSWORD"`
+	JWTSecret     string `env:"JWT_SECRET"`
+	DatabaseURL   string `env:"DATABASE_URL"`
 	Email         EmailConfig
 	Redis         RedisConfig
 	BaseURL       string `env:"BASE_URL" env-description:"the base url of the app, e.g. https://afterwill.life"`
+	GinMode       string `env:"GIN_MODE"`
 }
 
 func Get() (Config, error) {
