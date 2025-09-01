@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/adhocore/gronx"
 	"github.com/gin-gonic/gin"
 	"github.com/gragorther/epigo/asynq/tasks"
 	argon2id "github.com/gragorther/epigo/hash"
@@ -30,7 +31,7 @@ type LoginInput struct {
 func RegisterUser(db interface {
 	CheckIfUserExistsByUsernameAndEmail(username string, email string) (bool, error)
 	CreateUser(context.Context, *models.User) error
-}, createHash func(string, *argon2id.Params) (string, error), jwtSecret []byte, jwtIssuer string, jwtAudience string) gin.HandlerFunc {
+}, createHash func(string, *argon2id.Params) (string, error), parseEmailVerificationToken tokens.ParseEmailVerificationFunc) gin.HandlerFunc {
 	return func(c *gin.Context) {
 
 		var authInput RegistrationInput
@@ -39,7 +40,7 @@ func RegisterUser(db interface {
 			c.AbortWithError(http.StatusUnprocessableEntity, fmt.Errorf("failed to bind register user JSON: %w", err))
 			return
 		}
-		userEmail, err := tokens.ParseEmailVerification(jwtSecret, authInput.Token, jwtAudience, jwtIssuer)
+		userEmail, err := parseEmailVerificationToken(authInput.Token)
 		if err != nil {
 			c.AbortWithError(http.StatusUnauthorized, fmt.Errorf("failed to parse user email verification token, which was acquired from the `token` query param: %w", err))
 			return
@@ -84,7 +85,7 @@ func LoginUser(db interface {
 	CheckIfUserExistsByUsername(ctx context.Context, username string) (bool, error)
 	GetUserByUsername(ctx context.Context, username string) (models.User, error)
 	EditUser(context.Context, models.User) error
-}, comparePasswordAndHash func(password string, hash string) (match bool, err error), jwtSecret []byte, issuer string, audience []string) gin.HandlerFunc {
+}, comparePasswordAndHash func(password string, hash string) (match bool, err error), createUserAuthToken tokens.CreateUserAuthFunc) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var authInput LoginInput
 		if err := c.ShouldBindJSON(&authInput); err != nil {
@@ -117,7 +118,7 @@ func LoginUser(db interface {
 			return
 		}
 
-		token, err := tokens.CreateUserAuth(jwtSecret, userFound.ID, issuer, audience)
+		token, err := createUserAuthToken(userFound.ID)
 		if err != nil {
 			c.AbortWithError(http.StatusInternalServerError, fmt.Errorf("failed to generate JWT token: %w", err))
 			return
@@ -184,15 +185,19 @@ func SetEmailInterval(db interface {
 		userID, err := GetUserIDFromContext(c)
 		if err != nil {
 			c.AbortWithError(http.StatusInternalServerError, err)
-		}
-		var input setEmailIntervalInput
-		err = c.ShouldBindJSON(&input)
-		if err != nil {
-			c.AbortWithError(http.StatusUnprocessableEntity, fmt.Errorf("failed to bind json while setting user email interval: %w", err))
 			return
 		}
-		err = db.UpdateUserInterval(userID, input.Cron)
-		if err != nil {
+		var input setEmailIntervalInput
+		if err := c.ShouldBindJSON(&input); err != nil {
+			c.AbortWithError(http.StatusBadRequest, fmt.Errorf("failed to bind json while setting user email interval: %w", err))
+			return
+		}
+		if !gronx.IsValid(input.Cron) {
+			c.AbortWithStatus(http.StatusUnprocessableEntity)
+			return
+		}
+
+		if err := db.UpdateUserInterval(userID, input.Cron); err != nil {
 			c.AbortWithError(http.StatusInternalServerError, fmt.Errorf("failed to update user interval: %w", err))
 			return
 		}

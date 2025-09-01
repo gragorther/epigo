@@ -15,6 +15,8 @@ var jwtSecret = []byte("testsecret")
 const audience = "https://testserver.com"
 const issuer = "https://testserver.com"
 
+var parseEmailVerificationToken = tokens.ParseEmailVerification(jwtSecret, audience, issuer)
+
 func TestCreateEmailVerification(t *testing.T) {
 	table := map[string]struct {
 		Email string
@@ -27,9 +29,9 @@ func TestCreateEmailVerification(t *testing.T) {
 	for name, test := range table {
 		t.Run(name, func(t *testing.T) {
 			require := require.New(t)
-			gotToken, err := tokens.CreateEmailVerification(jwtSecret, test.Email, audience, issuer)
+			gotToken, err := tokens.CreateEmailVerification(jwtSecret, audience, issuer)(test.Email)
 			require.NoError(err, "creating email verification token shouldn't fail")
-			userEmail, err := tokens.ParseEmailVerification(jwtSecret, gotToken, issuer, audience)
+			userEmail, err := parseEmailVerificationToken(gotToken)
 			require.NoError(err, "parsing token shouldn't fail")
 
 			assert.Equal(t, test.Email, userEmail)
@@ -40,7 +42,6 @@ func TestCreateEmailVerification(t *testing.T) {
 const testEmail = "testemail@testing.com"
 
 func TestParseEmailVerification(t *testing.T) {
-
 	type want struct {
 		Email string
 		Error error
@@ -56,7 +57,7 @@ func TestParseEmailVerification(t *testing.T) {
 
 	{
 		var err error
-		table[0].Token, err = tokens.CreateEmailVerification(jwtSecret, testEmail, audience, issuer)
+		table[0].Token, err = tokens.CreateEmailVerification(jwtSecret, audience, issuer)(testEmail)
 		if err != nil {
 			t.Fatalf("failed to create token: %v", err)
 		}
@@ -80,7 +81,7 @@ func TestParseEmailVerification(t *testing.T) {
 
 	for _, test := range table {
 		t.Run(test.Name, func(t *testing.T) {
-			email, err := tokens.ParseEmailVerification(jwtSecret, test.Token, audience, issuer)
+			email, err := parseEmailVerificationToken(test.Token)
 			if test.Want.Error != nil {
 				assert.Error(t, err)
 			} else {

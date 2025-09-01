@@ -8,6 +8,9 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+var createUserAuth = tokens.CreateUserAuth(jwtSecret, []string{audience}, issuer)
+var parseUserAuth = tokens.ParseUserAuth(jwtSecret, []string{audience}, issuer)
+
 func TestCreateUserAuth(t *testing.T) {
 	table := map[string]struct {
 		UserID uint
@@ -20,9 +23,9 @@ func TestCreateUserAuth(t *testing.T) {
 	for name, test := range table {
 		t.Run(name, func(t *testing.T) {
 			require := require.New(t)
-			gotToken, err := tokens.CreateUserAuth(jwtSecret, test.UserID, audience, []string{issuer})
+			gotToken, err := createUserAuth(test.UserID)
 			require.NoError(err, "creating email verification token shouldn't fail")
-			userID, err := tokens.ParseUserAuth(jwtSecret, gotToken, issuer, []string{audience})
+			userID, err := parseUserAuth(gotToken)
 			require.NoError(err, "parsing token shouldn't fail")
 
 			assert.Equal(t, test.UserID, userID)
@@ -44,7 +47,7 @@ func TestParseUserAuth(t *testing.T) {
 
 	{
 		var err error
-		table[0].Token, err = tokens.CreateUserAuth(jwtSecret, userID, audience, []string{issuer})
+		table[0].Token, err = createUserAuth(userID)
 		if err != nil {
 			panic(err)
 		}
@@ -52,7 +55,7 @@ func TestParseUserAuth(t *testing.T) {
 
 	for _, test := range table {
 		t.Run(test.Name, func(t *testing.T) {
-			userID, err := tokens.ParseUserAuth(jwtSecret, test.Token, audience, []string{issuer})
+			userID, err := parseUserAuth(test.Token)
 			require.NoError(t, err)
 			assert.Equal(t, test.Want.UserID, userID)
 		})

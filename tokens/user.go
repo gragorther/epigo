@@ -19,30 +19,39 @@ type userAuthClaims struct {
 	UserID uint `json:"id,omitzero"`
 }
 
-func CreateUserAuth(jwtSecret []byte, userID uint, issuer string, audience []string) (token string, err error) {
-	return createToken(jwtSecret, userAuthClaims{
-		UserID: userID,
-		Claims: Claims{
-			Type: TypeUserAuth,
-			RegisteredClaims: jwt.RegisteredClaims{
-				Issuer:    issuer,
-				Audience:  audience,
-				ExpiresAt: jwt.NewNumericDate(time.Now().Add(24 * time.Hour)),
-				Subject:   strconv.FormatUint(uint64(userID), 10),
-				IssuedAt:  jwt.NewNumericDate(time.Now()),
+type CreateUserAuthFunc func(userID uint) (token string, err error)
+
+func CreateUserAuth(jwtSecret []byte, audience []string, issuer string) CreateUserAuthFunc {
+	return func(userID uint) (token string, err error) {
+		return createToken(jwtSecret, userAuthClaims{
+			UserID: userID,
+			Claims: Claims{
+				Type: TypeUserAuth,
+				RegisteredClaims: jwt.RegisteredClaims{
+					Issuer:    issuer,
+					Audience:  audience,
+					ExpiresAt: jwt.NewNumericDate(time.Now().Add(24 * time.Hour)),
+					Subject:   strconv.FormatUint(uint64(userID), 10),
+					IssuedAt:  jwt.NewNumericDate(time.Now()),
+				},
 			},
-		},
-	})
+		})
+	}
 
 }
 
 var ErrInvalidTokenType error = errors.New("invalid token type")
 
-func ParseUserAuth(jwtSecret []byte, tokenString string, issuer string, audience []string) (userID uint, err error) {
-	var claims userAuthClaims
-	if err := parseToken(jwtSecret, tokenString, TypeUserAuth, issuer, audience, "", &claims); err != nil {
-		return 0, err
+type ParseUserAuthFunc func(tokenString string) (userID uint, err error)
+
+func ParseUserAuth(jwtSecret []byte, audience []string, issuer string) ParseUserAuthFunc {
+	return func(tokenString string) (userID uint, err error) {
+		var claims userAuthClaims
+		if err := parseToken(jwtSecret, tokenString, TypeUserAuth, audience, issuer, "", &claims); err != nil {
+			return 0, err
+		}
+
+		return claims.UserID, nil
 	}
 
-	return claims.UserID, nil
 }

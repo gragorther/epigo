@@ -1,6 +1,8 @@
 package tokens
 
 import (
+	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -8,18 +10,32 @@ import (
 
 const TypeUserLifeStatus = "userLifeStatus"
 
-func CreateUserLifeStatus(jwtSecret []byte, userID uint, expiresAfter time.Duration) (token string, err error) {
-	generatedToken := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"exp": time.Now().Add(expiresAfter).Unix(),
-		"id":  userID,
-		"typ": TypeUserLifeStatus,
-	})
-	return generatedToken.SignedString(jwtSecret)
+type UserLifeStatusClaims struct {
+	Claims
+	UserID uint `json:"userID,omitzero"`
 }
 
-/*
-func ParseUserLifeStatus(jwtSecret []byte, token string) (userID uint, err error) {
-	claims, err := parseToken(jwtSecret, token, TypeUserLifeStatus)
+func NewUserLifeStatusClaims(userID uint, audience []string, issuer string, expiresAt time.Time) UserLifeStatusClaims {
+	return UserLifeStatusClaims{
+		Claims: NewClaims(TypeUserLifeStatus, audience, issuer, jwt.NewNumericDate(expiresAt), nil, strconv.FormatUint(uint64(userID), 10)),
+		UserID: userID,
+	}
 
 }
-*/
+
+type CreateUserLifeStatusFunc func(userID uint, expiresAt time.Time) (token string, err error)
+
+// token for verifying that the user is still alive (or something similar, i.e. not kidnapped)
+func CreateUserLifeStatus(jwtSecret []byte, audience []string, issuer string) CreateUserLifeStatusFunc {
+	return func(userID uint, expiresAt time.Time) (token string, err error) {
+		return createToken(jwtSecret, NewUserLifeStatusClaims(userID, audience, issuer, expiresAt))
+	}
+}
+
+func ParseUserLifeStatus(jwtSecret []byte, tokenString string, audience []string, issuer string) (userID uint, err error) {
+	var claims UserLifeStatusClaims
+	if err := parseToken(jwtSecret, tokenString, TypeUserLifeStatus, audience, issuer, "", &claims); err != nil {
+		return 0, fmt.Errorf("failed to parse token: %w", err)
+	}
+	return claims.UserID, nil
+}

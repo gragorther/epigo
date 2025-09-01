@@ -19,6 +19,7 @@ import (
 	"github.com/gragorther/epigo/email"
 	"github.com/gragorther/epigo/logger"
 	"github.com/gragorther/epigo/router"
+	"github.com/gragorther/epigo/tokens"
 	"github.com/hibiken/asynq"
 )
 
@@ -59,9 +60,10 @@ func main() {
 	if err != nil {
 		log.Fatalf("failed to run email client: %v", err)
 	}
+	createEmailVerificationToken := tokens.CreateEmailVerification(jwtSecret, config.BaseURL, config.BaseURL)
 	emailService := email.NewEmailService(emailClient, config.Email.From)
 	redisClientOpt := asynq.RedisClientOpt{Addr: config.Redis.Address, Username: config.Redis.Address, Password: config.Redis.Password, DB: config.Redis.DB}
-	go workers.Run(redisClientOpt, jwtSecret, emailService, fmt.Sprintf("%v/user/register", config.BaseURL), config.BaseURL)
+	go workers.Run(redisClientOpt, jwtSecret, emailService, fmt.Sprintf("%v/user/register", config.BaseURL), createEmailVerificationToken)
 	go scheduler.Run(dbHandler, redisClientOpt)
 	asynqClient := asynq.NewClient(redisClientOpt)
 

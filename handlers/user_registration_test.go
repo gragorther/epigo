@@ -23,13 +23,16 @@ import (
 
 const testIssuer = "https://server.com"
 
+var parseEmailVerificationToken = tokens.ParseEmailVerification(JWT_SECRET, testIssuer, testIssuer)
+
 func TestRegisterUser(t *testing.T) {
 	requi := require.New(t)
 	createToken := func(email string, audience string, issuer string) string {
-		token, err := tokens.CreateEmailVerification(JWT_SECRET, email, audience, issuer)
+		token, err := tokens.CreateEmailVerification(JWT_SECRET, audience, issuer)(email)
 		requi.NoError(err)
 		return token
 	}
+
 	type want struct {
 		Status      int
 		UserCreated bool
@@ -50,7 +53,7 @@ func TestRegisterUser(t *testing.T) {
 			mock := mock.NewMockDB()
 			gin.SetMode(gin.TestMode)
 			r := gin.New()
-			r.POST("/", handlers.RegisterUser(mock, createHash, JWT_SECRET, testIssuer, testIssuer))
+			r.POST("/", handlers.RegisterUser(mock, createHash, parseEmailVerificationToken))
 			req := httptest.NewRequest(http.MethodPost, "/", nil)
 			input, err := sonic.Marshal(test.Input)
 			require.NoError(err, "marshalling json shouldn't fail")
@@ -68,7 +71,7 @@ func TestRegisterUser(t *testing.T) {
 				assert.Equal(test.Input.Username, user.Username, "usernames should match")
 				hash, _ := createHash(test.Input.Password, argon2id.DefaultParams)
 				assert.Equal(hash, user.PasswordHash, "the hashed password should match the one in the database")
-				email, err := tokens.ParseEmailVerification(JWT_SECRET, test.Input.Token, testIssuer, testIssuer)
+				email, err := parseEmailVerificationToken(test.Input.Token)
 				require.NoError(err, "parsing email verification token shouldn't fail")
 				assert.Equal(email, user.Email)
 			}

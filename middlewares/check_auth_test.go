@@ -16,6 +16,7 @@ import (
 )
 
 var JWT_SECRET []byte = []byte("very sercure")
+var parseUserAuthToken = tokens.ParseUserAuth(JWT_SECRET, []string{testIssuer}, testIssuer)
 
 type Mock struct {
 	Users []models.User
@@ -32,6 +33,8 @@ func (m *Mock) GetUserByID(ctx context.Context, ID uint) (models.User, error) {
 
 const testUserID = 1
 const testIssuer = "https://issuer.com"
+
+var createUserAuth = tokens.CreateUserAuth(JWT_SECRET, []string{testIssuer}, testIssuer)
 
 func TestCheckAuth(t *testing.T) {
 
@@ -55,7 +58,7 @@ func TestCheckAuth(t *testing.T) {
 
 	{
 		require := require.New(t)
-		token, err := tokens.CreateUserAuth(JWT_SECRET, testUserID, testIssuer, []string{testIssuer})
+		token, err := createUserAuth(testUserID)
 		require.NoError(err, "creating user auth token shouldn't fail")
 
 		middlewares.SetHttpAuthHeaderToken(&table[0].Header, token)
@@ -71,7 +74,7 @@ func TestCheckAuth(t *testing.T) {
 			gin.SetMode(gin.TestMode)
 
 			r := gin.New()
-			r.Use(middlewares.CheckAuth(JWT_SECRET, testIssuer, []string{testIssuer}))
+			r.Use(middlewares.CheckAuth(parseUserAuthToken))
 
 			userIDs := make(chan uint, 1)
 

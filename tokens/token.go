@@ -22,7 +22,7 @@ var ErrTokenClaimsAreNil = errors.New("token claims are nil")
 var ErrInvalidClaimsType = errors.New("invalid claims type")
 
 // claims MUST be a pointer so that it can be populated
-func parseToken(jwtSecret []byte, tokenString string, expectedType string, issuer string, audience []string, subject string, claims properTypeClaims) error {
+func parseToken(jwtSecret []byte, tokenString string, expectedType string, audience []string, issuer string, subject string, claims properTypeClaims) error {
 
 	val := reflect.ValueOf(claims)
 	if val.Kind() != reflect.Pointer || val.IsNil() {

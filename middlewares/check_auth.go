@@ -12,7 +12,7 @@ import (
 
 const CurrentUser = "currentUser"
 
-func CheckAuth(jwtSecret []byte, jwtIssuer string, jwtAudience []string) gin.HandlerFunc {
+func CheckAuth(parseUserAuthToken tokens.ParseUserAuthFunc) gin.HandlerFunc {
 	return func(c *gin.Context) {
 
 		authHeader := c.GetHeader("Authorization")
@@ -29,7 +29,7 @@ func CheckAuth(jwtSecret []byte, jwtIssuer string, jwtAudience []string) gin.Han
 		}
 
 		tokenString := authToken[1]
-		userID, err := tokens.ParseUserAuth(jwtSecret, tokenString, jwtIssuer, jwtAudience)
+		userID, err := parseUserAuthToken(tokenString)
 		if err != nil {
 			c.AbortWithError(http.StatusUnauthorized, fmt.Errorf("failed to parse user auth token: %w", err))
 			return

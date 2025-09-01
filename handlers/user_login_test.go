@@ -21,6 +21,9 @@ import (
 const testUsername = "username"
 const testPass = "testpass"
 
+var createUserAuthToken = tokens.CreateUserAuth(JWT_SECRET, []string{testIssuer}, testIssuer)
+var parseUserAuthToken = tokens.ParseUserAuth(JWT_SECRET, []string{testIssuer}, testIssuer)
+
 func TestLoginUser(t *testing.T) {
 
 	hash := func(pass string) string {
@@ -51,7 +54,7 @@ func TestLoginUser(t *testing.T) {
 			r := gin.Default()
 			mock := mock.NewMockDB()
 			_ = mock.CreateUser(t.Context(), &test.UserToCreate)
-			r.POST("/", handlers.LoginUser(mock, comparePasswordAndHash, JWT_SECRET, testIssuer, []string{testIssuer}))
+			r.POST("/", handlers.LoginUser(mock, comparePasswordAndHash, createUserAuthToken))
 
 			input, err := sonic.MarshalString(test.Input)
 			require.NoError(err)
@@ -64,7 +67,7 @@ func TestLoginUser(t *testing.T) {
 				require.NoError(err, "reading http response shouldn't fail")
 				var response handlers.LoginResponse
 				require.NoError(sonic.Unmarshal(responseBytes, &response))
-				userID, err := tokens.ParseUserAuth(JWT_SECRET, response.Token, testIssuer, []string{testIssuer})
+				userID, err := parseUserAuthToken(response.Token)
 				require.NoError(err)
 				assert.Equal(test.UserToCreate.ID, userID, "userIDs should match")
 			}

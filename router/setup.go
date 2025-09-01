@@ -7,6 +7,7 @@ import (
 	"github.com/gragorther/epigo/handlers"
 	argon2id "github.com/gragorther/epigo/hash"
 	"github.com/gragorther/epigo/middlewares"
+	"github.com/gragorther/epigo/tokens"
 	"github.com/hibiken/asynq"
 )
 
@@ -15,14 +16,18 @@ func Setup(db *gormdb.GormDB, jwtSecret string, asynqClient *asynq.Client, baseU
 	r.Use(middlewares.ErrorHandler())
 
 	jwtSecretBytes := []byte(jwtSecret)
-	checkAuth := middlewares.CheckAuth(jwtSecretBytes, baseURL, []string{baseURL})
+	audience := []string{baseURL}
+	parseUserAuthToken := tokens.ParseUserAuth(jwtSecretBytes, audience, baseURL)
+	checkAuth := middlewares.CheckAuth(parseUserAuthToken)
+	parseEmailVerificationToken := tokens.ParseEmailVerification(jwtSecretBytes, baseURL, baseURL)
+	createUserAuthToken := tokens.CreateUserAuth(jwtSecretBytes, audience, baseURL)
 
 	// user stuff
 	{
 		user := r.Group("/user")
-		user.POST("/register", handlers.RegisterUser(db, argon2id.CreateHash, jwtSecretBytes, baseURL, baseURL))
+		user.POST("/register", handlers.RegisterUser(db, argon2id.CreateHash, parseEmailVerificationToken))
 		user.POST("/verify-email", handlers.VerifyEmail(tasks.EnqueueTask(asynqClient), db))
-		user.POST("/login", handlers.LoginUser(db, argon2id.ComparePasswordAndHash, jwtSecretBytes, baseURL, []string{baseURL}))
+		user.POST("/login", handlers.LoginUser(db, argon2id.ComparePasswordAndHash, createUserAuthToken))
 		user.GET("/profile", checkAuth, handlers.GetUserData(db))
 		user.PUT("/set-email-interval", checkAuth, handlers.SetEmailInterval(db))
 		{
