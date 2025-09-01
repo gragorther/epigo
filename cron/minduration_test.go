@@ -39,3 +39,10 @@ func TestMinDurationBetweenCronTicks(t *testing.T) {
 		})
 	}
 }
+
+func BenchmarkMinDurationBetweenCronTicks(b *testing.B) {
+	start := time.Date(2025, time.January, 2, 1, 0, 0, 0, time.UTC)
+	for b.Loop() {
+		cron.MinDurationBetweenCronTicks("*/2 * * * *", start, 0)
+	}
+}
