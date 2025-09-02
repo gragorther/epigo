@@ -1,6 +1,8 @@
 package router
 
 import (
+	"time"
+
 	"github.com/gin-gonic/gin"
 	"github.com/gragorther/epigo/asynq/tasks"
 	"github.com/gragorther/epigo/database/gormdb"
@@ -11,7 +13,7 @@ import (
 	"github.com/hibiken/asynq"
 )
 
-func Setup(db *gormdb.GormDB, jwtSecret string, asynqClient *asynq.Client, baseURL string) *gin.Engine {
+func Setup(db *gormdb.GormDB, jwtSecret string, asynqClient *asynq.Client, baseURL string, minDurationBetweenEmail time.Duration) *gin.Engine {
 	r := gin.Default()
 	r.Use(middlewares.ErrorHandler())
 
@@ -29,7 +31,7 @@ func Setup(db *gormdb.GormDB, jwtSecret string, asynqClient *asynq.Client, baseU
 		user.POST("/verify-email", handlers.VerifyEmail(tasks.EnqueueTask(asynqClient), db))
 		user.POST("/login", handlers.LoginUser(db, argon2id.ComparePasswordAndHash, createUserAuthToken))
 		user.GET("/profile", checkAuth, handlers.GetUserData(db))
-		user.PUT("/set-email-interval", checkAuth, handlers.SetEmailInterval(db))
+		user.PUT("/set-email-interval", checkAuth, handlers.SetEmailInterval(db, minDurationBetweenEmail))
 		{
 			profile := user.Group("/profile")
 			profile.POST("/create", checkAuth, handlers.CreateProfile(db))

@@ -3,7 +3,7 @@ module github.com/gragorther/epigo
 go 1.25.0
 
 require (
-	github.com/adhocore/gronx v1.19.6
+	github.com/aptible/supercronic v0.2.34
 	github.com/bytedance/sonic v1.14.0
 	github.com/gin-gonic/gin v1.10.1
 	github.com/golang-jwt/jwt/v5 v5.3.0

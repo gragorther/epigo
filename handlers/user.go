@@ -6,9 +6,9 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/adhocore/gronx"
 	"github.com/gin-gonic/gin"
 	"github.com/gragorther/epigo/asynq/tasks"
+	"github.com/gragorther/epigo/cron"
 	argon2id "github.com/gragorther/epigo/hash"
 	"github.com/gragorther/epigo/models"
 	"github.com/gragorther/epigo/tokens"
@@ -180,7 +180,7 @@ type setEmailIntervalInput struct {
 
 func SetEmailInterval(db interface {
 	UpdateUserInterval(userID uint, cron string) error
-}) gin.HandlerFunc {
+}, minDurationBetweenEmails time.Duration) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		userID, err := GetUserIDFromContext(c)
 		if err != nil {
@@ -192,7 +192,12 @@ func SetEmailInterval(db interface {
 			c.AbortWithError(http.StatusBadRequest, fmt.Errorf("failed to bind json while setting user email interval: %w", err))
 			return
 		}
-		if !gronx.IsValid(input.Cron) {
+		minDuration, err := cron.MinDurationBetweenCronTicks(input.Cron, 0)
+		if err != nil {
+			c.AbortWithError(http.StatusBadRequest, err)
+			return
+		}
+		if minDuration < minDurationBetweenEmails {
 			c.AbortWithStatus(http.StatusUnprocessableEntity)
 			return
 		}

@@ -67,7 +67,7 @@ func main() {
 	go scheduler.Run(dbHandler, redisClientOpt)
 	asynqClient := asynq.NewClient(redisClientOpt)
 
-	r := router.Setup(dbHandler, config.JWTSecret, asynqClient, config.BaseURL)
+	r := router.Setup(dbHandler, config.JWTSecret, asynqClient, config.BaseURL, config.MinDurationBetweenEmails)
 
 	srv := &http.Server{
 		Addr:    ":8080",

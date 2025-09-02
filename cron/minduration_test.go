@@ -10,22 +10,30 @@ import (
 )
 
 func TestMinDurationBetweenCronTicks(t *testing.T) {
-	startTime := time.Date(2025, time.January, 2, 1, 0, 0, 0, time.UTC)
 	table := map[string]struct {
 		Expr         string
-		Start        time.Time
 		Iterations   uint
 		WantDuration time.Duration
 	}{
 		"normal time": {
 			Expr:         "* * * * *",
 			WantDuration: time.Minute,
-			Start:        startTime,
 		},
 		"every 2nd minute": {
 			Expr:         "*/2 * * * *",
 			WantDuration: time.Minute * 2,
-			Start:        startTime,
+		},
+		"every month": {
+			Expr:         "0 0 1 * *",
+			WantDuration: time.Hour * 24 * 28,
+		},
+		"every minute on monday": {
+			Expr:         "* * * * 1",
+			WantDuration: time.Minute,
+		},
+		"every day at 2:02": {
+			Expr:         "2 2 * * *",
+			WantDuration: time.Hour * 24,
 		},
 	}
 
@@ -33,16 +41,15 @@ func TestMinDurationBetweenCronTicks(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			require := require.New(t)
 			assert := assert.New(t)
-			gotDuration, err := cron.MinDurationBetweenCronTicks(test.Expr, test.Start, test.Iterations)
+			gotDuration, err := cron.MinDurationBetweenCronTicks(test.Expr, test.Iterations)
 			require.NoError(err)
-			assert.Equal(test.WantDuration, gotDuration)
+			assert.Equal(test.WantDuration, gotDuration, "durations should match")
 		})
 	}
 }
 
 func BenchmarkMinDurationBetweenCronTicks(b *testing.B) {
-	start := time.Date(2025, time.January, 2, 1, 0, 0, 0, time.UTC)
 	for b.Loop() {
-		cron.MinDurationBetweenCronTicks("*/2 * * * *", start, 0)
+		cron.MinDurationBetweenCronTicks("*/2 * * * *", 0)
 	}
 }
