@@ -19,6 +19,7 @@ type User struct {
 	Cron         *string        `json:"cron"`
 	IsAdmin      bool           `json:"isAdmin"`
 	Profile      *Profile       `json:"profile"`
+	Alive        bool
 	LastMessages []LastMessage
 }
 type Profile struct {

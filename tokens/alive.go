@@ -32,10 +32,15 @@ func CreateUserLifeStatus(jwtSecret []byte, audience []string, issuer string) Cr
 	}
 }
 
-func ParseUserLifeStatus(jwtSecret []byte, tokenString string, audience []string, issuer string) (userID uint, err error) {
-	var claims UserLifeStatusClaims
-	if err := parseToken(jwtSecret, tokenString, TypeUserLifeStatus, audience, issuer, "", &claims); err != nil {
-		return 0, fmt.Errorf("failed to parse token: %w", err)
+type ParseUserLifeStatusFunc func(tokenString string) (userID uint, err error)
+
+func ParseUserLifeStatus(jwtSecret []byte, audience []string, issuer string) ParseUserLifeStatusFunc {
+	return func(tokenString string) (userID uint, err error) {
+		var claims UserLifeStatusClaims
+		if err := parseToken(jwtSecret, tokenString, TypeUserLifeStatus, audience, issuer, "", &claims); err != nil {
+			return 0, fmt.Errorf("failed to parse token: %w", err)
+		}
+		return claims.UserID, nil
 	}
-	return claims.UserID, nil
+
 }

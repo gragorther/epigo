@@ -2,8 +2,12 @@ package tasks
 
 import (
 	"context"
+	"fmt"
+	"time"
 
 	"github.com/bytedance/sonic"
+	"github.com/gragorther/epigo/email"
+	"github.com/gragorther/epigo/tokens"
 	"github.com/hibiken/asynq"
 )
 
@@ -23,21 +27,37 @@ func EnqueueTask(client *asynq.Client) TaskEnqueuer {
 // Task payload for any email related tasks.
 type RecurringEmailTaskPayload struct {
 	// ID for the email recipient.
-	UserID uint
+	UserID       uint
+	Name         string
+	Email        string
+	ExpiresAfter time.Duration
+}
+type verificationEmailSender interface {
+	SendVerificationEmail(ctx context.Context, user email.User, registrationLink string) error
 }
 
-func NewRecurringEmailTask(id uint) (*asynq.Task, error) {
-	payload, err := sonic.Marshal(RecurringEmailTaskPayload{UserID: id})
+func NewRecurringEmailTask(name string, email string, expiresAfter time.Duration) (*asynq.Task, error) {
+	payload, err := sonic.Marshal(RecurringEmailTaskPayload{Name: name})
 	if err != nil {
 		return nil, err
 	}
 	return asynq.NewTask(TypeRecurringEmail, payload), nil
 }
 
-func HandleRecurringEmailTask(ctx context.Context, t *asynq.Task) error {
-	var p RecurringEmailTaskPayload
-	if err := sonic.Unmarshal(t.Payload(), &p); err != nil {
-		return err
+// verificationURL is the URL that takes a token parameter, e.g. https://afterwill.life/user/life/verify?token=loremipsumdolorsitamet
+func HandleRecurringEmailTask(emailService interface {
+	SendUserLifeStatusEmail(ctx context.Context, user email.LifeStatusUser, verificationURL string) error
+}, createUserLifeStatusToken tokens.CreateUserLifeStatusFunc, verificationURL string) asynq.HandlerFunc {
+	return func(ctx context.Context, t *asynq.Task) error {
+		var p RecurringEmailTaskPayload
+		if err := sonic.Unmarshal(t.Payload(), &p); err != nil {
+			return err
+		}
+		token, err := createUserLifeStatusToken(p.UserID, time.Now().Add(p.ExpiresAfter))
+		if err != nil {
+			return err
+		}
+		return emailService.SendUserLifeStatusEmail(ctx, email.LifeStatusUser{Name: p.Name, Email: p.Email}, fmt.Sprintf("%s?%s", verificationURL, token))
+
 	}
-	return nil
 }

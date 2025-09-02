@@ -20,10 +20,14 @@ type UserInterval struct {
 	ID    uint   `gorm:"primarykey"`
 	Email string `json:"email" gorm:"unique"`
 	Cron  string `json:"cron"`
+	Name  string `json:"name"`
 }
 
 func (g *GormDB) GetUserIntervals(ctx context.Context) ([]UserInterval, error) {
-	got, err := gorm.G[models.User](g.db).Select("email", "id", "cron").Find(ctx)
+	got, err := gorm.G[models.User](g.db).Select("email", "id", "cron", "name", "username").Preload("profile", func(db gorm.PreloadBuilder) error {
+		db.Select("name")
+		return nil
+	}).Find(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -35,8 +39,15 @@ func (g *GormDB) GetUserIntervals(ctx context.Context) ([]UserInterval, error) {
 		} else {
 			cron = *item.Cron
 		}
+		var name string
+		if item.Profile != nil && item.Profile.Name != nil {
+			name = *item.Profile.Name
+		} else {
+			name = item.Username
+		}
+
 		return UserInterval{
-			ID: item.ID, Email: item.Email, Cron: cron,
+			ID: item.ID, Email: item.Email, Cron: cron, Name: name,
 		}
 	}), nil
 }

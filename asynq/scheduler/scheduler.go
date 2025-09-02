@@ -28,7 +28,6 @@ type Config struct {
 
 func Run(db intervalGetter, redisClientOpt asynq.RedisClientOpt) {
 	provider := &ConfigProvider{DB: db}
-
 	mgr, err := asynq.NewPeriodicTaskManager(
 		asynq.PeriodicTaskManagerOpts{
 			RedisConnOpt:               redisClientOpt,
@@ -61,7 +60,7 @@ func (p *ConfigProvider) GetConfigs() ([]*asynq.PeriodicTaskConfig, error) {
 		if user.Cron == "" {
 			continue
 		}
-		task, err := tasks.NewRecurringEmailTask(user.ID)
+		task, err := tasks.NewRecurringEmailTask(user.Name, user.Email, 24*time.Hour)
 		if err != nil {
 			return nil, err
 		}

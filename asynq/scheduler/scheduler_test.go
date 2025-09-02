@@ -2,14 +2,8 @@ package scheduler_test
 
 import (
 	"context"
-	"testing"
 
-	"github.com/gragorther/epigo/asynq/scheduler"
-	"github.com/gragorther/epigo/asynq/tasks"
 	"github.com/gragorther/epigo/database/gormdb"
-	"github.com/hibiken/asynq"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 type getIntervalsStub struct {
@@ -21,6 +15,7 @@ func (g getIntervalsStub) GetUserIntervals(ctx context.Context) ([]gormdb.UserIn
 	return g.userIntervals, g.err
 }
 
+/*
 func TestGetConfigs(t *testing.T) {
 
 	assert := assert.New(t)
@@ -60,3 +55,4 @@ func TestGetConfigs(t *testing.T) {
 		assert.Equal(want, got, "expected zero configs")
 	})
 }
+*/

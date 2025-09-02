@@ -24,7 +24,7 @@ func NewVerificationEmailTask(email string, opts ...asynq.Option) (*asynq.Task, 
 	return asynq.NewTask(TypeVerificationEmail, payload, opts...), nil
 }
 
-func HandleVerificationEmailTask(createEmailVerification tokens.CreateEmailVerificationFunc, emailService *email.EmailService, registrationRoute string) asynq.HandlerFunc {
+func HandleVerificationEmailTask(createEmailVerification tokens.CreateEmailVerificationFunc, emailService verificationEmailSender, registrationRoute string) asynq.HandlerFunc {
 	return func(ctx context.Context, t *asynq.Task) error {
 		var p VerificationEmailPayload
 		if err := sonic.Unmarshal(t.Payload(), &p); err != nil {
