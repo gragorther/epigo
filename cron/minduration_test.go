@@ -50,6 +50,9 @@ func TestMinDurationBetweenCronTicks(t *testing.T) {
 
 func BenchmarkMinDurationBetweenCronTicks(b *testing.B) {
 	for b.Loop() {
-		cron.MinDurationBetweenCronTicks("*/2 * * * *", 0)
+		_, err := cron.MinDurationBetweenCronTicks("*/2 * * * *", 0)
+		if err != nil {
+			b.Fatalf("got unexpected error: %v", err)
+		}
 	}
 }
