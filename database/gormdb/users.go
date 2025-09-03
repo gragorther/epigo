@@ -159,3 +159,7 @@ func (g *GormDB) UpdateProfile(ctx context.Context, profile models.Profile) erro
 	}
 	return nil
 }
+
+func (g *GormDB) IncrementUserSentEmailsCount(ctx context.Context, userID uint) error {
+	return gorm.G[models.User](g.db).Exec(ctx, "UPDATE users SET sent_emails = sent_emails + 1 WHERE id = ?", userID)
+}

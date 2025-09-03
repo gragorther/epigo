@@ -10,12 +10,12 @@ import (
 	"github.com/hibiken/asynq"
 )
 
-type intervalGetter interface {
+type configProviderDB interface {
 	GetUserIntervals(ctx context.Context) ([]gormdb.UserInterval, error)
 }
 
 type ConfigProvider struct {
-	DB intervalGetter
+	DB configProviderDB
 }
 
 type PeriodicTaskConfigContainer struct {
@@ -26,7 +26,7 @@ type Config struct {
 	TaskType string `json:"taskType"`
 }
 
-func Run(db intervalGetter, redisClientOpt asynq.RedisClientOpt) {
+func Run(db configProviderDB, redisClientOpt asynq.RedisClientOpt) {
 	provider := &ConfigProvider{DB: db}
 	mgr, err := asynq.NewPeriodicTaskManager(
 		asynq.PeriodicTaskManagerOpts{
@@ -60,7 +60,7 @@ func (p *ConfigProvider) GetConfigs() ([]*asynq.PeriodicTaskConfig, error) {
 		if user.Cron == "" {
 			continue
 		}
-		task, err := tasks.NewRecurringEmailTask(user.Name, user.Email, 24*time.Hour)
+		task, err := tasks.NewRecurringEmailTask(user.ID, user.Name, user.Email, 24*time.Hour)
 		if err != nil {
 			return nil, err
 		}

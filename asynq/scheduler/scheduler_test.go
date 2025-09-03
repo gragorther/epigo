@@ -1,11 +1,6 @@
 package scheduler_test
 
-import (
-	"context"
-
-	"github.com/gragorther/epigo/database/gormdb"
-)
-
+/*
 type getIntervalsStub struct {
 	err           error
 	userIntervals []gormdb.UserInterval
@@ -14,6 +9,7 @@ type getIntervalsStub struct {
 func (g getIntervalsStub) GetUserIntervals(ctx context.Context) ([]gormdb.UserInterval, error) {
 	return g.userIntervals, g.err
 }
+*/
 
 /*
 func TestGetConfigs(t *testing.T) {

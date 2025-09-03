@@ -11,7 +11,9 @@ import (
 )
 
 // starts the workers
-func Run(ctx context.Context, redisClientOpt asynq.RedisClientOpt, jwtSecret []byte, emailService *email.EmailService, registrationRoute string, createVerificationEmailToken tokens.CreateEmailVerificationFunc, createUserLifeStatus tokens.CreateUserLifeStatusFunc, lifeVerificationURL string) {
+func Run(ctx context.Context, redisClientOpt asynq.RedisClientOpt, db interface {
+	IncrementUserSentEmailsCount(ctx context.Context, userID uint) error
+}, jwtSecret []byte, emailService *email.EmailService, registrationRoute string, createVerificationEmailToken tokens.CreateEmailVerificationFunc, createUserLifeStatus tokens.CreateUserLifeStatusFunc, lifeVerificationURL string) {
 	srv := asynq.NewServer(
 		redisClientOpt,
 		asynq.Config{
@@ -33,7 +35,7 @@ func Run(ctx context.Context, redisClientOpt asynq.RedisClientOpt, jwtSecret []b
 
 	// mux maps a type to a handler
 	mux := asynq.NewServeMux()
-	mux.HandleFunc(tasks.TypeRecurringEmail, tasks.HandleRecurringEmailTask(emailService, createUserLifeStatus, lifeVerificationURL))
+	mux.HandleFunc(tasks.TypeRecurringEmail, tasks.HandleRecurringEmailTask(emailService, db, createUserLifeStatus, lifeVerificationURL))
 	mux.HandleFunc(tasks.TypeVerificationEmail, tasks.HandleVerificationEmailTask(createVerificationEmailToken, emailService, registrationRoute))
 	if err := srv.Run(mux); err != nil {
 		log.Fatalf("could not run asynq workers: %v", err.Error())

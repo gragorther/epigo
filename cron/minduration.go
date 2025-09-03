@@ -11,7 +11,7 @@ var ErrInvalidCronExpr = errors.New("invalid cron")
 
 // takes a cron, checks the duration between its ticks and returns the smallest one
 //
-// defaults to 100 iterations if the parameter you input is 0
+// defaults to 1000 iterations if the parameter you input is 0
 func MinDurationBetweenCronTicks(expr string, iterations uint) (time.Duration, error) {
 	expression, err := cronexpr.Parse(expr)
 	if err != nil {

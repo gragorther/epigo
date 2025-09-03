@@ -36,8 +36,8 @@ type verificationEmailSender interface {
 	SendVerificationEmail(ctx context.Context, user email.User, registrationLink string) error
 }
 
-func NewRecurringEmailTask(name string, email string, expiresAfter time.Duration) (*asynq.Task, error) {
-	payload, err := sonic.Marshal(RecurringEmailTaskPayload{Name: name})
+func NewRecurringEmailTask(userID uint, name string, email string, expiresAfter time.Duration) (*asynq.Task, error) {
+	payload, err := sonic.Marshal(RecurringEmailTaskPayload{Name: name, Email: email, ExpiresAfter: expiresAfter, UserID: userID})
 	if err != nil {
 		return nil, err
 	}
@@ -47,6 +47,8 @@ func NewRecurringEmailTask(name string, email string, expiresAfter time.Duration
 // verificationURL is the URL that takes a token parameter, e.g. https://afterwill.life/user/life/verify?token=loremipsumdolorsitamet
 func HandleRecurringEmailTask(emailService interface {
 	SendUserLifeStatusEmail(ctx context.Context, user email.LifeStatusUser, verificationURL string) error
+}, db interface {
+	IncrementUserSentEmailsCount(ctx context.Context, userID uint) error
 }, createUserLifeStatusToken tokens.CreateUserLifeStatusFunc, verificationURL string) asynq.HandlerFunc {
 	return func(ctx context.Context, t *asynq.Task) error {
 		var p RecurringEmailTaskPayload
@@ -56,8 +58,14 @@ func HandleRecurringEmailTask(emailService interface {
 		token, err := createUserLifeStatusToken(p.UserID, time.Now().Add(p.ExpiresAfter))
 		if err != nil {
 			return err
+
 		}
-		return emailService.SendUserLifeStatusEmail(ctx, email.LifeStatusUser{Name: p.Name, Email: p.Email}, fmt.Sprintf("%s?%s", verificationURL, token))
+
+		if err := emailService.SendUserLifeStatusEmail(ctx, email.LifeStatusUser{Name: p.Name, Email: p.Email}, fmt.Sprintf("%s?%s", verificationURL, token)); err != nil {
+			return err
+		}
+
+		return db.IncrementUserSentEmailsCount(ctx, p.UserID)
 
 	}
 }

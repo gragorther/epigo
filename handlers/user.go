@@ -134,6 +134,32 @@ func LoginUser(db interface {
 	}
 }
 
+type UpdateMaxSentEmailsInput struct {
+	MaxSentEmails uint `json:"maxSentEmails" binding:"required"`
+}
+
+func UpdateMaxSentEmails(db interface {
+	EditUser(context.Context, models.User) error
+}) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		var input UpdateMaxSentEmailsInput
+		if err := c.ShouldBindJSON(&input); err != nil {
+			c.AbortWithError(http.StatusBadRequest, err)
+			return
+		}
+		userID, err := GetUserIDFromContext(c)
+		if err != nil {
+			c.AbortWithError(http.StatusInternalServerError, err)
+			return
+		}
+
+		if err := db.EditUser(c, models.User{ID: userID, MaxSentEmails: input.MaxSentEmails}); err != nil {
+			c.AbortWithError(http.StatusInternalServerError, err)
+			return
+		}
+	}
+}
+
 type GetUserDataOutput struct {
 	Username  string    `json:"username,omitzero"`
 	LastLogin time.Time `json:"lastLogin,omitzero"`
