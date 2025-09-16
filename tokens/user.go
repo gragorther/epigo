@@ -37,7 +37,6 @@ func CreateUserAuth(jwtSecret []byte, audience []string, issuer string) CreateUs
 			},
 		})
 	}
-
 }
 
 var ErrInvalidTokenType error = errors.New("invalid token type")
@@ -53,5 +52,4 @@ func ParseUserAuth(jwtSecret []byte, audience []string, issuer string) ParseUser
 
 		return claims.UserID, nil
 	}
-
 }

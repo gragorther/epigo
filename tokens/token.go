@@ -16,14 +16,15 @@ type properTypeClaims interface {
 
 var signingMethod = jwt.SigningMethodHS256
 
-var ErrInvalidExpirationDate = errors.New("invalid expiration date")
-var ErrTokenIsNil = errors.New("token is nil")
-var ErrTokenClaimsAreNil = errors.New("token claims are nil")
-var ErrInvalidClaimsType = errors.New("invalid claims type")
+var (
+	ErrInvalidExpirationDate = errors.New("invalid expiration date")
+	ErrTokenIsNil            = errors.New("token is nil")
+	ErrTokenClaimsAreNil     = errors.New("token claims are nil")
+	ErrInvalidClaimsType     = errors.New("invalid claims type")
+)
 
 // claims MUST be a pointer so that it can be populated
 func parseToken(jwtSecret []byte, tokenString string, expectedType string, audience []string, issuer string, subject string, claims properTypeClaims) error {
-
 	val := reflect.ValueOf(claims)
 	if val.Kind() != reflect.Pointer || val.IsNil() {
 		return fmt.Errorf("claims must be a non-nil pointer")
@@ -72,7 +73,6 @@ func parseToken(jwtSecret []byte, tokenString string, expectedType string, audie
 	}
 
 	return nil
-
 }
 
 func createToken(jwtSecret []byte, claims jwt.Claims) (tokenString string, err error) {

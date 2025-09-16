@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/bytedance/sonic"
+	"github.com/gragorther/epigo/database/db"
 	"github.com/gragorther/epigo/email"
 	"github.com/gragorther/epigo/tokens"
 	"github.com/hibiken/asynq"
@@ -16,10 +17,10 @@ const (
 	TypeRecurringEmail = "email:recurring"
 )
 
-type TaskEnqueuer func(ctx context.Context, task *asynq.Task, opts ...asynq.Option) (*asynq.TaskInfo, error)
+type TaskEnqueuer func(task *asynq.Task, opts ...asynq.Option) (*asynq.TaskInfo, error)
 
 func EnqueueTask(client *asynq.Client) TaskEnqueuer {
-	return func(ctx context.Context, task *asynq.Task, opts ...asynq.Option) (*asynq.TaskInfo, error) {
+	return func(task *asynq.Task, opts ...asynq.Option) (*asynq.TaskInfo, error) {
 		return client.Enqueue(task, opts...)
 	}
 }
@@ -49,16 +50,18 @@ func HandleRecurringEmailTask(emailService interface {
 	SendUserLifeStatusEmail(ctx context.Context, user email.LifeStatusUser, verificationURL string) error
 }, db interface {
 	IncrementUserSentEmailsCount(ctx context.Context, userID uint) error
-}, createUserLifeStatusToken tokens.CreateUserLifeStatusFunc, verificationURL string) asynq.HandlerFunc {
+	GetUserSentEmails(context.Context, uint) (db.UserSentEmails, error)
+}, createUserLifeStatusToken tokens.CreateUserLifeStatusFunc, verificationURL string,
+) asynq.HandlerFunc {
 	return func(ctx context.Context, t *asynq.Task) error {
 		var p RecurringEmailTaskPayload
 		if err := sonic.Unmarshal(t.Payload(), &p); err != nil {
 			return err
 		}
+
 		token, err := createUserLifeStatusToken(p.UserID, time.Now().Add(p.ExpiresAfter))
 		if err != nil {
 			return err
-
 		}
 
 		if err := emailService.SendUserLifeStatusEmail(ctx, email.LifeStatusUser{Name: p.Name, Email: p.Email}, fmt.Sprintf("%s?%s", verificationURL, token)); err != nil {
@@ -66,6 +69,5 @@ func HandleRecurringEmailTask(emailService interface {
 		}
 
 		return db.IncrementUserSentEmailsCount(ctx, p.UserID)
-
 	}
 }

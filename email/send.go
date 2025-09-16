@@ -45,5 +45,4 @@ func (e *EmailService) SendVerificationEmail(ctx context.Context, user User, reg
 		return fmt.Errorf("failed to set body text template: %w", err)
 	}
 	return e.client.DialAndSendWithContext(ctx, message)
-
 }

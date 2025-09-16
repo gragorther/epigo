@@ -8,8 +8,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var createUserAuth = tokens.CreateUserAuth(jwtSecret, []string{audience}, issuer)
-var parseUserAuth = tokens.ParseUserAuth(jwtSecret, []string{audience}, issuer)
+var (
+	createUserAuth = tokens.CreateUserAuth(jwtSecret, []string{audience}, issuer)
+	parseUserAuth  = tokens.ParseUserAuth(jwtSecret, []string{audience}, issuer)
+)
 
 func TestCreateUserAuth(t *testing.T) {
 	table := map[string]struct {
@@ -32,6 +34,7 @@ func TestCreateUserAuth(t *testing.T) {
 		})
 	}
 }
+
 func TestParseUserAuth(t *testing.T) {
 	const userID = 12
 	type want struct {

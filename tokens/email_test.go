@@ -12,8 +12,10 @@ import (
 
 var jwtSecret = []byte("testsecret")
 
-const audience = "https://testserver.com"
-const issuer = "https://testserver.com"
+const (
+	audience = "https://testserver.com"
+	issuer   = "https://testserver.com"
+)
 
 var parseEmailVerificationToken = tokens.ParseEmailVerification(jwtSecret, audience, issuer)
 

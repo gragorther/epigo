@@ -17,19 +17,23 @@ type CreateEmailVerificationFunc func(userEmail string) (token string, err error
 
 func CreateEmailVerification(jwtSecret []byte, audience string, issuer string) CreateEmailVerificationFunc {
 	return func(userEmail string) (token string, err error) {
-		return createToken(jwtSecret, EmailClaims{Email: userEmail,
-			Claims: Claims{RegisteredClaims: jwt.RegisteredClaims{ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour * 2)),
-				Audience: []string{audience},
-				Issuer:   issuer,
-				IssuedAt: jwt.NewNumericDate(time.Now()),
-			}, Type: TypeEmailVerification}})
+		return createToken(jwtSecret, EmailClaims{
+			Email: userEmail,
+			Claims: Claims{RegisteredClaims: jwt.RegisteredClaims{
+				ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour * 2)),
+				Audience:  []string{audience},
+				Issuer:    issuer,
+				IssuedAt:  jwt.NewNumericDate(time.Now()),
+			}, Type: TypeEmailVerification},
+		})
 	}
-
 }
 
-var ErrInvalidToken error = errors.New("invalid token")
-var ErrInvalidEmail error = errors.New("invalid user email address")
-var ErrEmptyEmailClaim error = errors.New("empty email claim")
+var (
+	ErrInvalidToken    error = errors.New("invalid token")
+	ErrInvalidEmail    error = errors.New("invalid user email address")
+	ErrEmptyEmailClaim error = errors.New("empty email claim")
+)
 
 type ParseEmailVerificationFunc func(tokenString string) (userEmail string, err error)
 
@@ -42,5 +46,4 @@ func ParseEmailVerification(jwtSecret []byte, audience string, issuer string) Pa
 
 		return claims.Email, nil
 	}
-
 }

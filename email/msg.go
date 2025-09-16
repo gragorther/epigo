@@ -25,7 +25,6 @@ func (e *EmailService) newMsg(subject string, to string, opts ...mail.MsgOption)
 }
 
 func (e *EmailService) newTextMsg(msg *mail.Msg, template *template.Template, templateData any, opts ...mail.PartOption) (*mail.Msg, error) {
-
 	if err := msg.SetBodyTextTemplate(template, templateData, opts...); err != nil {
 		return nil, fmt.Errorf("failed to set text template: %w", err)
 	}
