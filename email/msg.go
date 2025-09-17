@@ -17,6 +17,8 @@ func (e *EmailService) newMsg(subject string, to string, opts ...mail.MsgOption)
 	}
 
 	msg.Subject(subject)
+	msg.SetDate()
+	msg.SetMessageID()
 
 	if err := msg.EnvelopeFrom(e.from); err != nil {
 		return nil, err

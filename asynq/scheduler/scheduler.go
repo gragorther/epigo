@@ -14,6 +14,7 @@ type configProviderDB interface {
 	AllUserIntervalsAndSentEmails(ctx context.Context) (intervals []db.IntervalAndSentEmails, err error)
 }
 
+// takes a task Enqueuer in order to be able to schedule one-off tasks like
 type configProvider struct {
 	DB          configProviderDB
 	EnqueueTask tasks.TaskEnqueuer
@@ -47,7 +48,7 @@ func (p *configProvider) GetConfigs() ([]*asynq.PeriodicTaskConfig, error) {
 	}
 	if len(users) == 0 {
 		// No users - no tasks to schedule
-		return []*asynq.PeriodicTaskConfig{}, nil
+		return nil, nil
 	}
 	var output []*asynq.PeriodicTaskConfig
 	for _, user := range users {
@@ -60,6 +61,12 @@ func (p *configProvider) GetConfigs() ([]*asynq.PeriodicTaskConfig, error) {
 			continue
 		}
 		if user.SentEmails == user.MaxSentEmails+1 {
+			deathTask, err := tasks.NewUserDeathTask(user.ID, user.Name)
+			if err != nil {
+				return nil, err
+			}
+			p.EnqueueTask(deathTask)
+			continue
 		}
 		task, err := tasks.NewRecurringEmailTask(user.ID, user.Name, user.Email, 24*time.Hour)
 		if err != nil {

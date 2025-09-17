@@ -6,7 +6,7 @@ import (
 
 func (d *DB) UserAuthorizationForGroups(ctx context.Context, groupIDs []uint, userID uint) (match bool, err error) {
 	var count int
-	err = d.db.QueryRow(ctx, "SELECT COUNT(SELECT 1 FROM groups WHERE id IN $1 AND user_id = $2)", groupIDs, userID).Scan(&count)
+	err = d.db.QueryRow(ctx, "SELECT COUNT(*) FROM groups WHERE id = ANY($1::int[]) AND user_id = $2", groupIDs, userID).Scan(&count)
 	return len(groupIDs) == count, err
 }
 

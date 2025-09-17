@@ -20,15 +20,15 @@ func (d *DB) CanUserEditLastmessage(ctx context.Context, userID uint, messageID 
 }
 
 type CreateLastMessage struct {
-	UserID      uint
-	Title       string
-	Description null.String
-	GroupIDs    []uint
+	UserID   uint
+	Title    string
+	Content  null.String
+	GroupIDs []uint
 }
 
 func (d *DB) CreateLastMessage(ctx context.Context, message CreateLastMessage) error {
-	_, err := d.db.Exec(ctx, `WITH m AS (INSERT INTO last_messages (title, description, user_id) VALUES ($1, $2, $3) RETURNING id)
-		INSERT INTO group_last_messages (messade_id, group_id) SELECT m.id, UNNEST($4::int[]) FROM m`, message.Title, message.Description, message.UserID, message.GroupIDs)
+	_, err := d.db.Exec(ctx, `WITH m AS (INSERT INTO last_messages (title, content, user_id) VALUES ($1, $2, $3) RETURNING id)
+		INSERT INTO group_last_messages (last_message_id, group_id) SELECT m.id, UNNEST($4::int[]) FROM m`, message.Title, message.Content, message.UserID, message.GroupIDs)
 	return err
 }
 

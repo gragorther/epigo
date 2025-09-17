@@ -98,12 +98,14 @@ ins_ord AS (
   SELECT id, row_number() OVER () AS ord FROM ins
 )
 INSERT INTO group_last_messages (group_id, last_message_id)
-SELECT ins_ord.id, unnest(data.last_ids)
+SELECT ins_ord.id, UNNEST(data.last_ids)
 FROM ins_ord
 JOIN data ON ins_ord.ord = data.ord;
-`, strings.Join(valueLines, ",\n    "))
+`, strings.Join(valueLines, ",\n"))
 
-	d.db.Exec(ctx, sql, args...)
+	if _, err := d.db.Exec(ctx, sql, args...); err != nil {
+		return err
+	}
 	return nil
 }
 

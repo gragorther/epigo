@@ -26,11 +26,12 @@ func Get() (Config, error) {
 }
 
 type EmailConfig struct {
-	From     string `env:"EMAIL_FROM"`
-	Host     string `env:"EMAIL_HOST"`
-	Port     int    `env:"EMAIL_PORT"`
-	Password string `env:"EMAIL_PASSWORD"`
-	Username string `env:"EMAIL_USERNAME" env-description:"the username used for authenticating with the mail server"`
+	FromFormat string `env:"EMAIL_FROM_NAME"`
+	From       string `env:"EMAIL_FROM"`
+	Host       string `env:"EMAIL_HOST"`
+	Port       int    `env:"EMAIL_PORT"`
+	Password   string `env:"EMAIL_PASSWORD"`
+	Username   string `env:"EMAIL_USERNAME" env-description:"the username used for authenticating with the mail server"`
 }
 
 type RedisConfig struct {

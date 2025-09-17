@@ -64,7 +64,7 @@ func main() {
 
 	createEmailVerificationToken := tokens.CreateEmailVerification(jwtSecret, config.BaseURL, config.BaseURL)
 	createUserLifeStatusToken := tokens.CreateUserLifeStatus(jwtSecret, []string{config.BaseURL}, config.BaseURL)
-	emailService := email.NewEmailService(emailClient, config.Email.From)
+	emailService := email.NewEmailService(emailClient, config.Email.From, config.Email.FromFormat)
 	redisClientOpt := asynq.RedisClientOpt{Addr: config.Redis.Address, Username: config.Redis.Address, Password: config.Redis.Password, DB: config.Redis.DB}
 	go workers.Run(ctx, redisClientOpt, dbHandler, jwtSecret, emailService, fmt.Sprintf("%v/user/register", config.BaseURL), createEmailVerificationToken, createUserLifeStatusToken, fmt.Sprintf("%s/user/life/verify", config.BaseURL))
 	go scheduler.Run(dbHandler, redisClientOpt)

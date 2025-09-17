@@ -31,7 +31,7 @@ func (suite *DBTestSuite) SetupSuite() {
 	// *must* be closed, otherwise the snapshot fails because there can't be any active connections.
 	conn, err := initializers.ConnectDB(suite.Ctx, pgContainer.ConnectionString)
 	suite.Require().NoError(err)
-	initializers.Migrate(suite.Ctx, conn)
+	suite.Require().NoError(initializers.Migrate(suite.Ctx, conn))
 	conn.Close()
 	suite.Require().NoError(suite.PgContainer.Snapshot(suite.Ctx))
 

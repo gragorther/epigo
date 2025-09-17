@@ -64,7 +64,7 @@ func Register(db interface {
 			return
 		}
 
-		if err := db.CreateUser(c, dbHandlers.CreateUserInput{Username: authInput.Username, Email: userEmail, Name: authInput.Name, Cron: null.String{}, PasswordHash: passwordHash}); err != nil {
+		if err := db.CreateUser(c, dbHandlers.CreateUserInput{Username: authInput.Username, Email: userEmail, Name: authInput.Name, PasswordHash: passwordHash}); err != nil {
 			c.AbortWithError(http.StatusInternalServerError, fmt.Errorf("failed to create user: %w", err))
 			return
 		}

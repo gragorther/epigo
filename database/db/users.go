@@ -8,6 +8,7 @@ import (
 
 	"github.com/georgysavva/scany/v2/pgxscan"
 	"github.com/guregu/null/v6"
+	"github.com/jackc/pgx/v5"
 )
 
 func (d *DB) UpdateUserInterval(ctx context.Context, userID uint, cron string) error {
@@ -43,8 +44,15 @@ type IntervalAndSentEmails struct {
 }
 
 func (d *DB) AllUserIntervalsAndSentEmails(ctx context.Context) (intervals []IntervalAndSentEmails, err error) {
-	err = pgxscan.Select(ctx, d.db, &intervals, "SELECT sent_emails, max_sent_emails, id, email, cron, name FROM users")
-	return
+	rows, err := d.db.Query(ctx, "SELECT sent_emails, max_sent_emails, id, email, cron, name FROM users")
+	if err != nil {
+		return nil, err
+	}
+
+	return pgx.CollectRows(rows, func(row pgx.CollectableRow) (interval IntervalAndSentEmails, err error) {
+		err = row.Scan(&interval.SentEmails, &interval.MaxSentEmails, &interval.ID, &interval.Email, &interval.Cron, &interval.Name)
+		return
+	})
 }
 
 // true if user exists, false if they don't exist
@@ -68,16 +76,15 @@ type CreateUserInput struct {
 	Email        string
 	PasswordHash string
 	Name         null.String
-	Cron         null.String
 }
 
 func (d *DB) CreateUser(ctx context.Context, user CreateUserInput) error {
-	_, err := d.db.Exec(ctx, "INSERT INTO users (username, email, name, cron, password_hash) VALUES ($1, $2, $3, $4, $5)", user.Username, user.Email, user.Name, user.Cron, user.PasswordHash)
+	_, err := d.db.Exec(ctx, "INSERT INTO users (username, email, name, password_hash) VALUES ($1, $2, $3, $4)", user.Username, user.Email, user.Name, user.PasswordHash)
 	return err
 }
 
 func (d *DB) CreateUserReturningID(ctx context.Context, user CreateUserInput) (userID uint, err error) {
-	err = d.db.QueryRow(ctx, "INSERT INTO users (username, email, name, cron, password_hash) VALUES ($1, $2, $3, $4, $5) RETURNING id", user.Username, user.Email, user.Name, user.Cron, user.PasswordHash).Scan(&userID)
+	err = d.db.QueryRow(ctx, "INSERT INTO users (username, email, name, password_hash) VALUES ($1, $2, $3, $4,) RETURNING id", user.Username, user.Email, user.Name, user.PasswordHash).Scan(&userID)
 	return
 }
 

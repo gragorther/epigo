@@ -12,9 +12,9 @@ import (
 )
 
 type AddMessageInput struct {
-	Title    string `json:"title" binding:"required"`
-	Content  string `json:"content"`
-	GroupIDs []uint `json:"groupIDs"`
+	Title    string      `json:"title" binding:"required"`
+	Content  null.String `json:"content"`
+	GroupIDs []uint      `json:"groupIDs"`
 }
 
 func Add(db interface {
@@ -37,7 +37,7 @@ func Add(db interface {
 		}
 		authorized, err := db.UserAuthorizationForGroups(c, input.GroupIDs, userID)
 		if err != nil {
-			c.AbortWithError(http.StatusUnauthorized, err)
+			c.AbortWithError(http.StatusUnauthorized, fmt.Errorf("check if user is authorized for groups: %w", err))
 			return
 		}
 		if !authorized {
@@ -45,7 +45,12 @@ func Add(db interface {
 			return
 		}
 
-		err = db.CreateLastMessage(c, dbHandler.CreateLastMessage{})
+		err = db.CreateLastMessage(c, dbHandler.CreateLastMessage{
+			UserID:   userID,
+			Title:    input.Title,
+			Content:  input.Content,
+			GroupIDs: input.GroupIDs,
+		})
 		if err != nil {
 			c.AbortWithError(http.StatusInternalServerError, fmt.Errorf("failed to create last message: %w", err))
 			return

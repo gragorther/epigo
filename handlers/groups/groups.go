@@ -12,10 +12,15 @@ import (
 	"github.com/guregu/null/v6"
 )
 
+type Recipient struct {
+	Email string `json:"email"`
+}
+
 type AddGroupInput struct {
 	Name           string      `json:"name" binding:"required"`
 	Description    null.String `json:"description"`
-	LastMessageIDs []uint      `json:"lastMessageIDs"`
+	Recipients     []Recipient
+	LastMessageIDs []uint `json:"lastMessageIDs"`
 }
 
 func Add(db interface {
