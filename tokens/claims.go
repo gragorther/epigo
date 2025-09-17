@@ -28,5 +28,4 @@ func NewClaims(claimsType string, audience []string, issuer string, expiresAt *j
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
 		},
 	}
-
 }

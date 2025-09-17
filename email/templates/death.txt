@@ -1,0 +1,4 @@
+Hi {{.Email}},
+{{.Name}} has requested we sent this message to you:
+
+{{.Message}}

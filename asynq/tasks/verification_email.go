@@ -35,7 +35,5 @@ func HandleVerificationEmailTask(createEmailVerification tokens.CreateEmailVerif
 			return err
 		}
 		return emailService.SendVerificationEmail(ctx, email.User{Email: p.Email}, fmt.Sprintf("%v?token=%v", registrationRoute, token))
-
 	}
-
 }

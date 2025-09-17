@@ -15,7 +15,6 @@ func ErrorHandler() gin.HandlerFunc {
 			for _, err := range c.Errors {
 				log.Print(err)
 			}
-
 		}
 
 		// Any other steps if no errors are found

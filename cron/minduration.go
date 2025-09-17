@@ -39,5 +39,4 @@ func MinDurationBetweenCronTicks(expr string, iterations uint) (time.Duration, e
 		}
 	}
 	return minDuration, nil
-
 }

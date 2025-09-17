@@ -1,43 +1,31 @@
 package middlewares_test
 
 import (
-	"context"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
 	"github.com/gin-gonic/gin"
-	"github.com/gragorther/epigo/handlers"
+	ginctx "github.com/gragorther/epigo/handlers/context"
 	"github.com/gragorther/epigo/middlewares"
-	"github.com/gragorther/epigo/models"
 	"github.com/gragorther/epigo/tokens"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-var JWT_SECRET []byte = []byte("very sercure")
-var parseUserAuthToken = tokens.ParseUserAuth(JWT_SECRET, []string{testIssuer}, testIssuer)
+var (
+	JWT_SECRET         = []byte("very sercure")
+	parseUserAuthToken = tokens.ParseUserAuth(JWT_SECRET, []string{testIssuer}, testIssuer)
+)
 
-type Mock struct {
-	Users []models.User
-}
-
-func (m *Mock) GetUserByID(ctx context.Context, ID uint) (models.User, error) {
-	for _, user := range m.Users {
-		if user.ID == ID {
-			return user, nil
-		}
-	}
-	return models.User{}, nil
-}
-
-const testUserID = 1
-const testIssuer = "https://issuer.com"
+const (
+	testUserID = 1
+	testIssuer = "https://issuer.com"
+)
 
 var createUserAuth = tokens.CreateUserAuth(JWT_SECRET, []string{testIssuer}, testIssuer)
 
 func TestCheckAuth(t *testing.T) {
-
 	type want struct {
 		Status int
 		User   uint
@@ -79,7 +67,7 @@ func TestCheckAuth(t *testing.T) {
 			userIDs := make(chan uint, 1)
 
 			r.GET("/", func(c *gin.Context) {
-				userID, err := handlers.GetUserIDFromContext(c)
+				userID, err := ginctx.GetUserID(c)
 				if err != nil {
 					userIDs <- 0
 					c.AbortWithError(http.StatusInternalServerError, err)
@@ -105,8 +93,6 @@ func TestCheckAuth(t *testing.T) {
 				assert.Equal(test.Want.User, userID, "user IDs should match")
 			}
 			assert.Equal(test.Want.Status, w.Code, "status codes should match")
-
 		})
 	}
-
 }

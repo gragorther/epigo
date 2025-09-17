@@ -6,28 +6,24 @@ import (
 	"time"
 
 	"github.com/gragorther/epigo/asynq/tasks"
-	"github.com/gragorther/epigo/database/gormdb"
+	"github.com/gragorther/epigo/database/db"
 	"github.com/hibiken/asynq"
 )
 
 type configProviderDB interface {
-	GetUserIntervals(ctx context.Context) ([]gormdb.UserInterval, error)
+	AllUserIntervalsAndSentEmails(ctx context.Context) (intervals []db.IntervalAndSentEmails, err error)
 }
 
-type ConfigProvider struct {
-	DB configProviderDB
-}
-
-type PeriodicTaskConfigContainer struct {
-	Configs []*Config `json:"configs"`
-}
-type Config struct {
-	Cronspec string `json:"cronspec"`
-	TaskType string `json:"taskType"`
+// takes a task Enqueuer in order to be able to schedule one-off tasks like
+type configProvider struct {
+	DB          configProviderDB
+	EnqueueTask tasks.TaskEnqueuer
 }
 
 func Run(db configProviderDB, redisClientOpt asynq.RedisClientOpt) {
-	provider := &ConfigProvider{DB: db}
+	client := asynq.NewClient(redisClientOpt)
+	enqueuer := tasks.EnqueueTask(client)
+	provider := &configProvider{DB: db, EnqueueTask: enqueuer}
 	mgr, err := asynq.NewPeriodicTaskManager(
 		asynq.PeriodicTaskManagerOpts{
 			RedisConnOpt:               redisClientOpt,
@@ -44,20 +40,32 @@ func Run(db configProviderDB, redisClientOpt asynq.RedisClientOpt) {
 	defer mgr.Shutdown()
 }
 
-func (p *ConfigProvider) GetConfigs() ([]*asynq.PeriodicTaskConfig, error) {
-	users, err := p.DB.GetUserIntervals(context.TODO())
+func (p *configProvider) GetConfigs() ([]*asynq.PeriodicTaskConfig, error) {
+	ctx := context.Background()
+	users, err := p.DB.AllUserIntervalsAndSentEmails(ctx)
 	if err != nil {
 		return nil, err
 	}
 	if len(users) == 0 {
 		// No users - no tasks to schedule
-		return []*asynq.PeriodicTaskConfig{}, nil
+		return nil, nil
 	}
 	var output []*asynq.PeriodicTaskConfig
 	for _, user := range users {
 
 		// if the user has no cron, skip them so asynq doesn't get mad at me
 		if user.Cron == "" {
+			continue
+		}
+		if user.SentEmails > user.MaxSentEmails+1 {
+			continue
+		}
+		if user.SentEmails == user.MaxSentEmails+1 {
+			deathTask, err := tasks.NewUserDeathTask(user.ID, user.Name)
+			if err != nil {
+				return nil, err
+			}
+			p.EnqueueTask(deathTask)
 			continue
 		}
 		task, err := tasks.NewRecurringEmailTask(user.ID, user.Name, user.Email, 24*time.Hour)

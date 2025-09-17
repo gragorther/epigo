@@ -20,7 +20,6 @@ func NewUserLifeStatusClaims(userID uint, audience []string, issuer string, expi
 		Claims: NewClaims(TypeUserLifeStatus, audience, issuer, jwt.NewNumericDate(expiresAt), nil, strconv.FormatUint(uint64(userID), 10)),
 		UserID: userID,
 	}
-
 }
 
 type CreateUserLifeStatusFunc func(userID uint, expiresAt time.Time) (token string, err error)
@@ -42,5 +41,4 @@ func ParseUserLifeStatus(jwtSecret []byte, audience []string, issuer string) Par
 		}
 		return claims.UserID, nil
 	}
-
 }

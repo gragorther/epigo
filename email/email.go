@@ -5,13 +5,14 @@ import (
 )
 
 type EmailService struct {
-	client *mail.Client
-	from   string
+	client     *mail.Client
+	from       string
+	fromFormat string
 }
 
 /*from is the address the email service is sending emails from*/
-func NewEmailService(client *mail.Client, from string) *EmailService {
-	return &EmailService{client: client, from: from}
+func NewEmailService(client *mail.Client, from string, fromFormat string) *EmailService {
+	return &EmailService{client: client, from: from, fromFormat: fromFormat}
 }
 
 func NewClient(host string, port int, password string, username string) (*mail.Client, error) {

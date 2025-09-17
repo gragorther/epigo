@@ -5,6 +5,7 @@ import (
 	"log"
 
 	"github.com/gragorther/epigo/asynq/tasks"
+	"github.com/gragorther/epigo/database/db"
 	"github.com/gragorther/epigo/email"
 	"github.com/gragorther/epigo/tokens"
 	"github.com/hibiken/asynq"
@@ -13,7 +14,14 @@ import (
 // starts the workers
 func Run(ctx context.Context, redisClientOpt asynq.RedisClientOpt, db interface {
 	IncrementUserSentEmailsCount(ctx context.Context, userID uint) error
-}, jwtSecret []byte, emailService *email.EmailService, registrationRoute string, createVerificationEmailToken tokens.CreateEmailVerificationFunc, createUserLifeStatus tokens.CreateUserLifeStatusFunc, lifeVerificationURL string) {
+	GetUserSentEmails(context.Context, uint) (db.UserSentEmails, error)
+	LastMessagesAndRecipients(ctx context.Context, userID uint) (lastMessages []db.LastMessageAndRecipients, err error)
+}, jwtSecret []byte, emailService interface {
+	SendUserLifeStatusEmail(ctx context.Context, user email.LifeStatusUser, verificationURL string) error
+	SendUserDeathEmails(ctx context.Context, name string, emails []email.UserDeathEmailAndRecipients) error
+	SendVerificationEmail(ctx context.Context, user email.User, registrationLink string) error
+}, registrationRoute string, createVerificationEmailToken tokens.CreateEmailVerificationFunc, createUserLifeStatus tokens.CreateUserLifeStatusFunc, lifeVerificationURL string,
+) {
 	srv := asynq.NewServer(
 		redisClientOpt,
 		asynq.Config{
@@ -37,6 +45,7 @@ func Run(ctx context.Context, redisClientOpt asynq.RedisClientOpt, db interface 
 	mux := asynq.NewServeMux()
 	mux.HandleFunc(tasks.TypeRecurringEmail, tasks.HandleRecurringEmailTask(emailService, db, createUserLifeStatus, lifeVerificationURL))
 	mux.HandleFunc(tasks.TypeVerificationEmail, tasks.HandleVerificationEmailTask(createVerificationEmailToken, emailService, registrationRoute))
+	mux.HandleFunc(tasks.TypeUserDeath, tasks.HandleUserDeathTask(db, emailService))
 	if err := srv.Run(mux); err != nil {
 		log.Fatalf("could not run asynq workers: %v", err.Error())
 	}

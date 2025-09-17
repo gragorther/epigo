@@ -12,9 +12,10 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/gragorther/epigo/asynq/scheduler"
+	"github.com/gragorther/epigo/asynq/tasks"
 	"github.com/gragorther/epigo/asynq/workers"
 	"github.com/gragorther/epigo/config"
-	"github.com/gragorther/epigo/database/gormdb"
+	"github.com/gragorther/epigo/database/db"
 	"github.com/gragorther/epigo/database/initializers"
 	"github.com/gragorther/epigo/email"
 	"github.com/gragorther/epigo/logger"
@@ -45,30 +46,31 @@ func main() {
 	if err != nil {
 		log.Fatalf("DB connection error: %v", err)
 	}
-	err = initializers.Migrate(dbconn)
+	err = initializers.Migrate(ctx, dbconn)
 	if err != nil {
 		log.Fatalf("failed to migrate db: %v", err)
 	}
 
-	dbHandler := gormdb.NewGormDB(dbconn)
+	dbHandler := db.NewDB(dbconn)
 	emailClient, err := email.NewClient(config.Email.Host, config.Email.Port, config.Email.Password, config.Email.Username)
+	if err != nil {
+		log.Fatalf("failed to run email client: %v", err)
+	}
 	defer func() {
 		if err := emailClient.Close(); err != nil {
 			log.Fatalf("failed to close email client: %v", err)
 		}
 	}()
-	if err != nil {
-		log.Fatalf("failed to run email client: %v", err)
-	}
+
 	createEmailVerificationToken := tokens.CreateEmailVerification(jwtSecret, config.BaseURL, config.BaseURL)
 	createUserLifeStatusToken := tokens.CreateUserLifeStatus(jwtSecret, []string{config.BaseURL}, config.BaseURL)
-	emailService := email.NewEmailService(emailClient, config.Email.From)
+	emailService := email.NewEmailService(emailClient, config.Email.From, config.Email.FromFormat)
 	redisClientOpt := asynq.RedisClientOpt{Addr: config.Redis.Address, Username: config.Redis.Address, Password: config.Redis.Password, DB: config.Redis.DB}
 	go workers.Run(ctx, redisClientOpt, dbHandler, jwtSecret, emailService, fmt.Sprintf("%v/user/register", config.BaseURL), createEmailVerificationToken, createUserLifeStatusToken, fmt.Sprintf("%s/user/life/verify", config.BaseURL))
 	go scheduler.Run(dbHandler, redisClientOpt)
 	asynqClient := asynq.NewClient(redisClientOpt)
 
-	r := router.Setup(dbHandler, config.JWTSecret, asynqClient, config.BaseURL, config.MinDurationBetweenEmails)
+	r := router.Setup(dbHandler, config.JWTSecret, tasks.EnqueueTask(asynqClient), config.BaseURL, config.MinDurationBetweenEmails)
 
 	srv := &http.Server{
 		Addr:    ":8080",
@@ -82,20 +84,10 @@ func main() {
 
 	// Listen for the interrupt signal.
 	<-ctx.Done()
-
 	// Restore default behavior on the interrupt signal and notify user of shutdown.
 	stop()
 	log.Println("shutting down gracefully, press Ctrl+C again to force")
-	sqlDB, err := dbconn.DB()
-	if err != nil {
-		log.Fatal("failed to get sqldb ", err)
-	}
-	log.Print("closing db connection")
-	sqlerr := sqlDB.Close()
-
-	if sqlerr != nil {
-		log.Printf("Failed to close db connection: %v", sqlerr)
-	}
+	dbconn.Close()
 
 	// The context is used to inform the server it has 5 seconds to finish
 	// the request it is currently handling

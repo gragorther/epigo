@@ -15,6 +15,11 @@
           "--show-stats=false"
         ]
       }
+    },
+    "gopls": {
+      "initialization_options": {
+        "gofumpt": true
+      }
     }
   },
   "languages": {
