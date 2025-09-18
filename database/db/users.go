@@ -84,7 +84,7 @@ func (d *DB) CreateUser(ctx context.Context, user CreateUserInput) error {
 }
 
 func (d *DB) CreateUserReturningID(ctx context.Context, user CreateUserInput) (userID uint, err error) {
-	err = d.db.QueryRow(ctx, "INSERT INTO users (username, email, name, password_hash) VALUES ($1, $2, $3, $4,) RETURNING id", user.Username, user.Email, user.Name, user.PasswordHash).Scan(&userID)
+	err = d.db.QueryRow(ctx, "INSERT INTO users (username, email, name, password_hash) VALUES ($1, $2, $3, $4) RETURNING id", user.Username, user.Email, user.Name, user.PasswordHash).Scan(&userID)
 	return
 }
 
