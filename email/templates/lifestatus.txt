@@ -1,0 +1,5 @@
+Still alive, {{.UserName}}? Click on the link below to let us know.
+
+{{.VerificationURL}}
+
+You will receive several reminders if you miss this one. Then your last messages will be sent out. 
