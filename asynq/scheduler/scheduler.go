@@ -5,6 +5,7 @@ import (
 	"log"
 	"time"
 
+	"github.com/bytedance/sonic"
 	"github.com/gragorther/epigo/asynq/tasks"
 	"github.com/gragorther/epigo/database/db"
 	"github.com/hibiken/asynq"
@@ -17,7 +18,7 @@ type configProviderDB interface {
 // takes a task Enqueuer in order to be able to schedule one-off tasks like
 type configProvider struct {
 	DB          configProviderDB
-	EnqueueTask tasks.TaskEnqueuer
+	EnqueueTask tasks.TaskEnqueueFunc
 }
 
 func Run(db configProviderDB, redisClientOpt asynq.RedisClientOpt) {
@@ -61,7 +62,7 @@ func (p *configProvider) GetConfigs() ([]*asynq.PeriodicTaskConfig, error) {
 			continue
 		}
 		if user.SentEmails == user.MaxSentEmails+1 {
-			deathTask, err := tasks.NewUserDeathTask(user.ID, user.Name)
+			deathTask, err := tasks.NewUserDeath(user.ID, user.Name, sonic.Marshal)
 			if err != nil {
 				return nil, err
 			}

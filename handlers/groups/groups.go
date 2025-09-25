@@ -23,8 +23,8 @@ type AddGroupInput struct {
 	LastMessageIDs []uint `json:"lastMessageIDs"`
 }
 
-func Add(db interface {
-	CreateGroup(context.Context, dbHandler.CreateGroup) error
+func Add(queue interface {
+	CreateGroup(dbHandler.CreateGroup) error
 },
 ) gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -45,7 +45,7 @@ func Add(db interface {
 			return
 		}
 
-		err = db.CreateGroup(c, dbHandler.CreateGroup{UserID: userID, Name: input.Name, Description: input.Description, LastMessageIDs: input.LastMessageIDs})
+		err = queue.CreateGroup(dbHandler.CreateGroup{UserID: userID, Name: input.Name, Description: input.Description, LastMessageIDs: input.LastMessageIDs})
 		if err != nil {
 
 			c.AbortWithError(http.StatusInternalServerError, err)
@@ -55,8 +55,9 @@ func Add(db interface {
 }
 
 func Delete(db interface {
-	DeleteGroupByID(ctx context.Context, id uint) error
 	UserAuthorizationForGroups(ctx context.Context, groupIDs []uint, userID uint) (bool, error)
+}, queue interface {
+	DeleteGroupByID(id uint) error
 },
 ) gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -82,12 +83,11 @@ func Delete(db interface {
 			return
 		}
 
-		err = db.DeleteGroupByID(c, uint(id))
+		err = queue.DeleteGroupByID(uint(id))
 		if err != nil {
 			c.AbortWithError(http.StatusInternalServerError, err)
 			return
 		}
-
 		c.Status(http.StatusOK)
 	}
 }
@@ -126,7 +126,8 @@ type EditGroupInput struct {
 
 func Edit(db interface {
 	CanUserEditGroup(ctx context.Context, userID uint, groupID uint, lastMessageIDs []uint) (authorized bool, err error)
-	UpdateGroup(ctx context.Context, id uint, group dbHandler.UpdateGroup) error
+}, queue interface {
+	UpdateGroup(id uint, group dbHandler.UpdateGroup) error
 },
 ) gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -156,7 +157,7 @@ func Edit(db interface {
 			return
 		}
 
-		err = db.UpdateGroup(c, id, dbHandler.UpdateGroup{Name: input.Name, Description: input.Description})
+		err = queue.UpdateGroup(id, dbHandler.UpdateGroup{Name: input.Name, Description: input.Description})
 		if err != nil {
 			c.AbortWithError(http.StatusInternalServerError, err)
 			return

@@ -35,7 +35,17 @@ func Setup(db interface {
 	UserAuthorizationForGroups(ctx context.Context, groupIDs []uint, userID uint) (bool, error)
 	CreateGroup(context.Context, db.CreateGroup) error
 	CheckIfUserExistsByUsernameAndEmail(ctx context.Context, username string, email string) (bool, error)
-}, jwtSecret string, enqueueTask tasks.TaskEnqueuer, baseURL string, minDurationBetweenEmail time.Duration,
+}, queue interface {
+	UpdateLastMessage(id uint, m db.UpdateLastMessage) error
+	SendVerificationEmail(email string) error
+	UpdateUserInterval(uint, string) error
+	CreateGroup(db.CreateGroup) error
+	DeleteGroupByID(id uint) error
+	UpdateGroup(id uint, group db.UpdateGroup) error
+	CreateLastMessage(message db.CreateLastMessage) error
+	DeleteLastMessageByID(id uint) error
+	CreateUser(db.CreateUserInput) error
+}, jwtSecret string, enqueueTask tasks.TaskEnqueueFunc, baseURL string, minDurationBetweenEmail time.Duration,
 ) *gin.Engine {
 	r := gin.Default()
 	r.Use(middlewares.ErrorHandler())
@@ -50,23 +60,24 @@ func Setup(db interface {
 	// user stuff
 	{
 		user := r.Group("/user")
-		user.POST("/register", users.Register(db, argon2id.CreateHash, parseEmailVerificationToken))
-		user.POST("/verify-email", users.VerifyEmail(enqueueTask, db))
+		user.POST("/register", users.Register(db, queue, argon2id.CreateHash, parseEmailVerificationToken))
+		user.POST("/verify-email", users.VerifyEmail(queue, db))
 		user.POST("/login", users.Login(db, argon2id.ComparePasswordAndHash, createUserAuthToken))
 		user.GET("/profile", checkAuth, users.GetData(db))
-		user.PUT("/set-email-interval", checkAuth, users.SetEmailInterval(db, minDurationBetweenEmail))
+		user.PUT("/set-email-interval", checkAuth, users.SetEmailInterval(queue, minDurationBetweenEmail))
 
 		// groups
-		user.DELETE("/groups/delete/:id", checkAuth, groups.Delete(db))
-		user.POST("/groups/add", checkAuth, groups.Add(db))
+		user.DELETE("/groups/:id", checkAuth, groups.Delete(db, queue))
+		user.POST("/groups", checkAuth, groups.Add(queue))
 		user.GET("/groups", checkAuth, groups.List(db)) // list groups
-		user.PATCH("/groups/edit/:id", checkAuth, groups.Edit(db))
+		user.PATCH("/groups/:id", checkAuth, groups.Edit(db, queue))
+		user.GET("/groups/:id", checkAuth)
 
 		// lastMessages
-		user.POST("/last-messages/add", checkAuth, messages.Add(db))
+		user.POST("/last-messages", checkAuth, messages.Add(db, queue))
 		user.GET("/last-messages", checkAuth, messages.List(db))
-		user.PATCH("/last-messages/edit/:id", checkAuth, messages.Edit(db))
-		user.DELETE("/last-messages/delete/:id", checkAuth, messages.Delete(db))
+		user.PATCH("/last-messages/:id", checkAuth, messages.Edit(db, queue))
+		user.DELETE("/last-messages/:id", checkAuth, messages.Delete(db, queue))
 	}
 	return r
 }

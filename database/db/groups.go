@@ -139,6 +139,21 @@ func (d *DB) UpdateGroup(ctx context.Context, id uint, group UpdateGroup) error 
 	return err
 }
 
+//go:embed queries/group_by_id.sql
+var groupByIDQuery string
+
+type GroupByID struct {
+	Name           string
+	Description    null.String
+	UserID         uint
+	LastMessageIDs []uint
+}
+
+func (d *DB) GroupByID(ctx context.Context, id uint) (group GroupByID, err error) {
+	err = d.db.QueryRow(ctx, groupByIDQuery, id).Scan(&group.Name, &group.Description, &group.UserID, &group.LastMessageIDs)
+	return
+}
+
 func (d *DB) GroupExistsByID(ctx context.Context, groupID uint) (exists bool, err error) {
 	err = d.db.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM groups WHERE id = $1)", groupID).Scan(&exists)
 	return exists, err

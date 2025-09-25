@@ -12,22 +12,27 @@ import (
 
 const TypeVerificationEmail = "email:verification"
 
-type VerificationEmailPayload struct {
+type verificationEmailPayload struct {
 	Email string `json:"email"`
 }
 
-func NewVerificationEmailTask(email string, opts ...asynq.Option) (*asynq.Task, error) {
-	payload, err := sonic.Marshal(VerificationEmailPayload{Email: email})
+func (q *queue) SendVerificationEmail(email string) error {
+	payload, err := sonic.Marshal(verificationEmailPayload{Email: email})
 	if err != nil {
-		return nil, fmt.Errorf("failed to marshal task payload: %w", err)
+		return err
 	}
-	return asynq.NewTask(TypeVerificationEmail, payload, opts...), nil
+	task := asynq.NewTask(TypeVerificationEmail, payload)
+	_, err = q.enqueueTask(task)
+	return err
 }
 
-func HandleVerificationEmailTask(createEmailVerification tokens.CreateEmailVerificationFunc, emailService verificationEmailSender, registrationRoute string) asynq.HandlerFunc {
+func HandleVerificationEmailTask(createEmailVerification tokens.CreateEmailVerificationFunc,
+	unmarshal UnmarshalFunc,
+	emailService verificationEmailSender, registrationRoute string,
+) asynq.HandlerFunc {
 	return func(ctx context.Context, t *asynq.Task) error {
-		var p VerificationEmailPayload
-		if err := sonic.Unmarshal(t.Payload(), &p); err != nil {
+		var p verificationEmailPayload
+		if err := unmarshal(t.Payload(), &p); err != nil {
 			return fmt.Errorf("failed to unmarshal task payload: %w", err)
 		}
 		token, err := createEmailVerification(p.Email)

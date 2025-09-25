@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/gragorther/epigo/asynq/tasks"
 	"github.com/gragorther/epigo/cron"
 	"github.com/gragorther/epigo/database/db"
 	dbHandlers "github.com/gragorther/epigo/database/db"
@@ -33,7 +32,8 @@ type LoginInput struct {
 // this also takes a `token` query parameter, which is the email JWT token
 func Register(db interface {
 	CheckIfUserExistsByUsernameAndEmail(ctx context.Context, username string, email string) (bool, error)
-	CreateUser(context.Context, db.CreateUserInput) error
+}, queue interface {
+	CreateUser(db.CreateUserInput) error
 }, createHash func(string, *argon2id.Params) (string, error), parseEmailVerificationToken tokens.ParseEmailVerificationFunc,
 ) gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -64,7 +64,7 @@ func Register(db interface {
 			return
 		}
 
-		if err := db.CreateUser(c, dbHandlers.CreateUserInput{Username: authInput.Username, Email: userEmail, Name: authInput.Name, PasswordHash: passwordHash}); err != nil {
+		if err := queue.CreateUser(dbHandlers.CreateUserInput{Username: authInput.Username, Email: userEmail, Name: authInput.Name, PasswordHash: passwordHash}); err != nil {
 			c.AbortWithError(http.StatusInternalServerError, fmt.Errorf("failed to create user: %w", err))
 			return
 		}
@@ -129,8 +129,8 @@ type UpdateMaxSentEmailsInput struct {
 	MaxSentEmails uint `json:"maxSentEmails" binding:"required"`
 }
 
-func UpdateMaxSentEmails(db interface {
-	SetUserMaxSentEmails(ctx context.Context, userID uint, maxSentEmails uint) error
+func UpdateMaxSentEmails(queue interface {
+	SetUserMaxSentEmails(userID uint, maxSentEmails uint) error
 },
 ) gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -145,7 +145,7 @@ func UpdateMaxSentEmails(db interface {
 			return
 		}
 
-		if err := db.SetUserMaxSentEmails(c, userID, input.MaxSentEmails); err != nil {
+		if err := queue.SetUserMaxSentEmails(userID, input.MaxSentEmails); err != nil {
 			c.AbortWithError(http.StatusInternalServerError, err)
 			return
 		}
@@ -187,8 +187,8 @@ type setEmailIntervalInput struct {
 	Cron string `json:"cron" binding:"required"`
 }
 
-func SetEmailInterval(db interface {
-	UpdateUserInterval(context.Context, uint, string) error
+func SetEmailInterval(queue interface {
+	UpdateUserInterval(uint, string) error
 }, minDurationBetweenEmails time.Duration,
 ) gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -212,7 +212,7 @@ func SetEmailInterval(db interface {
 			return
 		}
 
-		if err := db.UpdateUserInterval(c, userID, input.Cron); err != nil {
+		if err := queue.UpdateUserInterval(userID, input.Cron); err != nil {
 			c.AbortWithError(http.StatusInternalServerError, fmt.Errorf("failed to update user interval: %w", err))
 			return
 		}
@@ -224,7 +224,9 @@ type EmailVerificationInput struct {
 }
 
 // here, the user enters their email, gets sent a registration link to their email, and continues registration from there
-func VerifyEmail(enqueueTask tasks.TaskEnqueuer, db interface {
+func VerifyEmail(queue interface {
+	SendVerificationEmail(email string) error
+}, db interface {
 	CheckIfUserExistsByEmail(ctx context.Context, email string) (bool, error)
 },
 ) gin.HandlerFunc {
@@ -244,12 +246,7 @@ func VerifyEmail(enqueueTask tasks.TaskEnqueuer, db interface {
 			c.AbortWithStatus(http.StatusConflict)
 			return
 		}
-		task, err := tasks.NewVerificationEmailTask(input.Email)
-		if err != nil {
-			c.AbortWithError(http.StatusInternalServerError, err)
-			return
-		}
-		if _, err := enqueueTask(task); err != nil {
+		if err := queue.SendVerificationEmail(input.Email); err != nil {
 			c.AbortWithError(http.StatusInternalServerError, err)
 			return
 		}

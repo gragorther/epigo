@@ -60,3 +60,36 @@ func (s *Suite) TestCanUserEditGroup() {
 		s.True(authorized, "user should be authorized because they own the group without lastmessages")
 	})
 }
+
+func (s *Suite) TestGroupByID() {
+	table := map[string]db.CreateGroup{
+		"valid": {
+			Name:        "testname",
+			Description: null.StringFrom("test desc"),
+		},
+	}
+
+	for name, test := range table {
+		s.Run(name, func() {
+			userID, err := s.Repo.CreateUserReturningID(s.Ctx, db.CreateUserInput{
+				Username: "testname",
+				Email:    "testemail@google.com",
+			})
+			s.Require().NoError(err)
+			test.UserID = userID
+			id, err := s.Repo.CreateGroupReturningID(s.Ctx, test)
+			s.Require().NoError(err)
+
+			got, err := s.Repo.GroupByID(s.Ctx, id)
+			s.Require().NoError(err)
+
+			s.Equal(test.UserID, got.UserID, "userIDs should match")
+			s.Equal(test.Name, got.Name)
+			s.Equal(test.Description.String, got.Description.String, "descriptions should match")
+			s.Equal(test.LastMessageIDs, got.LastMessageIDs)
+		})
+	}
+
+	s.Run("last messages", func() {
+	})
+}

@@ -19,7 +19,8 @@ type AddMessageInput struct {
 
 func Add(db interface {
 	UserAuthorizationForGroups(ctx context.Context, groupIDs []uint, userID uint) (bool, error)
-	CreateLastMessage(ctx context.Context, message dbHandler.CreateLastMessage) error
+}, queue interface {
+	CreateLastMessage(message dbHandler.CreateLastMessage) error
 },
 ) gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -45,7 +46,7 @@ func Add(db interface {
 			return
 		}
 
-		err = db.CreateLastMessage(c, dbHandler.CreateLastMessage{
+		err = queue.CreateLastMessage(dbHandler.CreateLastMessage{
 			UserID:   userID,
 			Title:    input.Title,
 			Content:  input.Content,
@@ -88,7 +89,8 @@ type EditMessageInput struct {
 
 func Edit(db interface {
 	CanUserEditLastmessage(ctx context.Context, userID uint, messageID uint, groupIDs []uint) (authorized bool, err error)
-	UpdateLastMessage(ctx context.Context, id uint, m dbHandler.UpdateLastMessage) error
+}, queue interface {
+	UpdateLastMessage(id uint, m dbHandler.UpdateLastMessage) error
 },
 ) gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -119,7 +121,7 @@ func Edit(db interface {
 			return
 		}
 
-		err = db.UpdateLastMessage(c, messageID, dbHandler.UpdateLastMessage{
+		err = queue.UpdateLastMessage(messageID, dbHandler.UpdateLastMessage{
 			Title:    input.Title,
 			GroupIDs: input.GroupIDs,
 			Content:  input.Content,
@@ -135,7 +137,8 @@ func Edit(db interface {
 
 func Delete(db interface {
 	UserAuthorizationForLastMessage(ctx context.Context, messageID uint, userID uint) (bool, error)
-	DeleteLastMessageByID(ctx context.Context, id uint) error
+}, queue interface {
+	DeleteLastMessageByID(id uint) error
 },
 ) gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -159,7 +162,7 @@ func Delete(db interface {
 			c.AbortWithStatus(http.StatusUnauthorized)
 			return
 		}
-		err = db.DeleteLastMessageByID(c, lastMessageID)
+		err = queue.DeleteLastMessageByID(lastMessageID)
 		if err != nil {
 			c.AbortWithError(http.StatusInternalServerError, fmt.Errorf("failed to delete last message: %w", err))
 			return

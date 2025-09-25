@@ -3,7 +3,6 @@ package tasks
 import (
 	"context"
 
-	"github.com/bytedance/sonic"
 	dbHandler "github.com/gragorther/epigo/database/db"
 	"github.com/gragorther/epigo/email"
 	"github.com/hibiken/asynq"
@@ -12,13 +11,13 @@ import (
 
 const TypeUserDeath = "userDeath"
 
-type UserDeathPayload struct {
+type userDeathPayload struct {
 	UserID uint
 	Name   string
 }
 
-func NewUserDeathTask(userID uint, name string) (task *asynq.Task, err error) {
-	payload, err := sonic.Marshal(UserDeathPayload{UserID: userID, Name: name})
+func NewUserDeath(userID uint, name string, marshal MarshalFunc) (task *asynq.Task, err error) {
+	payload, err := marshal(userDeathPayload{UserID: userID, Name: name})
 	if err != nil {
 		return nil, err
 	}
@@ -26,15 +25,15 @@ func NewUserDeathTask(userID uint, name string) (task *asynq.Task, err error) {
 	return asynq.NewTask(TypeUserDeath, payload), nil
 }
 
-func HandleUserDeathTask(db interface {
+func HandleUserDeath(db interface {
 	LastMessagesAndRecipients(ctx context.Context, userID uint) (lastMessages []dbHandler.LastMessageAndRecipients, err error)
 }, emailService interface {
 	SendUserDeathEmails(ctx context.Context, name string, emails []email.UserDeathEmailAndRecipients) error
-},
+}, unmarshal UnmarshalFunc,
 ) asynq.HandlerFunc {
 	return func(ctx context.Context, task *asynq.Task) error {
-		var payload UserDeathPayload
-		if err := sonic.Unmarshal(task.Payload(), &payload); err != nil {
+		var payload userDeathPayload
+		if err := unmarshal(task.Payload(), &payload); err != nil {
 			return err
 		}
 		lastMessages, err := db.LastMessagesAndRecipients(ctx, payload.UserID)

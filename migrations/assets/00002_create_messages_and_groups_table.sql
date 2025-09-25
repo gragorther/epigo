@@ -4,14 +4,14 @@
 
 
 CREATE TABLE last_messages(
-id SERIAL PRIMARY KEY,
+id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
 user_id integer references users,
 title VARCHAR(200) NOT NULL,
 content text
 );
 
 CREATE TABLE groups(
-id SERIAL PRIMARY KEY,
+id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
 user_id integer references users,
 name VARCHAR(200) NOT NULL,
 description text
@@ -24,7 +24,7 @@ PRIMARY KEY (group_id, last_message_id)
 );
 
 CREATE TABLE recipients(
-id SERIAL PRIMARY KEY,
+id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
 group_id integer references groups,
 email varchar(319)
 );

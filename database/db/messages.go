@@ -39,7 +39,7 @@ type LastMessage struct {
 }
 
 func (d *DB) LastMessagesByUserID(ctx context.Context, userID uint) (lastMessages []LastMessage, err error) {
-	if err := pgxscan.Select(ctx, d.db, &lastMessages, "SELECT title, description, id FROM last_messages WHERE user_id = $1", userID); err != nil {
+	if err := pgxscan.Select(ctx, d.db, &lastMessages, "SELECT title, content, id FROM last_messages WHERE user_id = $1", userID); err != nil {
 		return nil, err
 	}
 	return lastMessages, err

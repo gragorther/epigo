@@ -12,21 +12,45 @@ import (
 	"github.com/hibiken/asynq"
 )
 
+type queue struct {
+	enqueueTask TaskEnqueueFunc
+	marshal     MarshalFunc
+}
+
+func NewQueue(
+	enqueueTask TaskEnqueueFunc,
+	marshal MarshalFunc,
+) *queue {
+	return &queue{
+		enqueueTask: enqueueTask,
+		marshal:     marshal,
+	}
+}
+
+type (
+	UnmarshalFunc func(data []byte, v any) error
+	MarshalFunc   func(val any) ([]byte, error)
+)
+
 // A list of task types.
 const (
 	TypeRecurringEmail = "email:recurring"
 )
 
-type TaskEnqueuer func(task *asynq.Task, opts ...asynq.Option) (*asynq.TaskInfo, error)
+type TaskEnqueueFunc func(task *asynq.Task, opts ...asynq.Option) (*asynq.TaskInfo, error)
 
-func EnqueueTask(client *asynq.Client) TaskEnqueuer {
+type Enqueuer interface {
+	Enqueue(task *asynq.Task, opts ...asynq.Option) (*asynq.TaskInfo, error)
+}
+
+func EnqueueTask(client Enqueuer) TaskEnqueueFunc {
 	return func(task *asynq.Task, opts ...asynq.Option) (*asynq.TaskInfo, error) {
 		return client.Enqueue(task, opts...)
 	}
 }
 
 // Task payload for any email related tasks.
-type RecurringEmailTaskPayload struct {
+type recurringEmailTaskPayload struct {
 	// ID for the email recipient.
 	UserID       uint
 	Name         string
@@ -38,7 +62,7 @@ type verificationEmailSender interface {
 }
 
 func NewRecurringEmailTask(userID uint, name string, email string, expiresAfter time.Duration) (*asynq.Task, error) {
-	payload, err := sonic.Marshal(RecurringEmailTaskPayload{Name: name, Email: email, ExpiresAfter: expiresAfter, UserID: userID})
+	payload, err := sonic.Marshal(recurringEmailTaskPayload{Name: name, Email: email, ExpiresAfter: expiresAfter, UserID: userID})
 	if err != nil {
 		return nil, err
 	}
@@ -46,16 +70,16 @@ func NewRecurringEmailTask(userID uint, name string, email string, expiresAfter 
 }
 
 // verificationURL is the URL that takes a token parameter, e.g. https://afterwill.life/user/life/verify?token=loremipsumdolorsitamet
-func HandleRecurringEmailTask(emailService interface {
+func HandleRecurringEmail(emailService interface {
 	SendUserLifeStatusEmail(ctx context.Context, user email.LifeStatusUser, verificationURL string) error
 }, db interface {
 	IncrementUserSentEmailsCount(ctx context.Context, userID uint) error
 	GetUserSentEmails(context.Context, uint) (db.UserSentEmails, error)
-}, createUserLifeStatusToken tokens.CreateUserLifeStatusFunc, verificationURL string,
+}, unmarshal UnmarshalFunc, createUserLifeStatusToken tokens.CreateUserLifeStatusFunc, verificationURL string,
 ) asynq.HandlerFunc {
 	return func(ctx context.Context, t *asynq.Task) error {
-		var p RecurringEmailTaskPayload
-		if err := sonic.Unmarshal(t.Payload(), &p); err != nil {
+		var p recurringEmailTaskPayload
+		if err := unmarshal(t.Payload(), &p); err != nil {
 			return err
 		}
 

@@ -10,6 +10,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/bytedance/sonic"
 	"github.com/gin-gonic/gin"
 	"github.com/gragorther/epigo/asynq/scheduler"
 	"github.com/gragorther/epigo/asynq/tasks"
@@ -70,7 +71,7 @@ func main() {
 	go scheduler.Run(dbHandler, redisClientOpt)
 	asynqClient := asynq.NewClient(redisClientOpt)
 
-	r := router.Setup(dbHandler, config.JWTSecret, tasks.EnqueueTask(asynqClient), config.BaseURL, config.MinDurationBetweenEmails)
+	r := router.Setup(dbHandler, tasks.NewQueue(tasks.EnqueueTask(asynqClient), sonic.Marshal), config.JWTSecret, tasks.EnqueueTask(asynqClient), config.BaseURL, config.MinDurationBetweenEmails)
 
 	srv := &http.Server{
 		Addr:    ":8080",
